@@ -1,0 +1,10 @@
+{
+  "Bots": {
+    "Lambdanaut": {
+      "Race": "Zerg",
+      "Type": "Python",
+      "RootPath": "./",
+      "FileName": "run.py"
+    }
+  }
+}
