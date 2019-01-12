@@ -1,7 +1,9 @@
+import datetime
 import importlib
+import os
 import sys
 
-import sc2, sys
+import sc2
 from __init__ import run_ladder_game
 from sc2 import Race, Difficulty
 from sc2.player import Bot, Computer
@@ -12,14 +14,22 @@ sys.path.append('lib/')
 import lambdanaut.bot as bot
 
 
+datetime_str = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M")
 
-REALTIME = True
+REALTIME = False
 DIFFICULTY = sc2.Difficulty.VeryHard
 #(4)DarknessSanctuaryLE
 MAP_NAME = "(4)DarknessSanctuaryLE"
 MAP = sc2.maps.get(MAP_NAME)
 RACE = Race.Zerg
+REPLAY_NAME = os.path.join("replays", "last_lambdanaut_replay{}.*.sc2replay".format(datetime_str))
+AGAINST_BOT = True
 
+
+opponent = sc2.player.Computer(Race.Terran, DIFFICULTY),
+if AGAINST_BOT:
+    from Overmind.Overmind import Overmind
+    opponent = Bot(Race.Zerg, Overmind())
 
 # Start game
 if __name__ == '__main__':
@@ -36,13 +46,14 @@ if __name__ == '__main__':
 
         player_config = [
             sc2.player.Bot(RACE, bot.LambdaBot()),
-            sc2.player.Computer(Race.Terran, DIFFICULTY),
+            opponent,
         ]
 
         gen = sc2.main._host_game_iter(
             MAP,
             player_config,
-            realtime=REALTIME
+            realtime=REALTIME,
+            save_replay_as=REPLAY_NAME,
         )
 
         while True:
