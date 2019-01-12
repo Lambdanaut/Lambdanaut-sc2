@@ -1,13 +1,14 @@
 """
 Class to add further constants from data_pb2
-
-examples: https://github.com/Dentosal/python-sc2/blob/master/sc2/data.py
-
 """
+
+import enum
 
 import sc2.constants as const
 from s2clientprotocol import data_pb2
 
+# About number of frames per second on faster speed
+FPS = 22
 
 # Set of zerg structures built from drones
 ZERG_STRUCTURES_FROM_DRONES = \
@@ -23,11 +24,22 @@ ZERG_ARMY_UNITS = \
     (const.ZERGLING, const.BANELING, const.ROACH, const.RAVAGER, const.HYDRALISK, const.MUTALISK, const.OVERSEER,
      const.INFESTOR, const.CORRUPTOR, const.VIPER, const.BROODLORD, const.ULTRALISK,)
 
+ENEMY_NON_ARMY = \
+    {const.OVERLORD, const.OVERSEER}
+
+
+
+
+# Value of different armies
 ZERG_ARMY_VALUE = \
     {const.ZERGLING: 2, const.BANELING: 8, const.ROACH: 8, const.RAVAGER: 10, const.HYDRALISK: 10, const.MUTALISK: 15,
-     const.OVERSEER: 10, const.INFESTOR: 15, const.CORRUPTOR: 15, const.VIPER: 15,
-     const.BROODLORD: 35, const.ULTRALISK: 35}
+     const.OVERSEER: 10, const.INFESTOR: 15, const.CORRUPTOR: 15, const.VIPER: 15, const.BROODLORD: 35, const.ULTRALISK: 35}
 
+TERRAN_ARMY_VALUE = \
+    {const.MARINE: 4, const.REAPER: 5, const.MARAUDER: 9, const.HELLION: 10, const.WIDOWMINE: 7, const.SIEGETANK: 20}
+
+TERRAN_ARMY_VALUE = \
+    {}
 
 # Attributes
 # {'Light': 1, 'Armored': 2, 'Biological': 3, 'Mechanical': 4,
@@ -37,5 +49,19 @@ ATTRIBUTES = dict(data_pb2.Attribute.items())
 
 
 
-# Build order constants
-RECENT_EXPAND_MOVE_COMMAND = 'RECENT_EXPAND_MOVE_COMMAND'  # Command to move to expansion before building
+# Build Manager Commands
+class BuildManagerCommands(enum.Enum):
+    EXPAND_MOVE = 0  # Command to move to expansion before building
+
+
+# Force Manager States
+class ForcesStates(enum.Enum):
+    HOUSEKEEPING = 0  # Default keeping units at home
+    DEFENDING = 1  # Defending against active threat at home
+    MOVING_TO_ATTACK = 2
+    ATTACKING = 3
+
+
+# Force Manager Commands
+class ForceCommands(enum.Enum):
+    pass

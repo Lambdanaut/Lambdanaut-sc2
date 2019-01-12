@@ -1,5 +1,4 @@
 from collections import Counter
-from expiringdict import ExpiringDict
 
 import sc2
 import sc2.constants as const
@@ -7,7 +6,11 @@ import sc2.constants as const
 import lambdanaut.builds as builds
 import lambdanaut.const2 as const2
 
+from lambdanaut.const2 import BuildManagerCommands, ForcesStates, ForceCommands
+from lambdanaut.expiringlist import ExpiringList
 
+
+VERSION = '2.0'
 BUILD = builds.TWO_BASE_LING_RUSH
 
 
@@ -38,19 +41,32 @@ def get_training_unit(unit):
     return unit_type
 
 
-class BuildManager(object):
-    def __init__(self, bot):
+class Manager(object):
+    """
+    Base class for all AI managers
+    """
+    async def run(self):
+        raise NotImplementedError;
+
+
+class BuildManager(Manager):
+    def __init__(self, bot, build_order=None):
         self.bot = bot
         self.build_queue = []
 
         # Dict with ttl so that we know what build commands were recently issued
         # For avoiding things like building two extractors when we needed 1
-        # {EXTRACTOR: 1}
-        self._recent_build_orders_10_second = ExpiringDict(max_age_seconds=10, max_len=100)
-        self._recent_build_orders_200_second = ExpiringDict(max_age_seconds=200, max_len=100)
+        # [EXTRACTOR, HATCHERY, etc. etc..]
+        self._recent_build_orders = ExpiringList()
 
         # Recent commands issued. Uses constants defined in const2.py
-        self._recent_commands_10_second = ExpiringDict(max_age_seconds=10, max_len=100)
+        self._recent_commands = ExpiringList()
+
+        self.build_target = None
+        self.last_build_target = None
+
+        if build_order is not None:
+            self.load_build_order(build_order)
 
     def can_afford(self, unit):
         """Returns boolean indicating if the player has enough minerals,
@@ -86,9 +102,8 @@ class BuildManager(object):
         # Baneling Eggs count as banelings
         baneling_eggs = Counter({const.BANELING: len(self.bot.units(const.EGG))})
 
-        # Units recently ordered to be built. This is a private counter of items
-        recent_build_orders1 = Counter(dict(self._recent_build_orders_10_second.items()))
-        recent_build_orders2 = Counter(dict(self._recent_build_orders_200_second.items()))
+        # Units recently ordered to be built.
+        recent_build_orders = Counter(self._recent_build_orders.items(self.bot.iteration))
 
         # Count of existing upgrades
         existing_upgrades = Counter(self.bot.state.upgrades)
@@ -96,8 +111,7 @@ class BuildManager(object):
         existing_unit_counts += units_in_eggs
         existing_unit_counts += units_being_trained
         existing_unit_counts += baneling_eggs
-        existing_unit_counts += recent_build_orders1
-        existing_unit_counts += recent_build_orders2
+        existing_unit_counts += recent_build_orders
         existing_unit_counts += existing_upgrades
 
         # Set the number of hatcheries to be the number of town halls
@@ -111,6 +125,10 @@ class BuildManager(object):
             build_order_counts[unit] += 1
 
             if existing_unit_counts[unit] < build_order_counts[unit]:
+                # Found build target
+                self.last_build_target = self.build_target
+                self.build_target = unit
+
                 return unit
 
         return None
@@ -120,9 +138,10 @@ class BuildManager(object):
         Main function that issues commands to build next build order target
         """
 
-        build_target = self.current_build_target()
+        if self.last_build_target != self.build_target:
+            print("Build target: {}".format(self.build_target))
 
-        print("Build target: {}".format(build_target))
+        build_target = self.current_build_target()
 
         # Check type of unit we're building to determine how to build
 
@@ -133,20 +152,23 @@ class BuildManager(object):
                 await self.bot.expand_now()
 
                 # Keep from issuing another expand command for 10 seconds
-                self._recent_build_orders_10_second[build_target] = 1
+                self._recent_build_orders.add(
+                    build_target, iteration=self.bot.iteration, expiry=10)
 
             # Move drone to expansion location before construction
             elif self.bot.state.common.minerals > 200 and \
-                    const2.RECENT_EXPAND_MOVE_COMMAND not in self._recent_commands_10_second:
+                    not self._recent_commands.contains(
+                        BuildManagerCommands.EXPAND_MOVE, self.bot.iteration):
                 if expansion_location:
                     nearest_drone = self.bot.units(const.DRONE).closest_to(expansion_location)
                     # Only move the drone to the expansion location if it's far away
                     # To keep from constantly issuing move commands
                     if nearest_drone.distance_to(expansion_location) > 9:
-                        await self.bot.do(nearest_drone.move(expansion_location))
+                        self.bot.actions.append(nearest_drone.move(expansion_location))
 
                         # Keep from issuing another expand move command
-                        self._recent_commands_10_second[const2.RECENT_EXPAND_MOVE_COMMAND] = 1
+                        self._recent_commands.add(
+                            BuildManagerCommands.EXPAND_MOVE, self.bot.iteration, expiry=10)
 
         elif build_target == const.LAIR:
             # Get a hatchery
@@ -154,7 +176,7 @@ class BuildManager(object):
 
             # Train the unit
             if self.can_afford(build_target) and hatcheries.exists:
-                await self.bot.do(hatcheries.random.build(build_target))
+                self.bot.actions.append(hatcheries.random.build(build_target))
 
         elif build_target == const.EXTRACTOR:
             if self.can_afford(build_target):
@@ -163,18 +185,19 @@ class BuildManager(object):
                 drone = self.bot.workers.closest_to(geyser)
 
                 if self.can_afford(build_target):
-                    err = await self.bot.do(drone.build(build_target, geyser))
+                    err = self.bot.actions.append(drone.build(build_target, geyser))
 
                     # Add structure order to recent build orders
                     if not err:
-                        self._recent_build_orders_10_second[build_target] = 1
+                        self._recent_build_orders.add(build_target, iteration=self.bot.iteration, expiry=10)
 
         elif build_target == const.QUEEN:
 
             idle_hatcheries = self.bot.units(const.HATCHERY).idle
 
             if self.can_afford(build_target) and idle_hatcheries.exists:
-                await self.bot.do(idle_hatcheries.random.train(build_target))
+                self.bot.actions.append(
+                    idle_hatcheries.random.train(build_target))
 
         elif build_target in const2.ZERG_STRUCTURES_FROM_DRONES:
             hatchery = self.bot.units(const.HATCHERY).ready.first
@@ -184,7 +207,7 @@ class BuildManager(object):
 
                 # Add structure order to recent build orders
                 if not err:
-                    self._recent_build_orders_10_second[build_target] = 1
+                    self._recent_build_orders.add(build_target, iteration=self.bot.iteration, expiry=10)
 
         elif build_target in const2.ZERG_UNITS_FROM_LARVAE:
             # Get a larvae
@@ -192,7 +215,7 @@ class BuildManager(object):
 
             # Train the unit
             if self.can_afford(build_target) and larvae.exists:
-                await self.bot.do(larvae.random.train(build_target))
+                self.bot.actions.append(larvae.random.train(build_target))
 
         elif build_target == const.BANELING:
             # Get a zergling
@@ -200,16 +223,16 @@ class BuildManager(object):
 
             # Train the unit
             if self.can_afford(build_target) and zerglings.exists:
-                await self.bot.do(zerglings.random.train(build_target))
+                self.bot.actions.append(zerglings.random.train(build_target))
 
         # Upgrades below
         elif build_target == const.ZERGLINGMOVEMENTSPEED:
             sp = self.bot.units(const.SPAWNINGPOOL).ready
             if self.can_afford(build_target) and sp.exists:
-                err = await self.bot.do(sp.first(const.RESEARCH_ZERGLINGMETABOLICBOOST))
+                err = self.bot.actions.append(sp.first(const.RESEARCH_ZERGLINGMETABOLICBOOST))
 
                 if not err:
-                    self._recent_build_orders_200_second[build_target] = 1
+                    self._recent_build_orders.add(build_target, iteration=self.bot.iteration, expiry=200)
 
         elif build_target == const.CENTRIFICALHOOKS:
             bn = self.bot.units(const.BANELINGNEST).ready
@@ -217,24 +240,20 @@ class BuildManager(object):
                 err = await self.bot.do(bn.first(const.RESEARCH_CENTRIFUGALHOOKS))
 
                 if not err:
-                    self._recent_build_orders_200_second[build_target] = 1
+                    self._recent_build_orders.add(build_target, iteration=self.bot.iteration, expiry=200)
 
 
     async def run(self):
         return await self.create_build_target()
 
 
-class UnitManager(object):
+class ResourceManager(Manager):
     """
-    Class for handling unit orders beyond training/construction. Involves:
+    Class for handling resource management. Involves:
 
     * Worker harvester management
-    * Force management
-        * Attacking enemy with a force
-        * Defending against enemy with a force
     * Queen injection
-    * Scouting
-    * Overlord management
+    * Queen creep spread
     """
 
     def __init__(self, bot):
@@ -266,7 +285,7 @@ class UnitManager(object):
             unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)
             mineral = self.bot.state.mineral_field.closest_to(unsaturated_townhall)
 
-            await self.bot.do(worker.gather(mineral, queue=True))
+            self.bot.actions.append(worker.gather(mineral, queue=True))
 
     async def manage_minerals(self):
         await self.manage_mineral_saturation()
@@ -276,7 +295,7 @@ class UnitManager(object):
             townhall = self.bot.townhalls.closest_to(worker.position)
             mineral = self.bot.state.mineral_field.closest_to(townhall)
 
-            await self.bot.do(worker.gather(mineral))
+            self.bot.actions.append(worker.gather(mineral))
 
     async def manage_vespene(self):
         saturated_extractors = self.bot.units(const.EXTRACTOR).filter(
@@ -303,7 +322,7 @@ class UnitManager(object):
                 unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)
                 mineral = self.bot.state.mineral_field.closest_to(unsaturated_townhall)
 
-                await self.bot.do(worker.gather(mineral, queue=True))
+                self.bot.actions.append(worker.gather(mineral, queue=True))
 
         # Move workers from minerals to unsaturated extractors
         if unsaturated_extractors:
@@ -315,7 +334,7 @@ class UnitManager(object):
             if mineral_workers.exists:
                 worker = mineral_workers.closest_to(extractor)
 
-                await self.bot.do(worker.gather(extractor, queue=True))
+                self.bot.actions.append(worker.gather(extractor, queue=True))
 
 
     async def manage_resources(self):
@@ -335,125 +354,253 @@ class UnitManager(object):
                 if const.AbilityId.EFFECT_INJECTLARVA in abilities:
                     townhall = self.bot.townhalls.closest_to(queen.position)
                     if townhall:
-                        await self.bot.do(queen(const.EFFECT_INJECTLARVA, townhall))
+                        self.bot.actions.append(queen(const.EFFECT_INJECTLARVA, townhall))
 
-    async def manage_scouts(self):
-        pass
-
-    async def manage_attacking(self):
-        army = self.bot.units().filter(
-            lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
-
-        # Value of the army
-        army_value = sum([const2.ZERG_ARMY_VALUE[unit.type_id] for unit in army])
-
-        if army_value > 100:
-            target = self.bot.known_enemy_structures.random_or(
-                self.bot.enemy_start_locations[0]).position
-            for unit in army:
-                await self.bot.do(unit.attack(target))
-
-    async def manage_forces(self):
-        await self.manage_attacking()
 
     async def run(self):
         await self.manage_resources()
         await self.manage_queens()
-        await self.manage_scouts()
-        await self.manage_forces()
+
+
+class ForceManager(Manager):
+    """
+    State-machine for controlling forces
+
+    States need a few things to work
+
+    * They need a `do` function in self.state_map for them to do something each frame.
+    * They need conditions defined in self.determine_state_change to switch into that state
+    * Optionally they can also have a `stop` function in self.state_stop_map which runs
+      when that state is exited.
+    """
+
+    def __init__(self, bot):
+        self.bot = bot
+
+        # Default starting state
+        self.state = ForcesStates.HOUSEKEEPING
+
+        # The previous state
+        self.previous_state = self.state
+
+        # Map of functions to do depending on the state
+        self.state_map = {
+            ForcesStates.HOUSEKEEPING: self.do_housekeeping,
+            ForcesStates.DEFENDING: self.do_defending,
+            ForcesStates.MOVING_TO_ATTACK: self.do_moving_to_attack,
+            ForcesStates.ATTACKING: self.do_attacking,
+        }
+
+        # Map of functions to do when leaving the state
+        self.state_stop_map = {
+            ForcesStates.DEFENDING: self.stop_defending,
+        }
+        self._recent_commands = ExpiringList()
+
+        # Set of worker ids of workers defending an attack.
+        self.workers_defending = set()
+
+    async def do_housekeeping(self):
+        army = self.bot.units().filter(
+            lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
+
+        townhalls = self.bot.townhalls
+
+        # Ensure each town hall has some army nearby
+        # Do it at max every 10 seconds
+        for townhall in townhalls:
+            nearby_army = army.closer_than(12, townhall.position)
+
+            # At least half of the standing army should be at town halls, divided evenly.
+            number_of_units_to_townhall = round(len(army) / len(townhalls) / 2)
+            if len(nearby_army) < number_of_units_to_townhall:
+                far_army = army.further_than(12, townhall.position)
+                if far_army.exists:
+                    self.bot.actions.append(far_army.random.attack(townhall.position))
+
+    async def do_defending(self):
+        """
+        Defend townhalls from nearby enemies
+        Not dependent on state. Always consider defense if attacked.
+        """
+
+        for th in self.bot.townhalls:
+            enemies_nearby = self.bot.known_enemy_units.closer_than(15, th.position)
+
+            if enemies_nearby.exists:
+                # Workers attack enemy
+                ground_enemies = enemies_nearby.not_flying
+                workers = self.bot.workers.closer_than(15, enemies_nearby.random.position)
+                if workers.amount > enemies_nearby.amount:
+                    for worker in workers:
+                        if len(self.workers_defending) <= ground_enemies.amount:
+                            if worker.tag not in self.workers_defending:
+                                target = ground_enemies.random
+                                self.bot.actions.append(worker.attack(target.position))
+                                self.workers_defending.add(worker.tag)
+
+                # Have queens defend
+                queens = self.bot.units(const.QUEEN)
+                if queens.exists:
+                    if enemies_nearby.amount > 2:
+                        defending_queens = queens
+                    else:
+                        defending_queens = [queens.closest_to(
+                            enemies_nearby.random.position)]
+
+                    for queen in defending_queens:
+                        target = enemies_nearby.closest_to(queen)
+                        if target.distance_to(queen) < queen.ground_range:
+                            # Target
+                            self.bot.actions.append(queen.attack(target))
+                        else:
+                            # Position
+                            self.bot.actions.append(queen.attack(target.position))
+
+                # Have army defend
+                army = self.bot.units().filter(
+                    lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
+
+            # Bring back defending workers that have drifted too far from town halls
+            workers_defending_to_remove = set()
+            for worker_id in self.workers_defending:
+                worker = self.bot.workers.find_by_tag(worker_id)
+                if worker:
+                    nearest_townhall = self.bot.townhalls.closest_to(worker.position)
+                    if worker.distance_to(nearest_townhall.position) > 45:
+                        workers_defending_to_remove.add(worker_id)
+                        self.bot.actions.append(worker.move(nearest_townhall.position))
+                else:
+                    workers_defending_to_remove.add(worker_id)
+            # Remove workers from defending set
+            self.workers_defending -= workers_defending_to_remove
+
+    async def stop_defending(self):
+        # Cleanup workers that were defending and send them back to their townhalls
+        for worker_id in self.workers_defending:
+            worker = self.bot.workers.find_by_tag(worker_id)
+            if worker:
+                nearest_townhall = self.bot.townhalls.closest_to(worker.position)
+                self.bot.actions.append(worker.move(nearest_townhall.position))
+        self.workers_defending.clear()  # Remove worker ids from set
+
+    async def do_moving_to_attack(self):
+        pass
+
+    async def do_attacking(self):
+        army = self.bot.units().filter(
+            lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
+
+        target = self.bot.known_enemy_structures.random_or(
+            self.bot.enemy_start_locations[0]).position
+
+        for unit in army:
+            self.bot.actions.append(unit.attack(target))
+
+    async def determine_state_change(self):
+        # HOUSEKEEPING
+        if self.state == ForcesStates.HOUSEKEEPING:
+
+            army = self.bot.units().filter(
+                lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
+
+            # Value of the army
+            army_value = sum([const2.ZERG_ARMY_VALUE[unit.type_id] for unit in army])
+
+            if army_value > 100:
+                return await self.change_state(ForcesStates.MOVING_TO_ATTACK)
+
+        # DEFENDING
+        elif self.state == ForcesStates.DEFENDING:
+            # Loop through all townhalls. If enemies are near any of them, don't change state.
+            for th in self.bot.townhalls:
+                enemies_nearby = self.bot.known_enemy_units.closer_than(
+                    15, th.position).exclude_type(const2.ENEMY_NON_ARMY)
+
+                if enemies_nearby.exists:
+                    # Enemies found, don't change state.
+                    break
+            else:
+                return await self.change_state(self.previous_state)
+
+        # MOVING_TO_ATTACK
+        elif self.state == ForcesStates.MOVING_TO_ATTACK:
+            return await self.change_state(ForcesStates.ATTACKING)
+
+        # ATTACKING
+        elif self.state == ForcesStates.ATTACKING:
+            army = self.bot.units().filter(
+                lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
+
+            # Value of the army
+            army_value = sum([const2.ZERG_ARMY_VALUE[unit.type_id] for unit in army])
+
+            if army_value < 100:
+                return await self.change_state(ForcesStates.HOUSEKEEPING)
+
+        # Switching to DEFENDING from any other state
+        if self.state != ForcesStates.DEFENDING:
+            for th in self.bot.townhalls:
+                enemies_nearby = self.bot.known_enemy_units.closer_than(
+                    15, th.position).exclude_type(const2.ENEMY_NON_ARMY)
+
+                if enemies_nearby.exists:
+                    return await self.change_state(ForcesStates.DEFENDING)
+
+    async def change_state(self, new_state):
+        """
+        Changes the state and runs a stop function if specified
+        in self.state_stop_map
+        """
+
+        print('STATE CHANGED TO: {}'.format(new_state.name))
+
+        # Run a stop function for the current state if it's specified
+        stop_function = self.state_stop_map.get(self.state)
+        if stop_function:
+            await stop_function()
+
+        # Set the previous state to the current state
+        self.previous_state = self.state
+
+        # Set the new state
+        self.state = new_state
+
+    async def run_state(self):
+        # Run function for current state
+        await self.state_map[self.state]()
+
+    async def run(self):
+        await self.determine_state_change()
+        await self.run_state()
 
 
 class LambdaBot(sc2.BotAI):
     def __init__(self):
-        self.build_manager = BuildManager(self)
-        self.build_manager.load_build_order(BUILD)
+        self.build_manager = BuildManager(self, build_order=BUILD)
 
-        self.unit_manager = UnitManager(self)
+        self.resource_manager = ResourceManager(self)
+
+        self.force_manager = ForceManager(self)
+
+        self.iteration = 0
+
+        # "Do" actions to run
+        self.actions = []
 
     async def on_step(self, iteration):
-        hatchery = self.units(const.HATCHERY).ready.first
-        larvae = self.units(const.LARVA)
 
-        target = self.known_enemy_structures.random_or(self.enemy_start_locations[0]).position
+        self.iteration = iteration
+
+        if iteration == 0:
+            await self.chat_send("Lambdanaut v{}".format(VERSION))
 
         await self.build_manager.run()
-        await self.unit_manager.run()
+        await self.resource_manager.run()
+        await self.force_manager.run()
 
-        async def unused():
-            if iteration == 0:
-                await self.chat_send("(glhf)")
+        # "Do" actions
+        await self.do_actions(self.actions)
 
-
-            if not self.units(const.HATCHERY).ready.exists:
-                for unit in self.workers | self.units(const.ZERGLING) | self.units(const.QUEEN):
-                    self.do(unit.attack(self.enemy_start_locations[0]))
-                return
-
-            if len(self.units(ZERGLING)) > 20:
-                for zl in self.units(ZERGLING).idle:
-                    await self.do(zl.attack(target))
-
-            for queen in self.units(QUEEN).idle:
-                abilities = await self.get_available_abilities(queen)
-                if const.AbilityId.EFFECT_INJECTLARVA in abilities:
-                    await self.do(queen(EFFECT_INJECTLARVA, hatchery))
-
-            if self.vespene >= 100:
-                sp = self.units(SPAWNINGPOOL).ready
-                if sp.exists and self.minerals >= 100 and not self.mboost_started:
-                    await self.do(sp.first(RESEARCH_ZERGLINGMETABOLICBOOST))
-                    self.mboost_started = True
-
-                if not self.moved_workers_from_gas:
-                    self.moved_workers_from_gas = True
-                    for drone in self.workers:
-                        m = self.state.mineral_field.closer_than(10, drone.position)
-                        await self.do(drone.gather(m.random, queue=True))
-
-            if self.supply_left < 2:
-                if self.can_afford(OVERLORD) and larvae.exists:
-                    await self.do(larvae.train(OVERLORD))
-
-            if self.units(SPAWNINGPOOL).ready.exists:
-                if larvae.exists and self.can_afford(ZERGLING):
-                    await self.do(larvae.random.train(ZERGLING))
-
-            if self.units(EXTRACTOR).ready.exists and not self.moved_workers_to_gas:
-                self.moved_workers_to_gas = True
-                extractor = self.units(EXTRACTOR).first
-                for drone in self.workers.random_group_of(3):
-                    await self.do(drone.gather(extractor))
-
-            if self.minerals > 500:
-                    self.spawning_pool_started = True
-                    await self.build(HATCHERY, near=hatchery)
-
-            if self.drone_counter < 3:
-                if self.can_afford(DRONE):
-                    self.drone_counter += 1
-                    await self.do(larvae.random.train(DRONE))
-
-            if not self.extractor_started:
-                if self.can_afford(EXTRACTOR):
-                    drone = self.workers.random
-                    target = self.state.vespene_geyser.closest_to(drone.position)
-                    err = await self.do(drone.build(EXTRACTOR, target))
-                    if not err:
-                        self.extractor_started = True
-
-            elif not self.spawning_pool_started:
-                if self.can_afford(SPAWNINGPOOL):
-                    for d in range(4, 15):
-                        pos = hatchery.position.to2.towards(self.game_info.map_center, d)
-                        if await self.can_place(SPAWNINGPOOL, pos):
-                            drone = self.workers.closest_to(pos)
-                            err = await self.do(drone.build(SPAWNINGPOOL, pos))
-                            if not err:
-                                self.spawning_pool_started = True
-                                break
-
-            elif not self.queeen_started and self.units(SPAWNINGPOOL).ready.exists:
-                if self.can_afford(QUEEN):
-                    r = await self.do(hatchery.train(QUEEN))
-                    if not r:
-                        self.queeen_started = True
+        # Reset actions
+        self.actions = []
