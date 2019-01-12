@@ -1,8 +1,10 @@
 # PROBLEMS AND SOLUTIONS
 
-* HIGH PRIORITY
+# BUG
 
-  * Switch between ForceManager states based on conditions
+  * Sometimes the state will get stuck in "MOVING_TO_ATTACK" but no action will be taken and the game will be stuck in this state
+
+* HIGH PRIORITY
 
   * Build orders in a tree structure rather than flat lists. Branches made depending on the state of the game.
       * Changing build order based on scouting information
@@ -17,12 +19,11 @@
   * Deal with hard walls. If an opponent hard-walls, it confuses the AI
     * Need to scout up closer to the base until the wall is seen. Not sure of implementation yet.
 
-  * Banelings should sometimes attack structures, particularly during hard-wall scenarios
-
   * Banelings should be in front of army during attacks.
 
-  * Overlord scouting
+  * Attack move to enemy ramp in case of hard walling main
 
+  * Switch from "DEFENDING" state to another where army is pulled home if it seems necessary. Maybe "ALL_DEFENDING"
 
 * LOW PRIORITY
 
@@ -46,3 +47,13 @@
 
   * Attack enemy worker scout with multiple drones if he enters the mineral line
     * If enemy worker is between townhall and minerals, attack with up to 10 nearby workers
+
+
+* DONE
+
+  * Banelings should sometimes attack structures, particularly during hard-wall scenarios
+
+  * Switch between ForceManager states based on conditions
+
+  * Overlord scouting
+

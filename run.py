@@ -13,9 +13,10 @@ import lambdanaut.bot as bot
 
 
 
-REALTIME = False
+REALTIME = True
 DIFFICULTY = sc2.Difficulty.VeryHard
-MAP_NAME = "(2)16-BitLE"
+#(4)DarknessSanctuaryLE
+MAP_NAME = "(4)DarknessSanctuaryLE"
 MAP = sc2.maps.get(MAP_NAME)
 RACE = Race.Zerg
 
@@ -35,7 +36,7 @@ if __name__ == '__main__':
 
         player_config = [
             sc2.player.Bot(RACE, bot.LambdaBot()),
-            sc2.player.Computer(Race.Protoss, DIFFICULTY),
+            sc2.player.Computer(Race.Terran, DIFFICULTY),
         ]
 
         gen = sc2.main._host_game_iter(

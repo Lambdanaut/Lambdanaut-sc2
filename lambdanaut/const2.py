@@ -48,6 +48,13 @@ TERRAN_ARMY_VALUE = \
 ATTRIBUTES = dict(data_pb2.Attribute.items())
 
 
+# Messages
+class Messages(enum.Enum):
+    OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION = 0  # Message indicating that overlord scout was sent to empty base
+    OVERLORD_SCOUT_FOUND_ENEMY_BASE = 1  # Message indicating that the army can't find enemy base
+    ARMY_COULDNT_FIND_ENEMY_BASE = 2  # Message indicating that the army can't find enemy base
+    ARMY_FOUND_ENEMY_BASE = 3  # Message indicating that the army can't find enemy base
+
 
 # Build Manager Commands
 class BuildManagerCommands(enum.Enum):
@@ -60,8 +67,12 @@ class ForcesStates(enum.Enum):
     DEFENDING = 1  # Defending against active threat at home
     MOVING_TO_ATTACK = 2
     ATTACKING = 3
+    SEARCHING = 4
 
 
-# Force Manager Commands
-class ForceCommands(enum.Enum):
-    pass
+# Overlord Scout States
+class OverlordStates(enum.Enum):
+    INITIAL = 0  # Initial peek into natural expansion
+    INITIAL_BACKOUT = 1  # Rest outside of enemy's natural
+    INITIAL_DIVE = 2  # Initial dive into main
+    SUICIDE_DIVE = 3  # Dive into enemy's main on a suicide scouting mission
