@@ -1,5 +1,6 @@
 from collections import Counter, defaultdict
-import importlib
+import math
+import random
 from typing import Any, Dict, List, Optional, Union
 
 import sc2
@@ -9,18 +10,13 @@ import lambdanaut
 import lambdanaut.builds as builds
 import lambdanaut.const2 as const2
 
-from lambdanaut.const2 import Messages, BuildManagerCommands, ForcesStates, OverlordStates
-from lambdanaut.builds import Builds, BUILD_MAPPING, DEFAULT_NEXT_BUILDS
+from lambdanaut.const2 import Messages, BuildManagerCommands, ResourceManagerCommands, ForcesStates, OverlordStates
+from lambdanaut.builds import Builds, BuildStages, BUILD_MAPPING, DEFAULT_NEXT_BUILDS
 from lambdanaut.expiringlist import ExpiringList
 
 
-VERSION = '2.2'
+VERSION = '3.0'
 BUILD = builds.EARLY_GAME_DEFAULT_OPENER
-
-# Reload imports
-importlib.reload(lambdanaut.const2)
-importlib.reload(lambdanaut.builds)
-importlib.reload(lambdanaut.expiringlist)
 
 
 def get_training_unit(unit):
@@ -94,6 +90,12 @@ class Manager(object):
         """
         print('{}: Message published: {}'.format(self.name, message_type.name))
         return self.bot.publish(self, message_type, value)
+
+    async def read_messages(self):
+        """
+        Overwrite this function to read all incoming messages
+        """
+        pass
 
     async def run(self):
         raise NotImplementedError
@@ -235,6 +237,7 @@ class BuildManager(Manager):
 
         # Message subscriptions
         self.subscribe(Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN)
+        self.subscribe(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
 
         # Dict with ttl so that we know what build commands were recently issued
         # For avoiding things like building two extractors when we needed 1
@@ -253,6 +256,28 @@ class BuildManager(Manager):
             can_afford.can_afford_minerals and \
             can_afford.can_afford_vespene and \
             can_afford.have_enough_supply
+
+    @property
+    def current_build(self):
+        return self.builds[-1]
+
+    def change_current_build_if_not(self, if_not_this_build, new_build):
+        """
+        Checks to see if the current build is "if_not_this_build"
+        If it is, then add "new_build"
+        If it's not, then change the current build to be "new_build"
+        """
+        if self.current_build == if_not_this_build:
+            self.add_build(new_build)
+        else:
+            self.change_current_build(new_build)
+
+    def change_current_build(self, build):
+        print("{}: Changing build order: \"{}\"".format(self.name, build.name))
+
+        assert isinstance(build, Builds)
+
+        self.builds[-1] = build
 
     def add_build(self, build):
         print("{}: Adding build order: \"{}\"".format(self.name, build.name))
@@ -277,9 +302,30 @@ class BuildManager(Manager):
 
         return build_queue
 
-    def determine_new_build_order(self):
+    async def read_messages(self):
+        """
+        Reads incoming subscribed messages and updates the build order based
+        on them.
+        """
+
         for message, val in self.messages.items():
-            pass
+
+            # Messages indicating that it's safe to expand early
+            safe_to_expand_early = {Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN}
+            if message in safe_to_expand_early:
+                self.ack(message)
+
+            # Messages indicating to take a cautious early game
+            cautious_early_game = {Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN}
+            if message in cautious_early_game:
+                self.ack(message)
+
+                if self.current_build in builds.EARLY_GAME_BUILDS:
+                    if builds.get_build_stage(self.current_build) == BuildStages.OPENING:
+                        self.add_build(Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS)
+                    else:
+                        self.change_current_build(Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS)
+
 
     def overlord_is_build_target(self) -> bool:
         """
@@ -472,6 +518,11 @@ class BuildManager(Manager):
 
             # Train the unit
             if self.can_afford(build_target) and zerglings.exists:
+                # Prefer idle zerglings if they exist
+                idle_zerglings = zerglings.idle
+                if idle_zerglings.exists:
+                    zerglings = idle_zerglings
+
                 zergling = zerglings.closest_to(self.bot.start_location)
                 self.bot.actions.append(zergling.train(build_target))
 
@@ -487,27 +538,50 @@ class BuildManager(Manager):
         elif build_target == const.ZERGLINGMOVEMENTSPEED:
             sp = self.bot.units(const.SPAWNINGPOOL).ready
             if self.can_afford(build_target) and sp.exists:
-                err = self.bot.actions.append(sp.first(const.RESEARCH_ZERGLINGMETABOLICBOOST))
+                self.bot.actions.append(sp.first(const.RESEARCH_ZERGLINGMETABOLICBOOST))
 
-                if not err:
-                    self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=200)
+                self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=200)
 
         elif build_target == const.CENTRIFICALHOOKS:
             bn = self.bot.units(const.BANELINGNEST).ready
             if self.can_afford(build_target) and bn.exists:
-                err = await self.bot.do(bn.first(const.RESEARCH_CENTRIFUGALHOOKS))
+                self.bot.actions.append(bn.first(const.RESEARCH_CENTRIFUGALHOOKS))
 
-                if not err:
-                    self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=200)
+                self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=200)
+
+        elif build_target in {
+                const.ZERGMELEEWEAPONSLEVEL1, const.ZERGMELEEWEAPONSLEVEL2, const.ZERGMELEEWEAPONSLEVEL3,
+                const.ZERGGROUNDARMORSLEVEL1, const.ZERGGROUNDARMORSLEVEL2, const.ZERGGROUNDARMORSLEVEL3,
+                const.ZERGMISSILEWEAPONSLEVEL1, const.ZERGMISSILEWEAPONSLEVEL2, const.ZERGMISSILEWEAPONSLEVEL3,}:
+            ec = self.bot.units(const.EVOLUTIONCHAMBER).ready.idle
+            if self.can_afford(build_target) and ec.exists:
+                self.bot.actions.append(ec.first(const2.ZERG_UPGRADES_TO_ABILITY[build_target]))
+
+                self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=200)
+
+        elif build_target in {
+                const.ZERGFLYERWEAPONSLEVEL1, const.ZERGFLYERWEAPONSLEVEL3, const.ZERGFLYERWEAPONSLEVEL3,
+                const.ZERGFLYERARMORSLEVEL1, const.ZERGFLYERARMORSLEVEL2, const.ZERGFLYERARMORSLEVEL3}:
+            spire = self.bot.units(const.SPIRE).ready.idle
+            if self.can_afford(build_target) and spire.exists:
+                self.bot.actions.append(spire.first(const2.ZERG_UPGRADES_TO_ABILITY[build_target]))
+
+                self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=200)
+
 
     async def run(self):
-        self.determine_new_build_order()
+        # Read messages and act on them
+        await self.read_messages()
+
+        # Get the current build target
         build_queue = self.get_current_build_queue()
         current_build_target = self.current_build_target(build_queue)
 
         if current_build_target is None:
+            # If we are at the end of the build queue, then add a default build
             self.add_next_default_build()
         else:
+            # Build the current build target
             await self.create_build_target(current_build_target)
 
 
@@ -518,12 +592,15 @@ class ResourceManager(Manager):
     * Worker harvester management
     * Queen injection
     * Queen creep spread
+    * Tumor creep spread
     """
 
     name = 'Resource Manager'
 
     def __init__(self, bot):
         super(ResourceManager, self).__init__(bot)
+
+        self._recent_commands = ExpiringList()
 
     async def manage_mineral_saturation(self):
         """
@@ -618,10 +695,31 @@ class ResourceManager(Manager):
         for queen in queens:
             if queen.energy > 25:
                 abilities = await self.bot.get_available_abilities(queen)
-                if const.AbilityId.EFFECT_INJECTLARVA in abilities:
-                    townhall = self.bot.townhalls.closest_to(queen.position)
-                    if townhall:
-                        self.bot.actions.append(queen(const.EFFECT_INJECTLARVA, townhall))
+
+                creep_tumors = self.bot.units({const.CREEPTUMOR, const.CREEPTUMORBURROWED})
+
+                if (not creep_tumors.exists or creep_tumors.amount == 5) and \
+                        not self._recent_commands.contains(ResourceManagerCommands.QUEEN_SPAWN_TUMOR,
+                                                           self.bot.state.game_loop):
+                    # Spawn creep tumor if we have none
+                    if const.BUILD_CREEPTUMOR_QUEEN in abilities:
+                        townhall = self.bot.townhalls.closest_to(queen.position)
+                        position = townhall.position.towards_with_random_angle(
+                            self.bot.enemy_start_location, random.randint(9, 11),
+                            max_difference=(math.pi / 2.2))
+
+                        self._recent_commands.add(
+                            ResourceManagerCommands.QUEEN_SPAWN_TUMOR,
+                            self.bot.state.game_loop, expiry=15)
+
+                        self.bot.actions.append(queen(const.BUILD_CREEPTUMOR_QUEEN, position))
+
+                else:
+                    # Inject larvae
+                    if const.EFFECT_INJECTLARVA in abilities:
+                        townhall = self.bot.townhalls.closest_to(queen.position)
+                        if townhall:
+                            self.bot.actions.append(queen(const.EFFECT_INJECTLARVA, townhall))
 
         for townhall in self.bot.townhalls:
             closest_queens = queens.closer_than(5, townhall)
@@ -634,9 +732,23 @@ class ResourceManager(Manager):
                 if other_townhalls.exists:
                     self.bot.actions.append(queen.move(other_townhalls.random))
 
+    async def manage_creep_tumors(self):
+        creep_tumors = self.bot.units({const.CREEPTUMORBURROWED})
+
+        for tumor in creep_tumors:
+            abilities = await self.bot.get_available_abilities(tumor)
+            if const.BUILD_CREEPTUMOR_TUMOR in abilities:
+                position = tumor.position.towards_with_random_angle(
+                    self.bot.enemy_start_location, random.randint(9, 11),
+                    max_difference=(math.pi / 2.2))
+
+                self.bot.actions.append(tumor(const.BUILD_CREEPTUMOR_TUMOR, position))
+
+
     async def run(self):
         await self.manage_resources()
         await self.manage_queens()
+        await self.manage_creep_tumors()
 
 
 class OverlordManager(StatefulManager):
@@ -756,6 +868,8 @@ class OverlordManager(StatefulManager):
                             if enemy_townhalls.exists:
                                 if enemy_townhalls.closer_than(4, enemy_natural_expansion):
                                     self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN)
+                                else:
+                                    self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
                             self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_BASE, value=overlord.position)
                             return await self.change_state(OverlordStates.INITIAL_BACKOUT)
                         else:
@@ -949,8 +1063,8 @@ class ForceManager(StatefulManager):
         nearby_target = self.get_nearby_to_target()
 
         # Search for another spot to move to
-        if not self.bot.in_pathing_grid(nearby_target):
-            nearby_target = self.bot.find_nearby_pathable_point(nearby_target)
+        # if not self.bot.in_pathing_grid(nearby_target):
+        nearby_target = self.bot.find_nearby_pathable_point(nearby_target)
 
         for unit in army:
             self.bot.actions.append(unit.attack(nearby_target))
@@ -1094,7 +1208,6 @@ class LambdaBot(sc2.BotAI):
         self.not_enemy_start_locations = None
 
     async def on_step(self, iteration):
-
         self.iteration = iteration
 
         if iteration == 0:
@@ -1168,7 +1281,7 @@ class LambdaBot(sc2.BotAI):
 
     def find_nearby_pathable_point(self, near: sc2.position.Point2) -> Union[None, sc2.position.Point2]:
         placement_step = 2
-        for distance in range(2, 20, 2):
+        for distance in range(2, 30, 2):
 
             possible_positions = [sc2.position.Point2(p).offset(near).to2 for p in (
                 [(dx, -distance) for dx in range(-distance, distance + 1, placement_step)] +
