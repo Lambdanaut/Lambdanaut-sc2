@@ -4,6 +4,7 @@ Class to add further constants from data_pb2
 
 import enum
 
+import sc2
 import sc2.constants as const
 from s2clientprotocol import data_pb2
 
@@ -28,8 +29,6 @@ ENEMY_NON_ARMY = \
     {const.OVERLORD, const.OVERSEER}
 
 
-
-
 # Value of different armies
 ZERG_ARMY_VALUE = \
     {const.ZERGLING: 2, const.BANELING: 8, const.ROACH: 8, const.RAVAGER: 10, const.HYDRALISK: 10, const.MUTALISK: 15,
@@ -41,6 +40,9 @@ TERRAN_ARMY_VALUE = \
 TERRAN_ARMY_VALUE = \
     {}
 
+
+TOWNHALLS = {townhall for subset in sc2.data.race_townhalls.values() for townhall in subset}
+
 # Attributes
 # {'Light': 1, 'Armored': 2, 'Biological': 3, 'Mechanical': 4,
 # 'Robotic': 5, 'Psionic': 6, 'Massive': 7, 'Structure': 8, 'Hover': 9,
@@ -50,15 +52,19 @@ ATTRIBUTES = dict(data_pb2.Attribute.items())
 
 # Messages
 class Messages(enum.Enum):
+    # ENEMY START LOCATION MESSAGES
     OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION = 0  # Message indicating that overlord scout was sent to empty base
     OVERLORD_SCOUT_FOUND_ENEMY_BASE = 1  # Message indicating that the army can't find enemy base
     ARMY_COULDNT_FIND_ENEMY_BASE = 2  # Message indicating that the army can't find enemy base
     ARMY_FOUND_ENEMY_BASE = 3  # Message indicating that the army can't find enemy base
 
+    # STRATEGIC NOTES MESSAGES
+    ENEMY_EARLY_NATURAL_EXPAND_TAKEN = 4
 
 # Build Manager Commands
 class BuildManagerCommands(enum.Enum):
     EXPAND_MOVE = 0  # Command to move to expansion before building
+    BUILD_OVERLORD = 1
 
 
 # Force Manager States

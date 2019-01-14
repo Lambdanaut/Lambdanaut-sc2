@@ -1,18 +1,26 @@
 from collections import Counter, defaultdict
+import importlib
 from typing import Any, Dict, List, Optional, Union
 
 import sc2
 import sc2.constants as const
 
+import lambdanaut
 import lambdanaut.builds as builds
 import lambdanaut.const2 as const2
 
 from lambdanaut.const2 import Messages, BuildManagerCommands, ForcesStates, OverlordStates
+from lambdanaut.builds import Builds, BUILD_MAPPING, DEFAULT_NEXT_BUILDS
 from lambdanaut.expiringlist import ExpiringList
 
 
-VERSION = '2.0'
-BUILD = builds.TWO_BASE_LING_RUSH
+VERSION = '2.2'
+BUILD = builds.EARLY_GAME_DEFAULT_OPENER
+
+# Reload imports
+importlib.reload(lambdanaut.const2)
+importlib.reload(lambdanaut.builds)
+importlib.reload(lambdanaut.expiringlist)
 
 
 def get_training_unit(unit):
@@ -187,7 +195,7 @@ class IntelManager(Manager):
                     new_enemy_start_location = enemy_start_locations[0]
                 except IndexError:
                     # This would indicate a bug where we were unable to find the enemy in any start location
-                    print('{}: bug while finding a new start location'.format(self.name, ))
+                    print("{}: Couldn't find enemy base in any start location".format(self.name, ))
                     continue
 
                 self.bot.enemy_start_location = new_enemy_start_location
@@ -206,7 +214,6 @@ class IntelManager(Manager):
 
                 self.bot.enemy_start_location = new_enemy_start_location
 
-
     async def run(self):
         await self.read_messages()
 
@@ -215,10 +222,19 @@ class BuildManager(Manager):
 
     name = 'Build Manager'
 
-    def __init__(self, bot, build_order=None):
+    def __init__(self, bot, starting_build):
         super(BuildManager, self).__init__(bot)
 
+        assert isinstance(starting_build, Builds)
+
         self.build_queue = []
+        self.builds = [starting_build]
+
+        self.build_target = None
+        self.last_build_target = None
+
+        # Message subscriptions
+        self.subscribe(Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN)
 
         # Dict with ttl so that we know what build commands were recently issued
         # For avoiding things like building two extractors when we needed 1
@@ -228,31 +244,82 @@ class BuildManager(Manager):
         # Recent commands issued. Uses constants defined in const2.py
         self._recent_commands = ExpiringList()
 
-        self.build_target = None
-        self.last_build_target = None
-
-        if build_order is not None:
-            self.load_build_order(build_order)
-
     def can_afford(self, unit):
         """Returns boolean indicating if the player has enough minerals,
         vespene, and supply to build the unit"""
 
         can_afford = self.bot.can_afford(unit)
-        return can_afford.can_afford_minerals and \
-               can_afford.can_afford_vespene and \
-               can_afford.have_enough_supply
+        return \
+            can_afford.can_afford_minerals and \
+            can_afford.can_afford_vespene and \
+            can_afford.have_enough_supply
 
-    def load_build_order(self, build_order: list):
-        self.build_queue = build_order
+    def add_build(self, build):
+        print("{}: Adding build order: \"{}\"".format(self.name, build.name))
 
-    def current_build_target(self):
+        assert isinstance(build, Builds)
+
+        self.builds.append(build)
+
+    def add_next_default_build(self):
+        next_default_build = DEFAULT_NEXT_BUILDS[self.builds[-1]]
+
+        if next_default_build is not None:
+            self.add_build(next_default_build)
+
+    def get_current_build_queue(self):
+        """Returns the current build queue"""
+
+        build_queue = []
+        for build in self.builds:
+            build_targets = BUILD_MAPPING[build]
+            build_queue += build_targets
+
+        return build_queue
+
+    def determine_new_build_order(self):
+        for message, val in self.messages.items():
+            pass
+
+    def overlord_is_build_target(self) -> bool:
+        """
+        Build Overlords automatically once the bot has built three or more
+        Overlords
+        """
+
+        # Calculate the supply coming from overlords in eggs
+        overlord_egg_count = len(
+            [True for egg in self.bot.units(const.EGG)
+             if get_training_unit(egg) == const.OVERLORD])
+        overlord_egg_supply = overlord_egg_count * 8  # Overlords provide 8 supply
+
+        supply_left = self.bot.supply_left + overlord_egg_supply
+
+        if supply_left < 2 + self.bot.supply_cap / 15:
+            # With a formula like this, At 30 supply cap it'll build an overlord
+            # when you have 5 supply left. At 60 supply cap it'll build an overlord
+            # when you have 7 supply left. This seems reasonable.
+
+            # Ensure we have over 3 overlords.
+            overlords = self.bot.units(const.OVERLORD)
+            if overlords.exists and overlords.amount >= 3:
+                return True
+
+        return False
+
+    def current_build_target(self, build_queue):
         """
         Goes through the build order one by one counting up all the units and
         stopping once we hit a unit we don't yet have
 
         :returns Unit Type or None
         """
+
+        if self.overlord_is_build_target():
+            unit = const.OVERLORD
+            self.last_build_target = self.build_target
+            self.build_target = unit
+            return unit
 
         # Count of existing units {unit.type_id: count}
         existing_unit_counts = Counter(map(lambda unit: unit.type_id, self.bot.units))
@@ -266,13 +333,15 @@ class BuildManager(Manager):
                                        for hatchery in self.bot.units(const.HATCHERY)])
 
         # Baneling Eggs count as banelings
-        baneling_eggs = Counter({const.BANELING: len(self.bot.units(const.EGG))})
+        baneling_eggs = Counter({const.BANELING: len(self.bot.units(const.BANELINGCOCOON))})
 
         # Overseer cocoons count as Overseers
         overseer_cocoons = Counter({const.OVERSEER: len(self.bot.units(const.OVERLORDCOCOON))})
 
-        # Units recently ordered to be built.
-        recent_build_orders = Counter(self._recent_build_orders.items(self.bot.iteration))
+        # Extractors without vespene left
+        empty_extractors = Counter({const.EXTRACTOR: len(
+            self.bot.units(const.EXTRACTOR).filter(lambda extr: extr.vespene_contents == 0))
+        })
 
         # Count of existing upgrades
         existing_upgrades = Counter(self.bot.state.upgrades)
@@ -280,17 +349,24 @@ class BuildManager(Manager):
         existing_unit_counts += units_in_eggs
         existing_unit_counts += units_being_trained
         existing_unit_counts += baneling_eggs
-        existing_unit_counts += recent_build_orders
+        existing_unit_counts += overseer_cocoons
+        existing_unit_counts -= empty_extractors  # Subtract empty extractors
         existing_unit_counts += existing_upgrades
 
         # Set the number of hatcheries to be the number of town halls
         # (We want to count Lairs and Hives as hatcheries too. They're all expansions)
         existing_unit_counts[const.HATCHERY] = len(self.bot.townhalls)
 
+        # Units recently ordered to be built.
+        # Must be counted after counting the amount of townhalls to prevent
+        # building multiple townhalls.
+        recent_build_orders = Counter(self._recent_build_orders.items(self.bot.state.game_loop))
+        existing_unit_counts += recent_build_orders
+
         # Count of units in build order up till this point {unit.type_id: count}
         build_order_counts = Counter()
 
-        for unit in self.build_queue:
+        for unit in build_queue:
             build_order_counts[unit] += 1
 
             if existing_unit_counts[unit] < build_order_counts[unit]:
@@ -302,15 +378,13 @@ class BuildManager(Manager):
 
         return None
 
-    async def create_build_target(self):
+    async def create_build_target(self, build_target):
         """
-        Main function that issues commands to build next build order target
+        Main function that issues commands to build a build order target
         """
 
-        if self.last_build_target != self.build_target:
-            print("Build target: {}".format(self.build_target))
-
-        build_target = self.current_build_target()
+        if self.last_build_target != build_target:
+            print("Build target: {}".format(build_target))
 
         # Check type of unit we're building to determine how to build
 
@@ -320,14 +394,14 @@ class BuildManager(Manager):
             if self.can_afford(build_target):
                 await self.bot.expand_now()
 
-                # Keep from issuing another expand command for 30 seconds
+                # Keep from issuing another expand command for 15 seconds
                 self._recent_build_orders.add(
-                    build_target, iteration=self.bot.iteration, expiry=30)
+                    build_target, iteration=self.bot.state.game_loop, expiry=15)
 
             # Move drone to expansion location before construction
             elif self.bot.state.common.minerals > 200 and \
                     not self._recent_commands.contains(
-                        BuildManagerCommands.EXPAND_MOVE, self.bot.iteration):
+                        BuildManagerCommands.EXPAND_MOVE, self.bot.state.game_loop):
                 if expansion_location:
                     nearest_drone = self.bot.units(const.DRONE).closest_to(expansion_location)
                     # Only move the drone to the expansion location if it's far away
@@ -337,7 +411,7 @@ class BuildManager(Manager):
 
                         # Keep from issuing another expand move command
                         self._recent_commands.add(
-                            BuildManagerCommands.EXPAND_MOVE, self.bot.iteration, expiry=10)
+                            BuildManagerCommands.EXPAND_MOVE, self.bot.state.game_loop, expiry=15)
 
         elif build_target == const.LAIR:
             # Get a hatchery
@@ -358,7 +432,7 @@ class BuildManager(Manager):
 
                     # Add structure order to recent build orders
                     if not err:
-                        self._recent_build_orders.add(build_target, iteration=self.bot.iteration, expiry=10)
+                        self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=5)
 
         elif build_target == const.QUEEN:
 
@@ -376,7 +450,7 @@ class BuildManager(Manager):
 
                 # Add structure order to recent build orders
                 if not err:
-                    self._recent_build_orders.add(build_target, iteration=self.bot.iteration, expiry=10)
+                    self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=10)
 
         elif build_target in const2.ZERG_UNITS_FROM_LARVAE:
             # Get a larvae
@@ -384,6 +458,12 @@ class BuildManager(Manager):
 
             # Train the unit
             if self.can_afford(build_target) and larvae.exists:
+                if build_target == const.OVERLORD:
+                    # Keep from issuing another overlord build command too soon
+                    # Overlords are built in 18 seconds.
+                    self._recent_commands.add(
+                        BuildManagerCommands.BUILD_OVERLORD, self.bot.state.game_loop, expiry=18)
+
                 self.bot.actions.append(larvae.random.train(build_target))
 
         elif build_target == const.BANELING:
@@ -392,7 +472,8 @@ class BuildManager(Manager):
 
             # Train the unit
             if self.can_afford(build_target) and zerglings.exists:
-                self.bot.actions.append(zerglings.random.train(build_target))
+                zergling = zerglings.closest_to(self.bot.start_location)
+                self.bot.actions.append(zergling.train(build_target))
 
         elif build_target == const.OVERSEER:
             # Get an overlord
@@ -409,7 +490,7 @@ class BuildManager(Manager):
                 err = self.bot.actions.append(sp.first(const.RESEARCH_ZERGLINGMETABOLICBOOST))
 
                 if not err:
-                    self._recent_build_orders.add(build_target, iteration=self.bot.iteration, expiry=200)
+                    self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=200)
 
         elif build_target == const.CENTRIFICALHOOKS:
             bn = self.bot.units(const.BANELINGNEST).ready
@@ -417,11 +498,17 @@ class BuildManager(Manager):
                 err = await self.bot.do(bn.first(const.RESEARCH_CENTRIFUGALHOOKS))
 
                 if not err:
-                    self._recent_build_orders.add(build_target, iteration=self.bot.iteration, expiry=200)
-
+                    self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=200)
 
     async def run(self):
-        return await self.create_build_target()
+        self.determine_new_build_order()
+        build_queue = self.get_current_build_queue()
+        current_build_target = self.current_build_target(build_queue)
+
+        if current_build_target is None:
+            self.add_next_default_build()
+        else:
+            await self.create_build_target(current_build_target)
 
 
 class ResourceManager(Manager):
@@ -471,7 +558,9 @@ class ResourceManager(Manager):
 
         # Move idle workers to mining
         for worker in self.bot.workers.idle:
-            townhall = self.bot.townhalls.closest_to(worker.position)
+            townhalls = self.bot.townhalls
+            if not townhalls.exists: return
+            townhall = townhalls.closest_to(worker.position)
             mineral = self.bot.state.mineral_field.closest_to(townhall)
 
             self.bot.actions.append(worker.gather(mineral))
@@ -596,8 +685,8 @@ class OverlordManager(StatefulManager):
 
     async def do_initial(self):
         """
-        We haven't seen any enemy structures yet
-        Move towards enemy's natural expansion
+        We haven't seen any enemy structures yet.
+        Move towards enemy's natural expansion.
         """
         await self.overlord_dispersal()
 
@@ -660,7 +749,13 @@ class OverlordManager(StatefulManager):
                 overlord = self.bot.units(const.OVERLORD).find_by_tag(overlord_tag)
                 if overlord:
                     if overlord.distance_to(enemy_natural_expansion) < 11:
-                        if enemy_structures.closer_than(12, overlord).exists:
+                        if enemy_structures.closer_than(12, overlord).exists and \
+                                self.bot.is_visible(enemy_natural_expansion):
+                            # Check if they took their natural expansion
+                            enemy_townhalls = enemy_structures.of_type(const2.TOWNHALLS)
+                            if enemy_townhalls.exists:
+                                if enemy_townhalls.closer_than(4, enemy_natural_expansion):
+                                    self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN)
                             self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_BASE, value=overlord.position)
                             return await self.change_state(OverlordStates.INITIAL_BACKOUT)
                         else:
@@ -781,8 +876,8 @@ class ForceManager(StatefulManager):
                 # Workers attack enemy
                 ground_enemies = enemies_nearby.not_flying
                 workers = self.bot.workers.closer_than(15, enemies_nearby.random.position)
-                if workers.exists and enemies_nearby.exists and \
-                        workers.amount > enemies_nearby.amount:
+                if workers.exists and ground_enemies.exists and \
+                        workers.amount > ground_enemies.amount:
                     for worker in workers:
                         if len(self.workers_defending) <= ground_enemies.amount:
                             if worker.tag not in self.workers_defending:
@@ -1009,7 +1104,8 @@ class LambdaBot(sc2.BotAI):
 
             # Load up managers
             self.intel_manager = IntelManager(self)
-            self.build_manager = BuildManager(self, build_order=BUILD)
+            self.build_manager = BuildManager(
+                self, starting_build=Builds.EARLY_GAME_DEFAULT_OPENER)
             self.resource_manager = ResourceManager(self)
             self.overlord_manager = OverlordManager(self)
             self.force_manager = ForceManager(self)

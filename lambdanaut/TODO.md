@@ -1,6 +1,6 @@
 # PROBLEMS AND SOLUTIONS
 
-# BUG
+* BUG
 
   * Sometimes the state will get stuck in "MOVING_TO_ATTACK" but no action will be taken and the game will be stuck in this state
 
@@ -8,6 +8,15 @@
 
   * Build orders in a tree structure rather than flat lists. Branches made depending on the state of the game.
       * Changing build order based on scouting information
+      * Builds early-game
+          * Basic macro-up ( Default )
+          * Ling Bane
+          * Roach Ravager
+      * Builds mid-game:
+          * Ling Bane Muta
+          * Roach Ravager Hydra
+      * Builds late-game
+
 
   * Overlord supply doesn't transfer between build orders.
 
@@ -16,6 +25,8 @@
 
 
 * MEDIUM PRIORITY
+  * Extractors that are depleted shouldn't count as extractors that we own.
+
   * Deal with hard walls. If an opponent hard-walls, it confuses the AI
     * Need to scout up closer to the base until the wall is seen. Not sure of implementation yet.
 

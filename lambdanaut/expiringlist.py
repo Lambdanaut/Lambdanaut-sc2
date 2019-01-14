@@ -63,7 +63,9 @@ class ExpiringList(object):
                 # Expired. Delete it
                 to_pop.append(i)
 
-        for i in to_pop:
+        # Delete the indexes in reverse order so that we don't throw off
+        # subsequent indexes
+        for i in sorted(to_pop, reverse=True):
             self.l.pop(i)
 
         return [item for item, iteration, expiry in self.l]
