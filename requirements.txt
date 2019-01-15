@@ -1,2 +1,1 @@
 sc2==0.10.8
-expiringdict==1.1.4
