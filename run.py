@@ -16,7 +16,7 @@ import lambdanaut.bot as bot
 datetime_str = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M")
 
 REALTIME = False
-DIFFICULTY = sc2.Difficulty.VeryHard
+DIFFICULTY = sc2.Difficulty.Easy
 # (4)DarknessSanctuaryLE
 # (2)16-BitLE
 MAP_NAME = "(2)16-BitLE"

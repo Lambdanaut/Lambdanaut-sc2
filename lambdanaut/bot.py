@@ -246,6 +246,7 @@ class BuildManager(Manager):
         self.subscribe(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_DEFENSIVE_STRUCTURES)
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY)
+        self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH)
 
         # Dict with ttl so that we know what build commands were recently issued
         # For avoiding things like building two extractors when we needed 1
@@ -316,9 +317,20 @@ class BuildManager(Manager):
                 self.add_build(Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS)
 
             # Messages indicating we need to defend an early aggression/rush
-            defensive_early_game = {Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY}
+            defensive_early_game = {
+                Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY,
+                Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH}
             if message in defensive_early_game:
                 self.ack(message)
+
+                # Cancel all constructing hatcheries
+                constructing_hatcheries = self.bot.units(const.HATCHERY).not_ready
+                if constructing_hatcheries.exists:
+                    print("{}: Cancelling all constructing hatcheries".format(self.name))
+                    for hatchery in constructing_hatcheries:
+                        self.bot.actions.append(hatchery(const.CANCEL))
+
+                # Switch to an defensive build
                 self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
 
             # Messages indicating roach_hydra mid game is ideal
@@ -390,6 +402,14 @@ class BuildManager(Manager):
         # Overseer cocoons count as Overseers
         overseer_cocoons = Counter({const.OVERSEER: len(self.bot.units(const.OVERLORDCOCOON))})
 
+        # Uprooted spine crawlers count as spine crawlers
+        spine_crawlers_uprooted = Counter({const.SPINECRAWLER: len(
+            self.bot.units(const.UnitTypeId.SPINECRAWLERUPROOTED))})
+
+        # Uprooted spore crawlers count as spine crawlers
+        spore_crawlers_uprooted = Counter({const.SPORECRAWLER: len(
+            self.bot.units(const.UnitTypeId.SPORECRAWLERUPROOTED))})
+
         # Extractors without vespene left
         empty_extractors = Counter({const.EXTRACTOR: len(
             self.bot.units(const.EXTRACTOR).filter(lambda extr: extr.vespene_contents == 0))
@@ -404,6 +424,8 @@ class BuildManager(Manager):
         existing_unit_counts += ravager_cocoons
         existing_unit_counts += lurker_eggs
         existing_unit_counts += overseer_cocoons
+        existing_unit_counts += spine_crawlers_uprooted
+        existing_unit_counts += spore_crawlers_uprooted
         existing_unit_counts -= empty_extractors  # Subtract empty extractors
         existing_unit_counts += existing_upgrades
 
@@ -505,13 +527,19 @@ class BuildManager(Manager):
             if hydralisk_dens.exists:
                 self.bot.actions.append(hydralisk_dens.random.build(build_target))
 
-        elif build_target == const.QUEEN:
+        elif build_target == const.SPINECRAWLER:
+            townhalls = self.bot.townhalls.ready
 
-            idle_hatcheries = self.bot.units(const.HATCHERY).idle
+            if townhalls.exists:
+                if self.can_afford(build_target):
+                    enemy_start_location = self.bot.enemy_start_location
+                    townhall = townhalls.closest_to(enemy_start_location)
 
-            if self.can_afford(build_target) and idle_hatcheries.exists:
-                self.bot.actions.append(
-                    idle_hatcheries.random.train(build_target))
+                    direction_of_enemy = townhall.position.towards_with_random_angle(enemy_start_location, 10)
+
+                    await self.bot.build(build_target, near=direction_of_enemy)
+
+                    self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=10)
 
         elif build_target in const2.ZERG_STRUCTURES_FROM_DRONES:
             townhalls = self.bot.townhalls.ready
@@ -519,11 +547,33 @@ class BuildManager(Manager):
             if townhalls.exists:
                 if self.can_afford(build_target):
                     townhall = townhalls.first
-                    err = await self.bot.build(build_target, near=townhall)
+                    location = townhall.position
+
+                    # Attempt to build the structure away from the nearest minerals
+                    nearest_minerals = self.bot.state.mineral_field.closer_than(8, townhall)
+                    nearest_gas = self.bot.state.vespene_geyser.closer_than(8, townhall)
+                    nearest_resources = nearest_minerals | nearest_gas
+                    if nearest_resources.exists:
+
+                        away_from_resources = townhall.position.towards_with_random_angle(
+                            nearest_resources.center, random.randint(-16, -6),
+                            max_difference=(math.pi / 2.2),
+                        )
+                        location = away_from_resources
+
+                    err = await self.bot.build(build_target, near=location)
 
                     # Add structure order to recent build orders
                     if not err:
                         self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=10)
+
+        elif build_target == const.QUEEN:
+
+            idle_hatcheries = self.bot.units(const.HATCHERY).idle
+
+            if self.can_afford(build_target) and idle_hatcheries.exists:
+                self.bot.actions.append(
+                    idle_hatcheries.random.train(build_target))
 
         elif build_target in const2.ZERG_UNITS_FROM_LARVAE:
             # Get a larvae
@@ -554,7 +604,7 @@ class BuildManager(Manager):
                 self.bot.actions.append(zergling.train(build_target))
 
         elif build_target == const.RAVAGER:
-            # Get a zergling
+            # Get a Roach
             roaches = self.bot.units(const.ROACH)
 
             # Train the unit
@@ -587,7 +637,8 @@ class BuildManager(Manager):
 
             # Train the unit
             if self.can_afford(build_target) and overlords.exists:
-                self.bot.actions.append(overlords.random.train(build_target))
+                overlord = overlords.closest_to(self.bot.start_location)
+                self.bot.actions.append(overlord.train(build_target))
 
         # Upgrades below
         elif build_target in const2.ZERG_UPGRADES_TO_ABILITY:
@@ -810,6 +861,10 @@ class OverlordManager(StatefulManager):
         self.proxy_scouting_overlord_tag = None
         self.third_expansion_scouting_overlord_tag = None
 
+        # Flag for if we find an enemy proxy or rush
+        self.enemy_proxy_found = False
+        self.proxy_search_concluded = False
+
         # Tags of overlords with creep turned on
         self.overlord_tags_with_creep_turned_on = set()
 
@@ -867,24 +922,50 @@ class OverlordManager(StatefulManager):
 
                 # Move Overlord around different expansion locations
                 expansion_locations = self.bot.get_expansion_positions()
-                for expansion_location in expansion_locations[2:6]:
+                for expansion_location in expansion_locations[2:5]:
                     self.bot.actions.append(overlord.move(expansion_location, queue=True))
 
                 try:
-                    sixth_expansion = expansion_locations[7]
-                    self.bot.actions.append(overlord.move(sixth_expansion, queue=True))
+                    # This is the expected enemy 5th expand location
+                    enemy_fifth_expansion = expansion_locations[-5]
+                    self.bot.actions.append(overlord.move(enemy_fifth_expansion, queue=True))
                     self.bot.actions.append(overlord.stop(queue=True))
                 except IndexError:
-                    # A sixth expansion doesn't exist
+                    # The indexed expansion doesn't exist
                     pass
         else:
-            if overlords.exists:
+            if not self.enemy_proxy_found and not self.proxy_search_concluded and overlords.exists:
                 scouting_overlord = overlords.find_by_tag(self.proxy_scouting_overlord_tag)
                 if scouting_overlord:
                     # Report enemy proxies
                     enemy_structures = self.bot.known_enemy_structures
-                    if enemy_structures.closer_than(55, self.bot.start_location).exists:
+                    if enemy_structures.closer_than(70, self.bot.start_location).exists:
+                        self.enemy_proxy_found = True
                         self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY)
+
+                    # Report enemy rushes
+                    enemy_units = self.bot.units.enemy.not_structure
+                    if not enemy_units.exists:
+                        nearby_enemy_units = enemy_units.closer_than(70, self.bot.start_location)
+                        enemy_workers = nearby_enemy_units.of_type(const2.WORKERS)
+                        if enemy_workers.exists and enemy_workers.amount > 2:
+                            self.enemy_proxy_found = True
+                            self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH)
+
+                    # End early scouting process if we've reached the enemy expansion and
+                    # haven't seen proxies
+                    expansion_locations = self.bot.get_expansion_positions()
+                    try:
+                        # This is the expected enemy 5th expand location where the overlord is headed
+                        enemy_fifth_expansion = expansion_locations[-5]
+                        if scouting_overlord.distance_to(enemy_fifth_expansion) < 8:
+                            self.proxy_search_concluded = True
+                            self.publish(Messages.OVERLORD_SCOUT_FOUND_NO_RUSH)
+
+                    except IndexError:
+                        # The indexed expansion doesn't exist
+                        pass
+
                 else:
                     # Overlord has died :(  (Or become a beautiful Overseer :) )
                     self.proxy_scouting_overlord_tag = None
@@ -956,15 +1037,12 @@ class OverlordManager(StatefulManager):
         await self.overlord_dispersal()
         await self.overlord_flee()
 
-    async def start_suicide_dive(self):
-
+    async def do_suicide_dive(self):
         overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
         if overlord:
+            enemy_natural_expansion = self.bot.get_enemy_natural_expansion()
             self.bot.actions.append(
-                overlord.move(self.bot.enemy_start_location.position))
-
-    async def do_suicide_dive(self):
-        await self.overlord_dispersal()
+                overlord.move(self.bot.enemy_start_location, queue=True))
 
     async def start_initial_dive(self):
         overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
@@ -1007,6 +1085,8 @@ class OverlordManager(StatefulManager):
                         if enemy_townhalls.exists:
                             if enemy_townhalls.closer_than(4, enemy_natural_expansion):
                                 self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN)
+                            else:
+                                self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
                         else:
                             self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
                         self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_BASE, value=overlord.position)
@@ -1015,7 +1095,11 @@ class OverlordManager(StatefulManager):
                         await self.change_state(OverlordStates.INITIAL_DIVE)
 
         elif self.state == OverlordStates.INITIAL_BACKOUT:
-            pass
+            # If we didn't find an enemy proxy/rush, and the search is off
+            # Then suicide dive in to get more information
+            if not self.enemy_proxy_found and self.proxy_search_concluded:
+                if self.bot.known_enemy_structures.amount < 4:
+                    await self.change_state(OverlordStates.SUICIDE_DIVE)
 
         elif self.state == OverlordStates.INITIAL_DIVE:
             enemy_structures = self.bot.known_enemy_structures
@@ -1187,7 +1271,7 @@ class ForceManager(StatefulManager):
                 # Have army defend
                 nearby_army = self.bot.units().filter(
                     lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS).\
-                    closer_than(50, th.position)
+                    closer_than(65, th.position)
 
                 for unit in nearby_army:
                     target = enemies_nearby.closest_to(unit)
@@ -1385,11 +1469,40 @@ class MicroManager(StatefulManager):
                         lambda unit: ravager.distance_to(unit), reverse=True):
                     our_closest_unit_to_enemy = self.bot.units().closest_to(enemy_unit)
                     if our_closest_unit_to_enemy.distance_to(enemy_unit) > 1:
-                        self.bot.actions.append(ravager(const.AbilityId.EFFECT_CORROSIVEBILE, enemy_unit.position))
+                        self.bot.actions.append(ravager(const.EFFECT_CORROSIVEBILE, enemy_unit.position))
                         break
+
+    async def manage_spine_crawlers(self):
+        rooted_spine_crawlers = self.bot.units(const.SPINECRAWLER)
+        uprooted_spine_crawlers = self.bot.units(const.SPINECRAWLERUPROOTED)
+        spine_crawlers = rooted_spine_crawlers | uprooted_spine_crawlers
+        townhalls = self.bot.townhalls.ready
+
+        if spine_crawlers.exists:
+            if townhalls.exists:
+                townhall = townhalls.closest_to(self.bot.enemy_start_location)
+                nearby_spine_crawlers = spine_crawlers.closer_than(22, townhall)
+
+                # Unroot spine crawlers that are far away from the front expansions
+                if not nearby_spine_crawlers.exists or (
+                        nearby_spine_crawlers.exists and nearby_spine_crawlers.amount < spine_crawlers.amount / 2):
+
+                    for sc in rooted_spine_crawlers:
+                        self.bot.actions.append(sc(const.AbilityId.SPINECRAWLERUPROOT_SPINECRAWLERUPROOT))
+
+                # Root unrooted spine crawlers near the front expansions
+                for sc in uprooted_spine_crawlers:
+                    near_townhall = townhall.position.towards_with_random_angle(
+                        self.bot.enemy_start_location, 10, max_difference=(math.pi / 3.0))
+                    position = await self.bot.find_placement(
+                        const.SPINECRAWLER, near_townhall, max_distance=20)
+
+                    self.bot.actions.append(
+                        sc(const.AbilityId.SPINECRAWLERROOT_SPINECRAWLERROOT, position))
 
     async def run(self):
         await self.manage_ravagers()
+        await self.manage_spine_crawlers()
 
 
 class LambdaBot(sc2.BotAI):
