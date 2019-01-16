@@ -5,7 +5,6 @@ import sys
 
 import sc2
 from __init__ import run_ladder_game
-from sc2 import Race, Difficulty
 
 # Lib holds
 sys.path.append('lib/')
@@ -21,8 +20,8 @@ DIFFICULTY = sc2.Difficulty.VeryHard
 # (2)16-BitLE
 # KairosJunctionLE
 MAP_NAME = "KairosJunctionLE"
-RACE = Race.Zerg
-ENEMY_RACE = Race.Zerg
+RACE = sc2.Race.Zerg
+ENEMY_RACE = sc2.Race.Terran
 REPLAY_NAME = os.path.join("replays", "last_lambdanaut_replay{}.*.sc2replay".format(datetime_str))
 
 
