@@ -563,7 +563,7 @@ class BuildManager(Manager):
 
                         away_from_resources = townhall.position.towards_with_random_angle(
                             nearest_resources.center, random.randint(-16, -6),
-                            max_difference=(math.pi / 2.2),
+                            max_difference=(math.pi / 2.1),
                         )
                         location = away_from_resources
 
@@ -945,7 +945,7 @@ class OverlordManager(StatefulManager):
                 if scouting_overlord:
                     # Report enemy proxies
                     enemy_structures = self.bot.known_enemy_structures
-                    if enemy_structures.closer_than(70, self.bot.start_location).exists:
+                    if enemy_structures.closer_than(90, self.bot.start_location).exists:
                         self.enemy_proxy_found = True
                         self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY)
 
@@ -960,7 +960,7 @@ class OverlordManager(StatefulManager):
                             # Found enemy worker rush
                             self.enemy_proxy_found = True
                             self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH)
-                        elif nearby_enemy_units.exists and nearby_enemy_units.amount > 2:
+                        elif nearby_enemy_units.exists and nearby_enemy_units.amount > 1:
                             # Found enemy non-worker rush
                             self.enemy_proxy_found = True
                             self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH)
