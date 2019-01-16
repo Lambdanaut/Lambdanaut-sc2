@@ -2,7 +2,7 @@ from collections import Counter, defaultdict
 from itertools import takewhile
 import math
 import random
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import sc2
 import sc2.constants as const
@@ -161,8 +161,8 @@ class IntelManager(Manager):
     Class for reading incoming pubsub messages and making adjustments to the intel
     held in the bot class.
 
-    This is the only class with permission to directly edit variables in
-    the Lambdanaut class.
+    This is the only class with permission to directly access and edit variables in
+    the Lambdanaut class and other managers.
     """
 
     name = 'Intel Manager'
@@ -230,13 +230,13 @@ class BuildManager(Manager):
 
         assert isinstance(starting_build, Builds)
 
-        self.build_queue = []
         self.builds = [
             starting_build,
             None,
             None,
             None
         ]
+        self.build_stage = builds.get_build_stage(starting_build)
 
         self.build_target = None
         self.last_build_target = None
@@ -245,6 +245,7 @@ class BuildManager(Manager):
         self.subscribe(Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN)
         self.subscribe(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_DEFENSIVE_STRUCTURES)
+        self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY)
 
         # Dict with ttl so that we know what build commands were recently issued
         # For avoiding things like building two extractors when we needed 1
@@ -314,6 +315,13 @@ class BuildManager(Manager):
                 self.ack(message)
                 self.add_build(Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS)
 
+            # Messages indicating we need to defend an early aggression/rush
+            defensive_early_game = {Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY}
+            if message in defensive_early_game:
+                self.ack(message)
+                self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
+
+            # Messages indicating roach_hydra mid game is ideal
             roach_hydra_mid_game = {Messages.OVERLORD_SCOUT_FOUND_ENEMY_DEFENSIVE_STRUCTURES}
             if message in roach_hydra_mid_game:
                 self.ack(message)
@@ -333,9 +341,9 @@ class BuildManager(Manager):
 
         supply_left = self.bot.supply_left + overlord_egg_supply
 
-        if supply_left < 2 + self.bot.supply_cap / 15:
-            # With a formula like this, At 30 supply cap it'll build an overlord
-            # when you have 5 supply left. At 60 supply cap it'll build an overlord
+        if supply_left < 2 + self.bot.supply_cap / 10:
+            # With a formula like this, At 20 supply cap it'll build an overlord
+            # when you have 5 supply left. At 40 supply cap it'll build an overlord
             # when you have 7 supply left. This seems reasonable.
 
             # Ensure we have over 3 overlords.
@@ -345,7 +353,7 @@ class BuildManager(Manager):
 
         return False
 
-    def current_build_target(self, build_queue):
+    def current_build_target(self) -> const.UnitTypeId:
         """
         Goes through the build order one by one counting up all the units and
         stopping once we hit a unit we don't yet have
@@ -412,15 +420,24 @@ class BuildManager(Manager):
         # Count of units in build order up till this point {unit.type_id: count}
         build_order_counts = Counter()
 
-        for unit in build_queue:
-            build_order_counts[unit] += 1
+        # Go through each build looking for the unit we don't have
+        for build in self.builds:
+            if build is None:
+                return None
 
-            if existing_unit_counts[unit] < build_order_counts[unit]:
-                # Found build target
-                self.last_build_target = self.build_target
-                self.build_target = unit
+            build_queue = builds.BUILD_MAPPING[build]
+            build_stage = builds.get_build_stage(build)
 
-                return unit
+            for unit in build_queue:
+                build_order_counts[unit] += 1
+
+                if existing_unit_counts[unit] < build_order_counts[unit]:
+                    # Found build target
+                    self.last_build_target = self.build_target
+                    self.build_target = unit
+                    self.build_stage = build_stage
+
+                    return unit
 
         return None
 
@@ -581,47 +598,13 @@ class BuildManager(Manager):
                 self.bot.actions.append(upgrade_structure.first(upgrade_ability))
 
                 self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=200)
-        #
-        # elif build_target == const.CENTRIFICALHOOKS:
-        #     bn = self.bot.units(const.BANELINGNEST).ready
-        #     if self.can_afford(build_target) and bn.exists:
-        #         self.bot.actions.append(bn.first(const.RESEARCH_CENTRIFUGALHOOKS))
-        #
-        #         self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=200)
-        #
-        # elif build_target == const.GLIALRECONSTITUTION:
-        #     rw = self.bot.units(const.ROACHWARREN).ready
-        #     if self.can_afford(build_target) and rw.exists:
-        #         self.bot.actions.append(rw.first(const.RESEARCH_GLIALREGENERATION))
-        #
-        #         self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=200)
-        #
-        # elif build_target in {
-        #         const.ZERGMELEEWEAPONSLEVEL1, const.ZERGMELEEWEAPONSLEVEL2, const.ZERGMELEEWEAPONSLEVEL3,
-        #         const.ZERGGROUNDARMORSLEVEL1, const.ZERGGROUNDARMORSLEVEL2, const.ZERGGROUNDARMORSLEVEL3,
-        #         const.ZERGMISSILEWEAPONSLEVEL1, const.ZERGMISSILEWEAPONSLEVEL2, const.ZERGMISSILEWEAPONSLEVEL3,}:
-        #     ec = self.bot.units(const.EVOLUTIONCHAMBER).ready.idle
-        #     if self.can_afford(build_target) and ec.exists:
-        #         self.bot.actions.append(ec.first(const2.ZERG_UPGRADES_TO_ABILITY[build_target]))
-        #
-        #         self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=200)
-        #
-        # elif build_target in {
-        #         const.ZERGFLYERWEAPONSLEVEL1, const.ZERGFLYERWEAPONSLEVEL3, const.ZERGFLYERWEAPONSLEVEL3,
-        #         const.ZERGFLYERARMORSLEVEL1, const.ZERGFLYERARMORSLEVEL2, const.ZERGFLYERARMORSLEVEL3}:
-        #     spire = self.bot.units(const.SPIRE).ready.idle
-        #     if self.can_afford(build_target) and spire.exists:
-        #         self.bot.actions.append(spire.first(const2.ZERG_UPGRADES_TO_ABILITY[build_target]))
-        #
-        #         self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=200)
 
     async def run(self):
         # Read messages and act on them
         await self.read_messages()
 
         # Get the current build target
-        build_queue = self.get_current_build_queue()
-        current_build_target = self.current_build_target(build_queue)
+        current_build_target = self.current_build_target()
 
         if current_build_target is None:
             # If we are at the end of the build queue, then add a default build
@@ -737,46 +720,47 @@ class ResourceManager(Manager):
 
     async def manage_queens(self):
         queens = self.bot.units(const.QUEEN).idle
+        townhalls = self.bot.townhalls
 
-        for queen in queens:
-            if queen.energy > 25:
-                abilities = await self.bot.get_available_abilities(queen)
+        if townhalls.exists:
+            for queen in queens:
+                if queen.energy > 25:
+                    abilities = await self.bot.get_available_abilities(queen)
 
-                creep_tumors = self.bot.units({const.CREEPTUMOR, const.CREEPTUMORBURROWED})
+                    creep_tumors = self.bot.units({const.CREEPTUMOR, const.CREEPTUMORBURROWED})
 
-                if (not creep_tumors.exists or creep_tumors.amount == 5) and \
-                        not self._recent_commands.contains(ResourceManagerCommands.QUEEN_SPAWN_TUMOR,
-                                                           self.bot.state.game_loop):
-                    # Spawn creep tumor if we have none
-                    if const.BUILD_CREEPTUMOR_QUEEN in abilities:
-                        townhall = self.bot.townhalls.closest_to(queen.position)
-                        position = townhall.position.towards_with_random_angle(
-                            self.bot.enemy_start_location, random.randint(9, 11),
-                            max_difference=(math.pi / 2.2))
+                    if (not creep_tumors.exists or creep_tumors.amount == 5) and \
+                            not self._recent_commands.contains(ResourceManagerCommands.QUEEN_SPAWN_TUMOR,
+                                                               self.bot.state.game_loop):
+                        # Spawn creep tumor if we have none
+                        if const.BUILD_CREEPTUMOR_QUEEN in abilities:
+                            townhall = townhalls.closest_to(queen.position)
+                            position = townhall.position.towards_with_random_angle(
+                                self.bot.enemy_start_location, random.randint(9, 11),
+                                max_difference=(math.pi / 2.2))
 
-                        self._recent_commands.add(
-                            ResourceManagerCommands.QUEEN_SPAWN_TUMOR,
-                            self.bot.state.game_loop, expiry=15)
+                            self._recent_commands.add(
+                                ResourceManagerCommands.QUEEN_SPAWN_TUMOR,
+                                self.bot.state.game_loop, expiry=15)
 
-                        self.bot.actions.append(queen(const.BUILD_CREEPTUMOR_QUEEN, position))
+                            self.bot.actions.append(queen(const.BUILD_CREEPTUMOR_QUEEN, position))
 
-                else:
-                    # Inject larvae
-                    if const.EFFECT_INJECTLARVA in abilities:
-                        townhall = self.bot.townhalls.closest_to(queen.position)
-                        if townhall:
-                            self.bot.actions.append(queen(const.EFFECT_INJECTLARVA, townhall))
+                    else:
+                        # Inject larvae
+                        if const.EFFECT_INJECTLARVA in abilities:
+                            closest_townhall = townhalls.closest_to(queen.position)
+                            self.bot.actions.append(queen(const.EFFECT_INJECTLARVA, closest_townhall))
 
-        for townhall in self.bot.townhalls:
-            closest_queens = queens.closer_than(5, townhall)
+            for townhall in townhalls:
+                closest_queens = queens.closer_than(5, townhall)
 
-            # Move all but the closest queen to a random townhall
-            second_closest_queens = closest_queens[1:]
-            for queen in second_closest_queens:
-                other_townhalls = self.bot.townhalls.filter(
-                    lambda th: th.tag != townhall.tag)
-                if other_townhalls.exists:
-                    self.bot.actions.append(queen.move(other_townhalls.random))
+                # Move all but the closest queen to a random townhall
+                second_closest_queens = closest_queens[1:]
+                for queen in second_closest_queens:
+                    other_townhalls = self.bot.townhalls.filter(
+                        lambda th: th.tag != townhall.tag)
+                    if other_townhalls.exists:
+                        self.bot.actions.append(queen.move(other_townhalls.random))
 
     async def manage_creep_tumors(self):
         creep_tumors = self.bot.units({const.CREEPTUMORBURROWED})
@@ -820,14 +804,37 @@ class OverlordManager(StatefulManager):
             OverlordStates.INITIAL_DIVE: self.start_initial_dive,
         }
 
-        # Set of overlords used for scouting
-        self.scouting_overlords = {self.bot.units(const.OVERLORD).first.tag}
+        # Overlords used for scouting
+        # These must be added to the set in scouting_overlord_tags()
+        self.scouting_overlord_tag = self.bot.units(const.OVERLORD).first.tag
+        self.proxy_scouting_overlord_tag = None
+        self.third_expansion_scouting_overlord_tag = None
+
+        # Tags of overlords with creep turned on
+        self.overlord_tags_with_creep_turned_on = set()
+
+    @property
+    def scouting_overlord_tags(self):
+        return {self.scouting_overlord_tag,
+                self.proxy_scouting_overlord_tag,
+                self.third_expansion_scouting_overlord_tag}
+
+    async def turn_on_generate_creep(self):
+        # Spread creep on last scouted expansion location like a fucking dick head
+        if self.bot.units({const.LAIR, const.HIVE}).exists:
+            overlords = self.bot.units(const.OVERLORD)
+            if overlords.exists:
+                for overlord in overlords.filter(
+                        lambda o: o.tag not in self.overlord_tags_with_creep_turned_on):
+                    self.overlord_tags_with_creep_turned_on.add(overlord.tag)
+                    self.bot.actions.append(
+                        overlord(const.AbilityId.BEHAVIOR_GENERATECREEPON))
 
     async def overlord_dispersal(self):
         """
         Disperse Overlords evenly around base
         """
-        overlords = self.bot.units(const.OVERLORD)
+        overlords = self.bot.units(const.OVERLORD).filter(lambda o: o.tag not in self.scouting_overlord_tags)
 
         for overlord in overlords:
             other_overlords = overlords.filter(lambda o: o.tag != overlord.tag)
@@ -840,6 +847,62 @@ class OverlordManager(StatefulManager):
                 if 11*2.3 > distance:
                     away_from_other_overlord = overlord.position.towards(closest_overlord.position, -1)
                     self.bot.actions.append(overlord.move(away_from_other_overlord))
+
+    async def proxy_scout_with_second_overlord(self):
+        overlords = self.bot.units(const.OVERLORD)
+
+        if self.proxy_scouting_overlord_tag is None:
+            if overlords.exists and overlords.amount == 2:
+                overlord = overlords.filter(lambda ov: ov.tag not in self.scouting_overlord_tags).first
+                self.proxy_scouting_overlord_tag = overlord.tag
+
+                expansion_location = await self.bot.get_next_expansion()
+
+                overlord_mov_pos_1 = expansion_location.towards(self.bot.enemy_start_location, +10)
+                overlord_mov_pos_2 = expansion_location.towards(self.bot.enemy_start_location, -3)
+
+                # Move Overlord around the natural expansion
+                self.bot.actions.append(overlord.move(overlord_mov_pos_1, queue=True))
+                self.bot.actions.append(overlord.move(overlord_mov_pos_2, queue=True))
+
+                # Move Overlord around different expansion locations
+                expansion_locations = self.bot.get_expansion_positions()
+                for expansion_location in expansion_locations[2:6]:
+                    self.bot.actions.append(overlord.move(expansion_location, queue=True))
+
+                try:
+                    sixth_expansion = expansion_locations[7]
+                    self.bot.actions.append(overlord.move(sixth_expansion, queue=True))
+                    self.bot.actions.append(overlord.stop(queue=True))
+                except IndexError:
+                    # A sixth expansion doesn't exist
+                    pass
+        else:
+            if overlords.exists:
+                scouting_overlord = overlords.find_by_tag(self.proxy_scouting_overlord_tag)
+                if scouting_overlord:
+                    # Report enemy proxies
+                    enemy_structures = self.bot.known_enemy_structures
+                    if enemy_structures.closer_than(55, self.bot.start_location).exists:
+                        self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY)
+                else:
+                    # Overlord has died :(  (Or become a beautiful Overseer :) )
+                    self.proxy_scouting_overlord_tag = None
+
+    async def scout_enemy_third_expansion_with_third_overlord(self):
+        overlords = self.bot.units(const.OVERLORD)
+
+        if self.third_expansion_scouting_overlord_tag is None:
+            if overlords.exists and overlords.amount == 3:
+                overlord = overlords.filter(lambda ov: ov.tag not in self.scouting_overlord_tags).first
+                self.third_expansion_scouting_overlord_tag = overlord.tag
+
+                enemy_expansion_locations = self.bot.get_enemy_expansion_positions()
+                third_and_fourth_expansions = enemy_expansion_locations[2:4]
+
+                # Move Overlord around different expansion locations
+                for expansion_location in third_and_fourth_expansions:
+                    self.bot.actions.append(overlord.move(expansion_location, queue=True))
 
     async def overlord_flee(self):
         """
@@ -857,7 +920,6 @@ class OverlordManager(StatefulManager):
                     away_from_enemy = overlord.position.towards(nearby_enemy_unit, -1)
                     self.bot.actions.append(overlord.move(away_from_enemy))
 
-
     async def do_initial(self):
         """
         We haven't seen any enemy structures yet.
@@ -870,11 +932,10 @@ class OverlordManager(StatefulManager):
 
         enemy_natural_expansion = self.bot.get_enemy_natural_expansion()
 
-        for overlord_tag in self.scouting_overlords:
-            overlord = self.bot.units(const.OVERLORD).find_by_tag(overlord_tag)
-            if overlord:
-                # Move towards natural expansion
-                self.bot.actions.append(overlord.move(enemy_natural_expansion))
+        overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
+        if overlord:
+            # Move towards natural expansion
+            self.bot.actions.append(overlord.move(enemy_natural_expansion))
 
     async def start_initial_backout(self):
         """
@@ -884,13 +945,12 @@ class OverlordManager(StatefulManager):
 
         enemy_natural_expansion = self.bot.get_enemy_natural_expansion()
 
-        for overlord_tag in self.scouting_overlords:
-            overlord = self.bot.units(const.OVERLORD).find_by_tag(overlord_tag)
-            if overlord:
-                # Move in closer towards main
-                away_from_enemy_natural_expansion = \
-                    enemy_natural_expansion.position.towards(self.bot.start_location, +22)
-                self.bot.actions.append(overlord.move(away_from_enemy_natural_expansion))
+        overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
+        if overlord:
+            # Move in closer towards main
+            away_from_enemy_natural_expansion = \
+                enemy_natural_expansion.position.towards(self.bot.start_location, +22)
+            self.bot.actions.append(overlord.move(away_from_enemy_natural_expansion))
 
     async def do_initial_backout(self):
         await self.overlord_dispersal()
@@ -898,21 +958,19 @@ class OverlordManager(StatefulManager):
 
     async def start_suicide_dive(self):
 
-        for overlord_tag in self.scouting_overlords:
-            overlord = self.bot.units(const.OVERLORD).find_by_tag(overlord_tag)
-            if overlord:
-                self.bot.actions.append(
-                    overlord.move(self.bot.enemy_start_location.position))
+        overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
+        if overlord:
+            self.bot.actions.append(
+                overlord.move(self.bot.enemy_start_location.position))
 
     async def do_suicide_dive(self):
         await self.overlord_dispersal()
 
     async def start_initial_dive(self):
-        for overlord_tag in self.scouting_overlords:
-            overlord = self.bot.units(const.OVERLORD).find_by_tag(overlord_tag)
-            if overlord:
-                self.bot.actions.append(
-                    overlord.move(self.bot.enemy_start_location.position))
+        overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
+        if overlord:
+            self.bot.actions.append(
+                overlord.move(self.bot.enemy_start_location.position))
 
     async def do_initial_dive(self):
         await self.overlord_dispersal()
@@ -923,79 +981,84 @@ class OverlordManager(StatefulManager):
             enemy_structures = self.bot.known_enemy_structures
             enemy_natural_expansion = self.bot.get_enemy_natural_expansion()
 
-            for overlord_tag in self.scouting_overlords:
-                overlord = self.bot.units(const.OVERLORD).find_by_tag(overlord_tag)
-                if overlord:
-                    distance_to_expansion = overlord.distance_to(enemy_natural_expansion)
+            overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
+            if overlord:
+                distance_to_expansion = overlord.distance_to(enemy_natural_expansion)
 
-                    if distance_to_expansion < 18:
-                        # Take note of enemy defensive structures sited
-                        enemy_defensive_structures_types = {const.PHOTONCANNON, const.SPINECRAWLER}
-                        nearby_enemy_defensive_structures = enemy_structures.of_type(
-                            enemy_defensive_structures_types).closer_than(15, overlord)
-                        if nearby_enemy_defensive_structures.exists:
-                            closest_enemy_defensive_structure = \
-                                nearby_enemy_defensive_structures.closest_to(overlord)
-                            self.publish(
-                                Messages.OVERLORD_SCOUT_FOUND_ENEMY_DEFENSIVE_STRUCTURES,
-                                value=closest_enemy_defensive_structure.position)
+                if distance_to_expansion < 18:
+                    # Take note of enemy defensive structures sited
+                    enemy_defensive_structures_types = {const.PHOTONCANNON, const.SPINECRAWLER}
+                    nearby_enemy_defensive_structures = enemy_structures.of_type(
+                        enemy_defensive_structures_types).closer_than(15, overlord)
+                    if nearby_enemy_defensive_structures.exists:
+                        closest_enemy_defensive_structure = \
+                            nearby_enemy_defensive_structures.closest_to(overlord)
+                        self.publish(
+                            Messages.OVERLORD_SCOUT_FOUND_ENEMY_DEFENSIVE_STRUCTURES,
+                            value=closest_enemy_defensive_structure.position)
 
-                            await self.change_state(OverlordStates.INITIAL_BACKOUT)
+                        await self.change_state(OverlordStates.INITIAL_BACKOUT)
 
-                    if distance_to_expansion < 11:
-                        if enemy_structures.closer_than(12, overlord).exists and \
-                                self.bot.is_visible(enemy_natural_expansion):
-                            # Check if they took their natural expansion
-                            enemy_townhalls = enemy_structures.of_type(const2.TOWNHALLS)
-                            if enemy_townhalls.exists:
-                                if enemy_townhalls.closer_than(4, enemy_natural_expansion):
-                                    self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN)
-                            else:
-                                self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
-                            self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_BASE, value=overlord.position)
-                            await self.change_state(OverlordStates.INITIAL_BACKOUT)
+                if distance_to_expansion < 11:
+                    if enemy_structures.closer_than(12, overlord).exists and \
+                            self.bot.is_visible(enemy_natural_expansion):
+                        # Check if they took their natural expansion
+                        enemy_townhalls = enemy_structures.of_type(const2.TOWNHALLS)
+                        if enemy_townhalls.exists:
+                            if enemy_townhalls.closer_than(4, enemy_natural_expansion):
+                                self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN)
                         else:
-                            await self.change_state(OverlordStates.INITIAL_DIVE)
+                            self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
+                        self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_BASE, value=overlord.position)
+                        await self.change_state(OverlordStates.INITIAL_BACKOUT)
+                    else:
+                        await self.change_state(OverlordStates.INITIAL_DIVE)
 
         elif self.state == OverlordStates.INITIAL_BACKOUT:
             pass
 
         elif self.state == OverlordStates.INITIAL_DIVE:
             enemy_structures = self.bot.known_enemy_structures
-            for overlord_tag in self.scouting_overlords:
-                overlord = self.bot.units(const.OVERLORD).find_by_tag(overlord_tag)
-                if overlord:
-                    distance_to_enemy_start_location = overlord.distance_to(self.bot.enemy_start_location)
-                    if distance_to_enemy_start_location < 24:
-                        # Take note of enemy defensive structures sited
-                        enemy_defensive_structures_types = {const.PHOTONCANNON, const.SPINECRAWLER}
-                        nearby_enemy_defensive_structures = enemy_structures.of_type(
-                            enemy_defensive_structures_types).closer_than(15, overlord)
-                        if nearby_enemy_defensive_structures.exists:
-                            closest_enemy_defensive_structure = \
-                                nearby_enemy_defensive_structures.closest_to(overlord)
-                            self.publish(
-                                Messages.OVERLORD_SCOUT_FOUND_ENEMY_DEFENSIVE_STRUCTURES,
-                                value=closest_enemy_defensive_structure.position)
+            overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
+            if overlord:
+                distance_to_enemy_start_location = overlord.distance_to(self.bot.enemy_start_location)
+                if distance_to_enemy_start_location < 24:
+                    # Take note of enemy defensive structures sited
+                    enemy_defensive_structures_types = {const.PHOTONCANNON, const.SPINECRAWLER}
+                    nearby_enemy_defensive_structures = enemy_structures.of_type(
+                        enemy_defensive_structures_types).closer_than(15, overlord)
+                    if nearby_enemy_defensive_structures.exists:
+                        closest_enemy_defensive_structure = \
+                            nearby_enemy_defensive_structures.closest_to(overlord)
+                        self.publish(
+                            Messages.OVERLORD_SCOUT_FOUND_ENEMY_DEFENSIVE_STRUCTURES,
+                            value=closest_enemy_defensive_structure.position)
 
-                    if enemy_structures.closer_than(11, overlord).exists:
-                        self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_BASE, value=overlord.position)
-                        await self.change_state(OverlordStates.INITIAL_BACKOUT)
+                if enemy_structures.closer_than(11, overlord).exists:
+                    self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_BASE, value=overlord.position)
+                    await self.change_state(OverlordStates.INITIAL_BACKOUT)
 
-                        enemy_townhalls = enemy_structures.of_type(const2.TOWNHALLS)
-                        if enemy_townhalls.exists:
-                            enemy_natural_expansion = self.bot.get_enemy_natural_expansion()
-                            if enemy_townhalls.closer_than(4, enemy_natural_expansion):
-                                self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN)
-                        else:
-                            self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
+                    enemy_townhalls = enemy_structures.of_type(const2.TOWNHALLS)
+                    if enemy_townhalls.exists:
+                        enemy_natural_expansion = self.bot.get_enemy_natural_expansion()
+                        if enemy_townhalls.closer_than(4, enemy_natural_expansion):
+                            self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN)
+                    else:
+                        self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
 
-                    elif distance_to_enemy_start_location< 10:
-                        self.publish(Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION)
-                        await self.change_state(OverlordStates.INITIAL_BACKOUT)
+                elif distance_to_enemy_start_location< 10:
+                    self.publish(Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION)
+                    await self.change_state(OverlordStates.INITIAL_BACKOUT)
 
         elif self.state == OverlordStates.SUICIDE_DIVE:
             pass
+
+    async def run(self):
+        await super(OverlordManager, self).run()
+
+        await self.turn_on_generate_creep()
+        await self.proxy_scout_with_second_overlord()
+        await self.scout_enemy_third_expansion_with_third_overlord()
 
 
 class ForceManager(StatefulManager):
@@ -1408,15 +1471,22 @@ class LambdaBot(sc2.BotAI):
         """Unsubscribes a manager to a type of message"""
         self._message_subscriptions[message_type].remove(manager)
 
+    def get_expansion_positions(self) -> List[sc2.position.Point2]:
+        """Returns our expansion positions in order from nearest to furthest"""
+        expansions = self.expansion_locations.keys()
+        expansion_positions = self.start_location.sort_by_distance(expansions)
+
+        return expansion_positions
+
     def get_enemy_expansion_positions(self) -> List[sc2.position.Point2]:
         """Returns enemy expansion positions in order from their nearest to furthest"""
 
         enemy_start_location = self.enemy_start_location.position
 
         expansions = self.expansion_locations.keys()
-        enemy_expansion_position = enemy_start_location.sort_by_distance(expansions)
+        enemy_expansion_positions = enemy_start_location.sort_by_distance(expansions)
 
-        return enemy_expansion_position
+        return enemy_expansion_positions
 
     def get_enemy_natural_expansion(self) -> Union[None, sc2.position.Point2]:
         try:
