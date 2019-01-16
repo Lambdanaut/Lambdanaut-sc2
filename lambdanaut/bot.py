@@ -247,6 +247,7 @@ class BuildManager(Manager):
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_DEFENSIVE_STRUCTURES)
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY)
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH)
+        self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH)
 
         # Dict with ttl so that we know what build commands were recently issued
         # For avoiding things like building two extractors when we needed 1
@@ -319,16 +320,21 @@ class BuildManager(Manager):
             # Messages indicating we need to defend an early aggression/rush
             defensive_early_game = {
                 Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY,
-                Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH}
+                Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH,
+                Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH,}
             if message in defensive_early_game:
                 self.ack(message)
 
-                # Cancel all constructing hatcheries
+                # Cancel constructing hatcheries that are not near completion
                 constructing_hatcheries = self.bot.units(const.HATCHERY).not_ready
                 if constructing_hatcheries.exists:
                     print("{}: Cancelling all constructing hatcheries".format(self.name))
                     for hatchery in constructing_hatcheries:
-                        self.bot.actions.append(hatchery(const.CANCEL))
+                        enemy_units = self.bot.known_enemy_units
+                        if enemy_units.exists:
+                            nearby_enemy_units = enemy_units.closer_than(20, hatchery)
+                            if nearby_enemy_units or hatchery.build_progress < 0.8:
+                                self.bot.actions.append(hatchery(const.CANCEL))
 
                 # Switch to an defensive build
                 self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
@@ -944,13 +950,20 @@ class OverlordManager(StatefulManager):
                         self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY)
 
                     # Report enemy rushes
-                    enemy_units = self.bot.units.enemy.not_structure
-                    if not enemy_units.exists:
-                        nearby_enemy_units = enemy_units.closer_than(70, self.bot.start_location)
+                    enemy_units = self.bot.known_enemy_units.not_structure
+                    if enemy_units.exists:
+                        nearby_enemy_units = enemy_units.exclude_type(
+                            const2.ENEMY_NON_ARMY).closer_than(90, self.bot.start_location)
                         enemy_workers = nearby_enemy_units.of_type(const2.WORKERS)
-                        if enemy_workers.exists and enemy_workers.amount > 2:
+                        nearby_enemy_units = nearby_enemy_units - enemy_workers
+                        if enemy_workers.exists and enemy_workers.amount > 3:
+                            # Found enemy worker rush
                             self.enemy_proxy_found = True
                             self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH)
+                        elif nearby_enemy_units.exists and nearby_enemy_units.amount > 2:
+                            # Found enemy non-worker rush
+                            self.enemy_proxy_found = True
+                            self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH)
 
                     # End early scouting process if we've reached the enemy expansion and
                     # haven't seen proxies
@@ -1006,7 +1019,6 @@ class OverlordManager(StatefulManager):
         We haven't seen any enemy structures yet.
         Move towards enemy's natural expansion.
         """
-        await self.overlord_dispersal()
         await self.overlord_flee()
 
         # Early game scouting
@@ -1034,7 +1046,6 @@ class OverlordManager(StatefulManager):
             self.bot.actions.append(overlord.move(away_from_enemy_natural_expansion))
 
     async def do_initial_backout(self):
-        await self.overlord_dispersal()
         await self.overlord_flee()
 
     async def do_suicide_dive(self):
@@ -1051,7 +1062,6 @@ class OverlordManager(StatefulManager):
                 overlord.move(self.bot.enemy_start_location.position))
 
     async def do_initial_dive(self):
-        await self.overlord_dispersal()
         await self.overlord_flee()
 
     async def determine_state_change(self):
@@ -1140,6 +1150,7 @@ class OverlordManager(StatefulManager):
     async def run(self):
         await super(OverlordManager, self).run()
 
+        await self.overlord_dispersal()
         await self.turn_on_generate_creep()
         await self.proxy_scout_with_second_overlord()
         await self.scout_enemy_third_expansion_with_third_overlord()
@@ -1487,11 +1498,11 @@ class MicroManager(StatefulManager):
                 if not nearby_spine_crawlers.exists or (
                         nearby_spine_crawlers.exists and nearby_spine_crawlers.amount < spine_crawlers.amount / 2):
 
-                    for sc in rooted_spine_crawlers:
+                    for sc in rooted_spine_crawlers.idle:
                         self.bot.actions.append(sc(const.AbilityId.SPINECRAWLERUPROOT_SPINECRAWLERUPROOT))
 
                 # Root unrooted spine crawlers near the front expansions
-                for sc in uprooted_spine_crawlers:
+                for sc in uprooted_spine_crawlers.idle:
                     near_townhall = townhall.position.towards_with_random_angle(
                         self.bot.enemy_start_location, 10, max_difference=(math.pi / 3.0))
                     position = await self.bot.find_placement(
