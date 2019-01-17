@@ -220,10 +220,11 @@ class IntelManager(Manager):
 
                 self.bot.enemy_start_location = new_enemy_start_location
 
-    def enemy_counter_with_roach_spotted(self):
+    def enemy_counter_with_midgame_roach_spotted(self):
         """Checks the map to see if there are any visible units we should counter with roach/hydra"""
         if not self.has_scouted_enemy_counter_with_roaches:
-            enemy_counter_with_roach_types = {const.ROACH, const.ROACHWARREN}
+            enemy_counter_with_roach_types = {
+                const.ROACH, const.ROACHWARREN, const.HELLIONTANK}
 
             enemy_counter_with_roach_units = self.bot.known_enemy_units.of_type(enemy_counter_with_roach_types)
 
@@ -260,7 +261,7 @@ class IntelManager(Manager):
 
         if self.enemy_air_tech_scouted():
             self.publish(Messages.ENEMY_AIR_TECH_SCOUTED)
-        if self.enemy_counter_with_roach_spotted():
+        if self.enemy_counter_with_midgame_roach_spotted():
             self.publish(Messages.ENEMY_COUNTER_WITH_ROACHES_SCOUTED)
 
     async def run(self):
@@ -436,7 +437,7 @@ class BuildManager(Manager):
 
         return False
 
-    def current_build_target(self) -> const.UnitTypeId:
+    def current_build_target(self) -> Union[None, const.UnitTypeId]:
         """
         Goes through the build order one by one counting up all the units and
         stopping once we hit a unit we don't yet have
@@ -558,7 +559,6 @@ class BuildManager(Manager):
                         # Update build stage
                         self.build_stage = build_stage
                         self.publish(Messages.NEW_BUILD_STAGE, build_stage)
-                        print()
 
                     return unit
 
@@ -605,7 +605,8 @@ class BuildManager(Manager):
 
             # Train the unit
             if self.can_afford(build_target) and hatcheries.exists:
-                self.bot.actions.append(hatcheries.random.build(build_target))
+                hatchery = hatcheries.closest_to(self.bot.start_location)
+                self.bot.actions.append(hatchery.build(build_target))
 
         elif build_target == const.HIVE:
             # Get a lair
@@ -695,7 +696,7 @@ class BuildManager(Manager):
 
             if townhalls.exists:
                 if self.can_afford(build_target):
-                    townhall = townhalls.first
+                    townhall = townhalls.closest_to(self.bot.start_location)
                     location = townhall.position
 
                     # Attempt to build the structure away from the nearest minerals
@@ -705,8 +706,8 @@ class BuildManager(Manager):
                     if nearest_resources.exists:
 
                         away_from_resources = townhall.position.towards_with_random_angle(
-                            nearest_resources.center, random.randint(-12, -1),
-                            max_difference=(math.pi / 2.1),
+                            nearest_resources.center, random.randint(-13, -3),
+                            max_difference=(math.pi / 2.4),
                         )
                         location = away_from_resources
 
@@ -942,21 +943,27 @@ class ResourceManager(Manager):
                 if queen.energy > 25:
                     abilities = await self.bot.get_available_abilities(queen)
 
+                    townhall = townhalls.closest_to(queen.position)
                     creep_tumors = self.bot.units({const.CREEPTUMOR, const.CREEPTUMORBURROWED})
 
-                    if (not creep_tumors.exists or creep_tumors.amount == 5) and \
+                    # Get creep tumors nearby the closest townhall
+                    if creep_tumors.exists:
+                        creep_tumors = creep_tumors.closer_than(17, townhall)
+
+                    # If there are no nearby creep tumors or any at all, then spawn a creep tumor
+                    if not creep_tumors.exists and \
                             not self._recent_commands.contains(ResourceManagerCommands.QUEEN_SPAWN_TUMOR,
                                                                self.bot.state.game_loop):
+
                         # Spawn creep tumor if we have none
                         if const.BUILD_CREEPTUMOR_QUEEN in abilities:
-                            townhall = townhalls.closest_to(queen.position)
                             position = townhall.position.towards_with_random_angle(
                                 self.bot.enemy_start_location, random.randint(9, 11),
                                 max_difference=(math.pi / 2.2))
 
                             self._recent_commands.add(
                                 ResourceManagerCommands.QUEEN_SPAWN_TUMOR,
-                                self.bot.state.game_loop, expiry=15)
+                                self.bot.state.game_loop, expiry=20)
 
                             self.bot.actions.append(queen(const.BUILD_CREEPTUMOR_QUEEN, position))
 
@@ -1357,11 +1364,15 @@ class ForceManager(StatefulManager):
         # Map of functions to do when leaving the state
         self.state_stop_map = {
             ForcesStates.DEFENDING: self.stop_defending,
+            ForcesStates.ATTACKING: self.stop_attacking,
         }
         self._recent_commands = ExpiringList()
 
         # Set of worker ids of workers defending an attack.
         self.workers_defending = set()
+
+        # Set of banelings attacking mineral lines
+        self.banelings_harassing = set()
 
         # Subscribe to messages
         self.subscribe(Messages.NEW_BUILD_STAGE)
@@ -1373,7 +1384,7 @@ class ForceManager(StatefulManager):
             BuildStages.OPENING: 100000,  #  Don't attack
             BuildStages.EARLY_GAME: 6,  #  Only attack if we banked up some units early on
             BuildStages.MID_GAME: 50,  #  Attack when a sizeable army is gained
-            BuildStages.LATE_GAME: 70,  #  Attack when a sizeable army is gained
+            BuildStages.LATE_GAME: 75,  #  Attack when a sizeable army is gained
         }[build_stage]
 
     def get_nearby_to_target(self):
@@ -1504,6 +1515,36 @@ class ForceManager(StatefulManager):
             self.bot.actions.append(unit.attack(nearby_target))
 
     async def start_attacking(self):
+        # Do Baneling harass during attack
+        banelings = self.bot.units(const.BANELING)
+        if banelings.exists:
+            # Take 4 banelings if we have 4, otherwise just don't harass
+            # This returns a list (not a Units Group)
+            try:
+                banelings: List = banelings.take(4, True)
+            except AssertionError:
+                # This SHOULD only happen if we don't have 4 banelings
+                banelings = []
+            if banelings:
+                enemy_structures = self.bot.known_enemy_structures
+
+                if enemy_structures.exists:
+                    # Get expansion locations starting from enemy start location
+                    enemy_townhalls = enemy_structures.of_type(
+                        const2.TOWNHALLS)
+
+                    if enemy_townhalls.exists:
+                        # Get the enemy townhall that we know of that is the furthest away from
+                        # the closest enemy structure we know of. Hopefully this means they attack
+                        # far away from where the main army will be attacking
+                        enemy_townhall = enemy_townhalls.furthest_to(
+                            enemy_structures.closest_to(self.bot.start_location))
+
+                        for baneling in banelings:
+                            target = enemy_townhall
+                            self.bot.actions.append(baneling.move(target.position))
+                            self.banelings_harassing.add(baneling.tag)
+
         # Do Mutalisk harass during attack
         mutalisks = self.bot.units(const.MUTALISK)
         if mutalisks.exists:
@@ -1523,11 +1564,22 @@ class ForceManager(StatefulManager):
                         enemy_expansion = enemy_townhalls.random
                         self.bot.actions.append(mutalisk.move(enemy_expansion))
 
+    async def stop_attacking(self):
+        # Cleanup banelings that were harassing
+        self.banelings_harassing.clear()
+
     async def do_attacking(self):
+        # Don't attackmove with these units
+        no_attackmove_units = {
+            const.OVERSEER, const.MUTALISK const.CORRUPTOR, const.VIPER}
+
         # Do main force attacking
         army = self.bot.units().filter(
             lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS).\
-            exclude_type(const2.ZERG_HARASS_UNITS)
+            exclude_type(no_attackmove_units)
+
+        # Exclude the banelings that are currently harassing
+        army -= self.bot.units().tags_in(self.banelings_harassing)
 
         if not army.exists:
             return
@@ -1589,7 +1641,7 @@ class ForceManager(StatefulManager):
             # Loop through all townhalls. If enemies are near any of them, don't change state.
             for th in self.bot.townhalls:
                 enemies_nearby = self.bot.known_enemy_units.closer_than(
-                    15, th.position).exclude_type(const2.ENEMY_NON_ARMY)
+                    20, th.position).exclude_type(const2.ENEMY_NON_ARMY)
 
                 if enemies_nearby.exists:
                     # Enemies found, don't change state.
@@ -1670,6 +1722,23 @@ class MicroManager(StatefulManager):
     def __init__(self, bot):
         super(MicroManager, self).__init__(bot)
 
+    async def manage_banelings(self):
+        banelings = self.bot.units(const.BANELING)
+
+        attack_priorities = const2.WORKERS | {const.MARINE, const.ZERGLING, const.ZEALOT}
+
+        for baneling in banelings:
+            nearby_enemy_units = self.bot.known_enemy_units.closer_than(10, baneling)
+            if nearby_enemy_units.exists:
+                nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priorities)
+                # Filter enemy priorities for only those that also have a nearby priority.
+                # It's only a priority if it makes the splash damage worth it.
+                nearby_enemy_priorities = nearby_enemy_priorities.filter(
+                    lambda u: nearby_enemy_units.closer_than(2).of_type(attack_priorities))
+
+                nearby_enemy_unit = nearby_enemy_units.closest_to(baneling)
+                self.bot.actions.append(baneling.attack(nearby_enemy_unit))
+
     async def manage_ravagers(self):
         ravagers = self.bot.units(const.RAVAGER)
 
@@ -1723,8 +1792,20 @@ class MicroManager(StatefulManager):
                     nearby_enemy_unit = nearby_enemy_units.closest_to(mutalisk)
                     self.bot.actions.append(mutalisk.attack(nearby_enemy_unit))
 
+    async def manage_corruptors(self):
+        corruptors = self.bot.units(const.CORRUPTOR)
+        if corruptors.exists:
+            army = self.bot.units(const.ZERG_ARMY_UNITS)
+            if army.exists:
+                for corruptor in corruptors:
+                    # Keep corruptor at center of army
+                    if corruptor.distance(army.center) > 15:
+                        self.bot.actions.append(corruptor.attack(army.center))
+
+
     async def manage_overseers(self):
         overseers = self.bot.units(const.OVERSEER)
+        army = self.bot.units(const.ZERG_ARMY_UNITS)
         for overseer in overseers:
             if overseer.energy > 50:
                 abilities = await self.bot.get_available_abilities(overseer)
@@ -1734,8 +1815,16 @@ class MicroManager(StatefulManager):
                     self.bot.actions.append(overseer(
                         const.SPAWNCHANGELING_SPAWNCHANGELING))
 
+            if army.exists:
+                # Keep overseer at center of army
+                if overseer.distance(army.center) > 15:
+                    self.bot.actions.append(overseer.move(army.center))
+
     async def manage_changelings(self):
-        changelings = self.bot.units(const.CHANGELING).idle
+        changeling_types = {
+            const.CHANGELING, const.CHANGELINGMARINE, const.CHANGELINGMARINESHIELD, const.CHANGELINGZEALOT,
+            const.CHANGELINGZERGLING, const.CHANGELINGZERGLINGWINGS}
+        changelings = self.bot.units(changeling_types).idle
 
         for c in changelings:
             # Get enemy's 5 first expansions including starting location
