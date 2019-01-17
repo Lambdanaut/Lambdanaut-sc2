@@ -20,7 +20,8 @@ DIFFICULTY = sc2.Difficulty.VeryHard
 # (4)DarknessSanctuaryLE
 # (2)16-BitLE
 # KairosJunctionLE
-MAP_NAME = "KairosJunctionLE"
+# ParaSiteLE
+MAP_NAME = "ParaSiteLE"
 RACE = sc2.Race.Zerg
 ENEMY_RACE = sc2.Race.Terran
 REPLAY_NAME = os.path.join("replays", "last_lambdanaut_replay{}.*.sc2replay".format(datetime_str))
