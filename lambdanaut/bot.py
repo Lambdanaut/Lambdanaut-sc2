@@ -223,11 +223,13 @@ class IntelManager(Manager):
     def enemy_counter_with_roach_spotted(self):
         """Checks the map to see if there are any visible units we should counter with roach/hydra"""
         if not self.has_scouted_enemy_counter_with_roaches:
-            enemy_counter_with_roach_types = {const.ROACH, const.ROACHWARREN}
+            enemy_counter_with_roach_types = {const.ROACH, const.ROACHWARREN, const.ARMORY}
 
             enemy_counter_with_roach_units = self.bot.known_enemy_units.of_type(enemy_counter_with_roach_types)
 
-            if enemy_counter_with_roach_units.exists:
+            factory_count = self.bot.known_enemy_units.of_type(const.FACTORY).amount
+
+            if enemy_counter_with_roach_units.exists or factory_count > 1:
                 self.has_scouted_enemy_counter_with_roaches = True
                 return True
 
@@ -703,7 +705,7 @@ class BuildManager(Manager):
                     if nearest_resources.exists:
 
                         away_from_resources = townhall.position.towards_with_random_angle(
-                            nearest_resources.center, random.randint(-16, -6),
+                            nearest_resources.center, random.randint(-12, -1),
                             max_difference=(math.pi / 2.1),
                         )
                         location = away_from_resources
@@ -1721,6 +1723,29 @@ class MicroManager(StatefulManager):
                     nearby_enemy_unit = nearby_enemy_units.closest_to(mutalisk)
                     self.bot.actions.append(mutalisk.attack(nearby_enemy_unit))
 
+    async def manage_overseers(self):
+        overseers = self.bot.units(const.OVERSEER)
+        for overseer in overseers:
+            if overseer.energy > 50:
+                abilities = await self.bot.get_available_abilities(overseer)
+
+                # Spawn changeling
+                if const.SPAWNCHANGELING_SPAWNCHANGELING in abilities:
+                    self.bot.actions.append(overseer(
+                        const.SPAWNCHANGELING_SPAWNCHANGELING))
+
+    async def manage_changelings(self):
+        changelings = self.bot.units(const.CHANGELING).idle
+
+        for c in changelings:
+            # Get enemy's 5 first expansions including starting location
+            expansion_locations = self.bot.get_enemy_expansion_positions()
+            expansion_locations = expansion_locations[0:4]
+            expansion_locations.reverse()
+
+            for expansion_location in expansion_locations:
+                self.bot.actions.append(c.move(expansion_location, queue=True))
+
     async def manage_spine_crawlers(self):
         rooted_spine_crawlers = self.bot.units(const.SPINECRAWLER)
         uprooted_spine_crawlers = self.bot.units(const.SPINECRAWLERUPROOTED)
@@ -1752,6 +1777,8 @@ class MicroManager(StatefulManager):
     async def run(self):
         await self.manage_ravagers()
         await self.manage_mutalisks()
+        await self.manage_overseers()
+        await self.manage_changelings()
         await self.manage_spine_crawlers()
 
 
