@@ -89,7 +89,7 @@ class Manager(object):
         """
         Publish a message to all subscribers of it's type
         """
-        print('{}: Message published: {}'.format(self.name, message_type.name))
+        print('{}: Message published: {} - {}'.format(self.name, message_type.name, value))
         return self.bot.publish(self, message_type, value)
 
     async def read_messages(self):
@@ -171,6 +171,7 @@ class IntelManager(Manager):
         super(IntelManager, self).__init__(bot)
 
         self.has_scouted_enemy_air_tech = False
+        self.has_scouted_enemy_counter_with_roaches = False
 
         self.subscribe(Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION)
         self.subscribe(Messages.ARMY_COULDNT_FIND_ENEMY_BASE)
@@ -219,13 +220,28 @@ class IntelManager(Manager):
 
                 self.bot.enemy_start_location = new_enemy_start_location
 
+    def enemy_counter_with_roach_spotted(self):
+        """Checks the map to see if there are any visible units we should counter with roach/hydra"""
+        if not self.has_scouted_enemy_counter_with_roaches:
+            enemy_counter_with_roach_types = {const.ROACH, const.ROACHWARREN}
+
+            enemy_counter_with_roach_units = self.bot.known_enemy_units.of_type(enemy_counter_with_roach_types)
+
+            if enemy_counter_with_roach_units.exists:
+                self.has_scouted_enemy_counter_with_roaches = True
+                return True
+
+        return False
+
     def enemy_air_tech_scouted(self):
-        """Checks the map to see if there is any visible enemy air tech"""
+        """Checks the map to see if there are any visible enemy air tech"""
         if not self.has_scouted_enemy_air_tech:
             enemy_air_tech_types = {
                 const.STARGATE, const.STARPORT, const.SPIRE,
                 const.LIBERATOR, const.BATTLECRUISER, const.ORACLE, const.BANSHEE,
-                const.PHOENIX}
+                const.PHOENIX, const.BROODLORD, const.DARKSHRINE, const.GHOSTACADEMY,
+                const.GHOST, const.MUTALISK, const.CORRUPTOR,
+                const.LURKERDEN, const.LURKER, const.UnitTypeId.ROACHBURROWED,}
 
             enemy_air_tech_units = self.bot.known_enemy_units.of_type(enemy_air_tech_types)
 
@@ -242,6 +258,8 @@ class IntelManager(Manager):
 
         if self.enemy_air_tech_scouted():
             self.publish(Messages.ENEMY_AIR_TECH_SCOUTED)
+        if self.enemy_counter_with_roach_spotted():
+            self.publish(Messages.ENEMY_COUNTER_WITH_ROACHES_SCOUTED)
 
     async def run(self):
         await self.read_messages()
@@ -276,6 +294,7 @@ class BuildManager(Manager):
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH)
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH)
         self.subscribe(Messages.ENEMY_AIR_TECH_SCOUTED)
+        self.subscribe(Messages.ENEMY_COUNTER_WITH_ROACHES_SCOUTED)
 
         # Dict with ttl so that we know what build commands were recently issued
         # For avoiding things like building two extractors when we needed 1
@@ -374,7 +393,10 @@ class BuildManager(Manager):
                 self.add_build(Builds.EARLY_GAME_SPORE_CRAWLERS)
 
             # Messages indicating roach_hydra mid game is ideal
-            roach_hydra_mid_game = {Messages.OVERLORD_SCOUT_FOUND_ENEMY_DEFENSIVE_STRUCTURES}
+            roach_hydra_mid_game = {
+                Messages.OVERLORD_SCOUT_FOUND_ENEMY_DEFENSIVE_STRUCTURES,
+                Messages.ENEMY_COUNTER_WITH_ROACHES_SCOUTED,
+            }
             if message in roach_hydra_mid_game:
                 self.ack(message)
                 self.add_build(Builds.MID_GAME_ROACH_HYDRA_LURKER)
@@ -392,7 +414,6 @@ class BuildManager(Manager):
             damaged_overlords = overlords.filter(lambda o: o.health_percentage < 0.7)
             if damaged_overlords.exists:
                 damaged_overlord_supply = damaged_overlords.amount * 8  # Overlords provide 8 supply
-
 
         # Calculate the supply coming from overlords in eggs
         overlord_egg_count = len(
@@ -447,6 +468,9 @@ class BuildManager(Manager):
         # Lurker Eggs count as lurkers
         lurker_eggs = Counter({const.LURKER: len(self.bot.units(const.UnitTypeId.LURKEREGG))})
 
+        # Brood Lord cocoons count as Brood Lords
+        brood_lord_cocoons = Counter({const.BROODLORD: len(self.bot.units(const.UnitTypeId.BROODLORDCOCOON))})
+
         # Overseer cocoons count as Overseers
         overseer_cocoons = Counter({const.OVERSEER: len(self.bot.units(const.OVERLORDCOCOON))})
 
@@ -471,15 +495,26 @@ class BuildManager(Manager):
         existing_unit_counts += baneling_eggs
         existing_unit_counts += ravager_cocoons
         existing_unit_counts += lurker_eggs
+        existing_unit_counts += brood_lord_cocoons
         existing_unit_counts += overseer_cocoons
         existing_unit_counts += spine_crawlers_uprooted
         existing_unit_counts += spore_crawlers_uprooted
         existing_unit_counts -= empty_extractors  # Subtract empty extractors
         existing_unit_counts += existing_upgrades
 
-        # Set the number of hatcheries to be the number of town halls
+        # Set the number of hatcheries to be the number of town halls with minerals left
         # (We want to count Lairs and Hives as hatcheries too. They're all expansions)
-        existing_unit_counts[const.HATCHERY] = len(self.bot.townhalls)
+        townhalls = self.bot.townhalls
+        if townhalls.exists:
+            townhall_count = 0
+            for townhall in townhalls:
+                minerals = self.bot.state.mineral_field
+                if minerals.exists:
+                    nearby_minerals = minerals.closer_than(10, townhall)
+                    if nearby_minerals.exists:
+                        townhall_count += 1
+
+            existing_unit_counts[const.HATCHERY] = townhall_count
 
         # Units recently ordered to be built.
         # Must be counted after counting the amount of townhalls to prevent
@@ -498,7 +533,18 @@ class BuildManager(Manager):
             build_queue = builds.BUILD_MAPPING[build]
 
             for unit in build_queue:
-                build_order_counts[unit] += 1
+
+                if isinstance(unit, builds.AtLeast):
+                    # AtLeast is a "special" unittype that only adds 1 if we
+                    # don't have AT LEAST `n` number of units built
+
+                    at_least = unit
+                    unit = at_least.unit_type
+
+                    if existing_unit_counts[unit] < at_least.n:
+                        build_order_counts[unit] += 1
+                else:
+                    build_order_counts[unit] += 1
 
                 if existing_unit_counts[unit] < build_order_counts[unit]:
                     # Found build target
@@ -509,6 +555,8 @@ class BuildManager(Manager):
                     if build_stage != self.build_stage:
                         # Update build stage
                         self.build_stage = build_stage
+                        self.publish(Messages.NEW_BUILD_STAGE, build_stage)
+                        print()
 
                     return unit
 
@@ -557,6 +605,14 @@ class BuildManager(Manager):
             if self.can_afford(build_target) and hatcheries.exists:
                 self.bot.actions.append(hatcheries.random.build(build_target))
 
+        elif build_target == const.HIVE:
+            # Get a lair
+            lairs = self.bot.units(const.LAIR)
+
+            # Train the unit
+            if self.can_afford(build_target) and lairs.exists:
+                self.bot.actions.append(lairs.random.build(build_target))
+
         elif build_target == const.EXTRACTOR:
             if self.can_afford(build_target):
                 townhall = self.bot.townhalls.filter(lambda th: th.is_ready).first
@@ -575,8 +631,16 @@ class BuildManager(Manager):
             hydralisk_dens = self.bot.units(const.HYDRALISKDEN).idle
 
             # Train the unit
-            if hydralisk_dens.exists:
+            if hydralisk_dens.exists and self.can_afford(build_target):
                 self.bot.actions.append(hydralisk_dens.random.build(build_target))
+
+        elif build_target == const.GREATERSPIRE:
+            # Get a spire
+            spire = self.bot.units(const.SPIRE).idle
+
+            # Train the unit
+            if spire.exists and self.can_afford(build_target):
+                self.bot.actions.append(spire.random.build(build_target))
 
         elif build_target == const.SPINECRAWLER:
             townhalls = self.bot.townhalls.ready
@@ -714,6 +778,20 @@ class BuildManager(Manager):
                 hydralisk = hydralisks.closest_to(self.bot.start_location)
                 self.bot.actions.append(hydralisk.train(build_target))
 
+        elif build_target == const.BROODLORD:
+            # Get a Corruptor
+            corruptors = self.bot.units(const.CORRUPTOR)
+
+            # Train the unit
+            if self.can_afford(build_target) and corruptors.exists:
+                # Prefer idle corruptors if they exist
+                idle_corruptors = corruptors.idle
+                if idle_corruptors.exists:
+                    corruptors = idle_corruptors
+
+                corruptor = corruptors.closest_to(self.bot.start_location)
+                self.bot.actions.append(corruptor.train(build_target))
+
         elif build_target == const.OVERSEER:
             # Get an overlord
             overlords = self.bot.units(const.OVERLORD)
@@ -787,11 +865,12 @@ class ResourceManager(Manager):
         for saturated_townhall in saturated_townhalls:
             mineral_workers = self.bot.workers.filter(
                 lambda worker: worker.is_carrying_minerals)
-            worker = mineral_workers.closest_to(saturated_townhall)
-            unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)
-            mineral = self.bot.state.mineral_field.closest_to(unsaturated_townhall)
+            if mineral_workers.exists:
+                worker = mineral_workers.closest_to(saturated_townhall)
+                unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)
+                mineral = self.bot.state.mineral_field.closest_to(unsaturated_townhall)
 
-            self.bot.actions.append(worker.gather(mineral, queue=True))
+                self.bot.actions.append(worker.gather(mineral, queue=True))
 
     async def manage_minerals(self):
         await self.manage_mineral_saturation()
@@ -1217,7 +1296,7 @@ class OverlordManager(StatefulManager):
                     else:
                         self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
 
-                elif distance_to_enemy_start_location< 10:
+                elif distance_to_enemy_start_location < 10:
                     self.publish(Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION)
                     await self.change_state(OverlordStates.INITIAL_BACKOUT)
 
@@ -1265,6 +1344,9 @@ class ForceManager(StatefulManager):
             ForcesStates.SEARCHING: self.do_searching,
         }
 
+        # Army value needed to do an attack. Changes with the current build stage.
+        self.army_value_to_attack = 50
+
         # Map of functions to do when entering the state
         self.state_start_map = {
             ForcesStates.ATTACKING: self.start_attacking,
@@ -1280,7 +1362,17 @@ class ForceManager(StatefulManager):
         self.workers_defending = set()
 
         # Subscribe to messages
+        self.subscribe(Messages.NEW_BUILD_STAGE)
         self.subscribe(Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION)
+
+    def get_army_value_to_attack(self, build_stage):
+        """Given a build stage, returns the army value needed to begin an attack"""
+        return {
+            BuildStages.OPENING: 100000,  #  Don't attack
+            BuildStages.EARLY_GAME: 6,  #  Only attack if we banked up some units early on
+            BuildStages.MID_GAME: 50,  #  Attack when a sizeable army is gained
+            BuildStages.LATE_GAME: 70,  #  Attack when a sizeable army is gained
+        }[build_stage]
 
     def get_nearby_to_target(self):
         """
@@ -1413,13 +1505,21 @@ class ForceManager(StatefulManager):
         # Do Mutalisk harass during attack
         mutalisks = self.bot.units(const.MUTALISK)
         if mutalisks.exists:
-            # Get expansion locations starting from enemy start location
-            enemy_townhalls = self.bot.known_enemy_structures.of_type(
-                const2.TOWNHALLS)
+            dangerous_enemy_units = {const.PHOTONCANNON, const.SPORECRAWLER, const.MISSILETURRET}
 
-            for mutalisk in mutalisks:
-                enemy_expansion = enemy_townhalls.random
-                self.bot.actions.append(mutalisk.move(enemy_expansion))
+            enemy_structures = self.bot.known_enemy_structures
+
+            if enemy_structures.exists:
+                # Get expansion locations starting from enemy start location
+                enemy_townhalls = enemy_structures.of_type(
+                    const2.TOWNHALLS).filter(
+                    lambda th: enemy_structures.of_type(
+                        dangerous_enemy_units).closer_than(7, th).empty)
+
+                if enemy_townhalls.exists:
+                    for mutalisk in mutalisks:
+                        enemy_expansion = enemy_townhalls.random
+                        self.bot.actions.append(mutalisk.move(enemy_expansion))
 
     async def do_attacking(self):
         # Do main force attacking
@@ -1453,10 +1553,18 @@ class ForceManager(StatefulManager):
     async def determine_state_change(self):
         # Reacting to subscribed messages
         for message, val in self.messages.items():
+            # Start searching for an enemy location if we can't find it
             if message in {Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION}:
                 if self.state != ForcesStates.DEFENDING:
                     self.ack(message)
                     return await self.change_state(ForcesStates.SEARCHING)
+
+            if message in {Messages.NEW_BUILD_STAGE}:
+                self.ack(message)
+                new_army_value_to_attack = self.get_army_value_to_attack(val)
+                self.army_value_to_attack = new_army_value_to_attack
+                print("{}: New army value to attack with: {}".format(
+                    self.name, new_army_value_to_attack))
 
         # HOUSEKEEPING
         if self.state == ForcesStates.HOUSEKEEPING:
@@ -1471,7 +1579,7 @@ class ForceManager(StatefulManager):
                 # Average army health percentage
                 army_health_average = sum([unit.health_percentage for unit in army]) / army.amount
 
-                if army_value > 100 and army_health_average > 0.85:
+                if army_value > self.army_value_to_attack and army_health_average > 0.85:
                     return await self.change_state(ForcesStates.MOVING_TO_ATTACK)
 
         # DEFENDING
@@ -1499,7 +1607,7 @@ class ForceManager(StatefulManager):
                 # Average army health percentage
                 army_health_average = sum([unit.health_percentage for unit in army]) / army.amount
 
-                if army_value < 60 or army_health_average < 0.7:
+                if army_value < self.army_value_to_attack or army_health_average < 0.8:
                     return await self.change_state(ForcesStates.HOUSEKEEPING)
 
                 # Start attacking when army has amassed
@@ -1515,7 +1623,7 @@ class ForceManager(StatefulManager):
             # Value of the army
             army_value = sum([const2.ZERG_ARMY_VALUE[unit.type_id] for unit in army])
 
-            if army_value < 60:
+            if army_value < self.army_value_to_attack:
                 return await self.change_state(ForcesStates.HOUSEKEEPING)
 
             enemy_start_location = self.bot.enemy_start_location.position
@@ -1564,8 +1672,9 @@ class MicroManager(StatefulManager):
         ravagers = self.bot.units(const.RAVAGER)
 
         bile_priorities = {
-            const.OVERLORD, const.MEDIVAC, const.PHOTONCANNON, const.SPINECRAWLER,
-            const.PYLON, const.UnitTypeId.MISSILETURRET}
+            const.OVERLORD, const.MEDIVAC, const.SIEGETANKSIEGED,
+            const.PHOTONCANNON, const.SPINECRAWLER, const.PYLON, const.MISSILETURRET,
+        }
 
         for ravager in ravagers:
             # Perform bile attacks
@@ -1587,15 +1696,21 @@ class MicroManager(StatefulManager):
     async def manage_mutalisks(self):
         mutalisks = self.bot.units(const.MUTALISK)
 
-        attack_priorities = {const.QUEEN, const.PHOTONCANNON, const.MISSILETURRET, const.SPORECRAWLER}
+        attack_priorities = {const.QUEEN}
 
         for mutalisk in mutalisks:
-            nearby_enemy_units = self.bot.known_enemy_units.closer_than(10, mutalisk)
+            nearby_enemy_units = self.bot.known_enemy_units.closer_than(11, mutalisk)
             if nearby_enemy_units.exists:
                 # Only begin concentrated targeting near enemy town halls
                 if nearby_enemy_units.of_type(const2.TOWNHALLS).exists:
                     nearby_enemy_workers = nearby_enemy_units.of_type(const2.WORKERS)
                     nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priorities)
+                    nearby_enemy_can_attack_air = nearby_enemy_units.filter(lambda u: u.can_attack_air)
+
+                    # TOO MANY BADDIES. GET OUT OF DODGE
+                    if nearby_enemy_can_attack_air.amount > 1:
+                        towards_start_location = mutalisk.position.towards(self.bot.start_location, 80)
+                        self.bot.actions.append(mutalisk.move(towards_start_location))
 
                     # Prefer targeting our priorities
                     if nearby_enemy_workers.exists:

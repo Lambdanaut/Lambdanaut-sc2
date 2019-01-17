@@ -6,18 +6,13 @@
 
 ## HIGH PRIORITY
 
-  * Build spore crawlers if we scout enemy air or cloak tech
 
-  * Search for further enemy expansions and structures.
-    * ForceManager could enter a state of searching for further expansions
+
 
 ## MEDIUM PRIORITY
 
-  * Update the amount of army units needed to attack based on the game stage.
-    * Early game needs fewer units to do an attack
-    * Late game needs more units to do an attack
-    * A message can be sent from the BuildManager when the BuildStage changes to let the ForceManager know when to
-      update this value
+  * Search for further enemy expansions and structures.
+    * ForceManager could enter a state of searching for further expansions
 
   * Add late game builds that are triggered based on scouting info
     * Corruptor BroodLord
@@ -31,8 +26,6 @@
 
   * Target artosis pylons
     * If a single pylon is visible and there are no known nearby pylons to it. Prioritize attacking pylon
-
-  * Prioritize what enemy units to attack with MicroManager. Mutas should focus workers and queens, for instance.
 
   * Sending drones to saturate another base when that base is under fire will result in dead drones
     * If the unsaturated base has nearby enemy army units. Don't saturate it
@@ -52,7 +45,7 @@
   * Banelings should be in front of army during attacks.
 
 
-* DONE
+## DONE
 
   * Banelings should sometimes attack structures, particularly during hard-wall scenarios
 
@@ -82,3 +75,12 @@
   * Extractor mining blocked/slowed by structure between hatch and extractor
     * Find a build spot that is both near the hatchery and far from geyser/extractors
 
+  * Build spore crawlers if we scout enemy air or cloak tech
+
+  * Update the amount of army units needed to attack based on the game stage.
+    * Early game needs fewer units to do an attack
+    * Late game needs more units to do an attack
+    * A message can be sent from the BuildManager when the BuildStage changes to let the ForceManager know when to
+      update this value
+
+  * Prioritize what enemy units to attack with MicroManager. Mutas should focus workers and queens, for instance.

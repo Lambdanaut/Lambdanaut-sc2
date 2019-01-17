@@ -16,12 +16,13 @@ datetime_str = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M")
 
 REALTIME = False
 DIFFICULTY = sc2.Difficulty.VeryHard
+# DIFFICULTY = sc2.Difficulty.Easy
 # (4)DarknessSanctuaryLE
 # (2)16-BitLE
 # KairosJunctionLE
 MAP_NAME = "KairosJunctionLE"
 RACE = sc2.Race.Zerg
-ENEMY_RACE = sc2.Race.Terran
+ENEMY_RACE = sc2.Race.Protoss
 REPLAY_NAME = os.path.join("replays", "last_lambdanaut_replay{}.*.sc2replay".format(datetime_str))
 
 

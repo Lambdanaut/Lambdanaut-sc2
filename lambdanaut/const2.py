@@ -80,16 +80,12 @@ ENEMY_NON_ARMY = \
 WORKERS = {const.PROBE, const.DRONE, const.SCV}
 
 
-# Value of different armies
+# Value of army units
+# Used when determing whether to attack or not
 ZERG_ARMY_VALUE = \
-    {const.ZERGLING: 2, const.BANELING: 4, const.ROACH: 4, const.RAVAGER: 5, const.HYDRALISK: 5, const.MUTALISK: 5,
-     const.OVERSEER: 5, const.INFESTOR: 7, const.CORRUPTOR: 7, const.VIPER: 7, const.BROODLORD: 15, const.ULTRALISK: 15}
-
-TERRAN_ARMY_VALUE = \
-    {const.MARINE: 4, const.REAPER: 5, const.MARAUDER: 9, const.HELLION: 10, const.WIDOWMINE: 7, const.SIEGETANK: 20}
-
-TERRAN_ARMY_VALUE = \
-    {}
+    {const.ZERGLING: 0.5, const.BANELING: 1.5, const.ROACH: 1.5, const.RAVAGER: 2.5, const.HYDRALISK: 2,
+     const.MUTALISK: 2, const.OVERSEER: 1, const.INFESTOR: 2, const.CORRUPTOR: 2, const.VIPER: 3,
+     const.BROODLORD: 4, const.ULTRALISK: 5}
 
 
 TOWNHALLS = {townhall for subset in sc2.data.race_townhalls.values() for townhall in subset}
@@ -116,11 +112,12 @@ class Messages(enum.Enum):
     OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH = 7
     OVERLORD_SCOUT_FOUND_NO_RUSH = 8
     ENEMY_AIR_TECH_SCOUTED = 9
+    ENEMY_COUNTER_WITH_ROACHES_SCOUTED = 10
 
     # STRATEGIC NOTES MESSAGES
-    ENEMY_EARLY_NATURAL_EXPAND_TAKEN = 10
-    ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN = 11
-    NEW_BUILD_STAGE = 12
+    ENEMY_EARLY_NATURAL_EXPAND_TAKEN = 11
+    ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN = 12
+    NEW_BUILD_STAGE = 13
 
 
 # Build Manager Commands
