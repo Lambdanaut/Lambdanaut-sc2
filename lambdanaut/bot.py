@@ -402,7 +402,8 @@ class BuildManager(Manager):
             }
             if message in roach_hydra_mid_game:
                 self.ack(message)
-                self.add_build(Builds.MID_GAME_ROACH_HYDRA_LURKER)
+                if self.build_stage != BuildStages.LATE_GAME:
+                    self.add_build(Builds.MID_GAME_ROACH_HYDRA_LURKER)
 
     def overlord_is_build_target(self) -> bool:
         """
@@ -851,6 +852,9 @@ class ResourceManager(Manager):
 
         self._recent_commands = ExpiringList()
 
+        # Tags of hatcheries that have been injected recently
+        self._recently_injected_hatchery_tags = ExpiringList()
+
     async def manage_mineral_saturation(self):
         """
         Balances mineral saturation so that no patch is oversaturated with
@@ -940,12 +944,28 @@ class ResourceManager(Manager):
         await self.manage_vespene()
 
     async def manage_queens(self):
-        queens = self.bot.units(const.QUEEN).idle
+        queens = self.bot.units(const.QUEEN)
         townhalls = self.bot.townhalls
 
-        if townhalls.exists:
+        if townhalls.exists and queens.exists:
             for queen in queens:
-                if queen.energy > 25:
+                if queen.energy >= 50:
+                    nearby_units = self.bot.units().closer_than(15, queen)
+                    if nearby_units.exists:
+                        nearby_units = nearby_units.sorted(lambda u: u.health_percentage)
+
+                    nearby_unit = nearby_units[0]
+
+                    # Don't transfuse yourself, fucking asshole.
+                    if (nearby_unit.tag == queen.tag) and len(nearby_units) > 1:
+                        nearby_unit = nearby_units[1]
+
+                    if nearby_unit.health_percentage < 0.6:
+                        self.bot.actions.append(queen(const.TRANSFUSION_TRANSFUSION, nearby_unit))
+
+            idle_queens = queens.idle
+            for queen in idle_queens:
+                if queen.energy >= 25:
                     abilities = await self.bot.get_available_abilities(queen)
 
                     townhall = townhalls.closest_to(queen.position)
@@ -976,18 +996,17 @@ class ResourceManager(Manager):
                         # Inject larvae
                         if const.EFFECT_INJECTLARVA in abilities:
                             closest_townhall = townhalls.closest_to(queen.position)
-                            self.bot.actions.append(queen(const.EFFECT_INJECTLARVA, closest_townhall))
+                            if not closest_townhall.has_buff(const.QUEENSPAWNLARVATIMER):
+                                self.bot.actions.append(queen(const.EFFECT_INJECTLARVA, closest_townhall))
 
+            # Move queens to townhalls
             for townhall in townhalls:
                 closest_queens = queens.closer_than(5, townhall)
-
-                # Move all but the closest queen to a random townhall
-                second_closest_queens = closest_queens[1:]
-                for queen in second_closest_queens:
-                    other_townhalls = self.bot.townhalls.filter(
-                        lambda th: th.tag != townhall.tag)
-                    if other_townhalls.exists:
-                        self.bot.actions.append(queen.move(other_townhalls.random))
+                if closest_queens.empty:
+                    for queen in idle_queens:
+                        if townhalls.closest_to(queen).distance_to(queen) >= 5:
+                            self.bot.actions.append(
+                                queen.attack(townhall.position))
 
     async def manage_creep_tumors(self):
         creep_tumors = self.bot.units({const.CREEPTUMORBURROWED})
@@ -1681,7 +1700,7 @@ class ForceManager(StatefulManager):
             # Loop through all townhalls. If enemies are near any of them, don't change state.
             for th in self.bot.townhalls:
                 enemies_nearby = self.bot.known_enemy_units.closer_than(
-                    20, th.position).exclude_type(const2.ENEMY_NON_ARMY)
+                    30, th.position).exclude_type(const2.ENEMY_NON_ARMY)
 
                 if enemies_nearby.exists:
                     # Enemies found, don't change state.
@@ -1756,7 +1775,8 @@ class ForceManager(StatefulManager):
 
         await self.update_enemy_army_position()
 
-class MicroManager(StatefulManager):
+
+class MicroManager(Manager):
     """
     Manager for microing army units
     """
@@ -1788,7 +1808,7 @@ class MicroManager(StatefulManager):
 
         bile_priorities = {
             const.OVERLORD, const.MEDIVAC, const.SIEGETANKSIEGED,
-            const.PHOTONCANNON, const.SPINECRAWLER, const.PYLON, const.MISSILETURRET,
+            const.PHOTONCANNON, const.SPINECRAWLER, const.PYLON, const.SUPPLYDEPOT,
         }
 
         for ravager in ravagers:
