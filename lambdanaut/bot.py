@@ -229,8 +229,11 @@ class IntelManager(Manager):
             enemy_counter_with_roach_units = self.bot.known_enemy_units.of_type(enemy_counter_with_roach_types)
 
             factory_count = self.bot.known_enemy_units.of_type(const.FACTORY).amount
+            reaper_count = self.bot.known_enemy_units.of_type(const.REAPER).amount
 
-            if enemy_counter_with_roach_units.exists or factory_count > 1:
+            if enemy_counter_with_roach_units.exists \
+                    or factory_count > 1\
+                    or reaper_count > 4:
                 self.has_scouted_enemy_counter_with_roaches = True
                 return True
 
@@ -241,10 +244,11 @@ class IntelManager(Manager):
         if not self.has_scouted_enemy_air_tech:
             enemy_air_tech_types = {
                 const.STARGATE, const.STARPORT, const.SPIRE,
-                const.LIBERATOR, const.BATTLECRUISER, const.ORACLE, const.UnitTypeId.BANSHEE,
+                const.LIBERATOR, const.BATTLECRUISER, const.ORACLE, const.BANSHEE,
+                const.SMBANSHEE, const.SMARMORYBANSHEE,
                 const.PHOENIX, const.BROODLORD, const.DARKSHRINE, const.GHOSTACADEMY,
                 const.GHOST, const.MUTALISK, const.CORRUPTOR,
-                const.LURKERDEN, const.LURKER, const.UnitTypeId.ROACHBURROWED,}
+                const.LURKERDEN, const.LURKER, const.ROACHBURROWED,}
 
             enemy_air_tech_units = self.bot.known_enemy_units.of_type(enemy_air_tech_types)
 
@@ -411,30 +415,32 @@ class BuildManager(Manager):
         Overlords
         """
 
-        # Subtract supply from damaged overlords. Assume we'll lose them.
-        overlords = self.bot.units(const.OVERLORD)
-        damaged_overlord_supply = 0
-        if overlords.exists:
-            damaged_overlords = overlords.filter(lambda o: o.health_percentage < 0.7)
-            if damaged_overlords.exists:
-                damaged_overlord_supply = damaged_overlords.amount * 8  # Overlords provide 8 supply
+        # Only build overlords if we haven't yet reached max supply
+        if self.bot.supply_cap < 200:
+            # Subtract supply from damaged overlords. Assume we'll lose them.
+            overlords = self.bot.units(const.OVERLORD)
+            damaged_overlord_supply = 0
+            if overlords.exists:
+                damaged_overlords = overlords.filter(lambda o: o.health_percentage < 0.7)
+                if damaged_overlords.exists:
+                    damaged_overlord_supply = damaged_overlords.amount * 8  # Overlords provide 8 supply
 
-        # Calculate the supply coming from overlords in eggs
-        overlord_egg_count = len(
-            [True for egg in self.bot.units(const.EGG)
-             if get_training_unit(egg) == const.OVERLORD])
-        overlord_egg_supply = overlord_egg_count * 8  # Overlords provide 8 supply
+            # Calculate the supply coming from overlords in eggs
+            overlord_egg_count = len(
+                [True for egg in self.bot.units(const.EGG)
+                 if get_training_unit(egg) == const.OVERLORD])
+            overlord_egg_supply = overlord_egg_count * 8  # Overlords provide 8 supply
 
-        supply_left = self.bot.supply_left + overlord_egg_supply - damaged_overlord_supply
+            supply_left = self.bot.supply_left + overlord_egg_supply - damaged_overlord_supply
 
-        if supply_left < 2 + self.bot.supply_cap / 10:
-            # With a formula like this, At 20 supply cap it'll build an overlord
-            # when you have 5 supply left. At 40 supply cap it'll build an overlord
-            # when you have 7 supply left. This seems reasonable.
+            if supply_left < 2 + self.bot.supply_cap / 10:
+                # With a formula like this, At 20 supply cap it'll build an overlord
+                # when you have 5 supply left. At 40 supply cap it'll build an overlord
+                # when you have 7 supply left. This seems reasonable.
 
-            # Ensure we have over 3 overlords.
-            if overlords.exists and overlords.amount >= 3:
-                return True
+                # Ensure we have over 3 overlords.
+                if overlords.exists and overlords.amount >= 3:
+                    return True
 
         return False
 
@@ -459,9 +465,9 @@ class BuildManager(Manager):
         units_in_eggs = Counter([get_training_unit(egg)
                                  for egg in self.bot.units(const.EGG)])
 
-        # Units being trained in hatcheries (to be added to existing units counter)
-        units_being_trained = Counter([get_training_unit(hatchery)
-                                       for hatchery in self.bot.units(const.HATCHERY)])
+        # Units being trained in townhalls (to be added to existing units counter)
+        units_being_trained = Counter([get_training_unit(townhall)
+                                       for townhall in self.bot.units(const2.TOWNHALLS)])
 
         # Baneling Eggs count as banelings
         baneling_eggs = Counter({const.BANELING: len(self.bot.units(const.BANELINGCOCOON))})
@@ -624,16 +630,22 @@ class BuildManager(Manager):
 
         elif build_target == const.EXTRACTOR:
             if self.can_afford(build_target):
-                townhall = self.bot.townhalls.filter(lambda th: th.is_ready).first
-                geyser = self.bot.state.vespene_geyser.closest_to(townhall)
-                drone = self.bot.workers.closest_to(geyser)
+                townhalls = self.bot.townhalls.ready
+                for townhall in townhalls:
+                    extractors = self.bot.units(const2.VESPENE_REFINERIES)
+                    geysers = self.bot.state.vespene_geyser.filter(lambda g: extractors.closer_than(0.5, g).empty)
+                    geyser = geysers.closest_to(townhall)
 
-                if self.can_afford(build_target):
+                    if geyser.distance_to(townhall) > 9:
+                        continue
+
+                    drone = self.bot.workers.closest_to(geyser)
+
                     err = self.bot.actions.append(drone.build(build_target, geyser))
 
                     # Add structure order to recent build orders
                     if not err:
-                        self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=5)
+                        self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=6)
 
         elif build_target == const.LURKERDEN:
             # Get a hydralisk den
@@ -657,7 +669,7 @@ class BuildManager(Manager):
             if townhalls.exists:
                 if self.can_afford(build_target):
                     enemy_start_location = self.bot.enemy_start_location
-                    townhall = townhalls.closest_to(enemy_start_location)
+                    townhall = townhalls.closest_to(self.bot.start_location)
 
                     direction_of_enemy = townhall.position.towards_with_random_angle(enemy_start_location, 10)
 
@@ -818,6 +830,9 @@ class BuildManager(Manager):
                 upgrade_ability = const2.ZERG_UPGRADES_TO_ABILITY[build_target]
                 self.bot.actions.append(upgrade_structure.first(upgrade_ability))
 
+                # Send out message about upgrade started
+                self.publish(Messages.UPGRADE_STARTED, build_target)
+
                 self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=200)
 
     async def run(self):
@@ -854,6 +869,9 @@ class ResourceManager(Manager):
 
         # Tags of hatcheries that have been injected recently
         self._recently_injected_hatchery_tags = ExpiringList()
+
+        # Message subscriptions
+        self.subscribe(Messages.UPGRADE_STARTED)
 
     async def manage_mineral_saturation(self):
         """
@@ -903,37 +921,55 @@ class ResourceManager(Manager):
         unsaturated_extractors = self.bot.units(const.EXTRACTOR).filter(
             lambda extr: extr.assigned_harvesters < extr.ideal_harvesters)
 
-        # Move workers from saturated extractors to minerals
-        for saturated_extractor in saturated_extractors:
+        if self._recent_commands.contains(
+                ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE, self.bot.state.game_loop):
+            # We're currently pulling workers off of vespene gas
             vespene_workers = self.bot.workers.filter(
                 lambda worker: worker.is_carrying_vespene)
 
-            if not vespene_workers.exists:
-                break
+            for worker in vespene_workers:
+                # Get saturated and unsaturated townhalls
+                unsaturated_townhalls = self.bot.townhalls.filter(
+                    lambda th: th.assigned_harvesters < th.ideal_harvesters)
 
-            worker = vespene_workers.closest_to(saturated_extractor)
+                if unsaturated_townhalls.exists:
+                    unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)
+                    mineral = self.bot.state.mineral_field.closest_to(unsaturated_townhall)
 
-            # Get saturated and unsaturated townhalls
-            unsaturated_townhalls = self.bot.townhalls.filter(
-                lambda th: th.assigned_harvesters < th.ideal_harvesters)
+                    self.bot.actions.append(worker.gather(mineral, queue=True))
 
-            if unsaturated_townhalls.exists:
-                unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)
-                mineral = self.bot.state.mineral_field.closest_to(unsaturated_townhall)
+        else:
+            # Move workers from saturated extractors to minerals
+            for saturated_extractor in saturated_extractors:
+                vespene_workers = self.bot.workers.filter(
+                    lambda worker: worker.is_carrying_vespene)
 
-                self.bot.actions.append(worker.gather(mineral, queue=True))
+                if not vespene_workers.exists:
+                    break
 
-        # Move workers from minerals to unsaturated extractors
-        if unsaturated_extractors:
-            extractor = unsaturated_extractors.first
+                worker = vespene_workers.closest_to(saturated_extractor)
 
-            mineral_workers = self.bot.workers.filter(
-                lambda worker: worker.is_carrying_minerals)
+                # Get saturated and unsaturated townhalls
+                unsaturated_townhalls = self.bot.townhalls.filter(
+                    lambda th: th.assigned_harvesters < th.ideal_harvesters)
 
-            if mineral_workers.exists:
-                worker = mineral_workers.closest_to(extractor)
+                if unsaturated_townhalls.exists:
+                    unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)
+                    mineral = self.bot.state.mineral_field.closest_to(unsaturated_townhall)
 
-                self.bot.actions.append(worker.gather(extractor, queue=True))
+                    self.bot.actions.append(worker.gather(mineral, queue=True))
+
+            # Move workers from minerals to unsaturated extractors
+            if unsaturated_extractors:
+                extractor = unsaturated_extractors.first
+
+                mineral_workers = self.bot.workers.filter(
+                    lambda worker: worker.is_carrying_minerals)
+
+                if mineral_workers.exists:
+                    worker = mineral_workers.closest_to(extractor)
+
+                    self.bot.actions.append(worker.gather(extractor, queue=True))
 
     async def manage_resources(self):
         """
@@ -1020,8 +1056,23 @@ class ResourceManager(Manager):
 
                 self.bot.actions.append(tumor(const.BUILD_CREEPTUMOR_TUMOR, position))
 
+    async def read_messages(self):
+        for message, val in self.messages.items():
+
+            # Messages indicating that we need to pull workers off vespene for a bit
+            stop_vespene = {Messages.UPGRADE_STARTED}
+            if message in stop_vespene and val == const.UpgradeId.ZERGLINGMOVEMENTSPEED:
+                self.ack(message)
+
+                self._recent_commands.add(
+                    ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
+                    self.bot.state.game_loop, expiry=100)
 
     async def run(self):
+        super(ResourceManager, self).run()
+
+        await self.read_messages()
+
         await self.manage_resources()
         await self.manage_queens()
         await self.manage_creep_tumors()
@@ -1909,7 +1960,7 @@ class MicroManager(Manager):
         if spine_crawlers.exists:
             if townhalls.exists:
                 townhall = townhalls.closest_to(self.bot.enemy_start_location)
-                nearby_spine_crawlers = spine_crawlers.closer_than(22, townhall)
+                nearby_spine_crawlers = spine_crawlers.closer_than(16, townhall)
 
                 # Unroot spine crawlers that are far away from the front expansions
                 if not nearby_spine_crawlers.exists or (

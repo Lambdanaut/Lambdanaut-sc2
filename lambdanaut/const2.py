@@ -77,6 +77,7 @@ ENEMY_NON_ARMY = \
     {const.OVERLORD, const.OVERSEER}
 
 WORKERS = {const.PROBE, const.DRONE, const.SCV}
+VESPENE_REFINERIES = {const.EXTRACTOR, const.REFINERY, const.ASSIMILATOR}
 
 
 # Value of army units
@@ -118,6 +119,9 @@ class Messages(enum.Enum):
     ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN = 12
     NEW_BUILD_STAGE = 13
 
+    # UNITS TRAINED MESSAGES
+    UPGRADE_STARTED = 14
+
 
 # Build Manager Commands
 class BuildManagerCommands(enum.Enum):
@@ -128,6 +132,7 @@ class BuildManagerCommands(enum.Enum):
 # Resource Manager Commands
 class ResourceManagerCommands(enum.Enum):
     QUEEN_SPAWN_TUMOR = 0
+    PULL_WORKERS_OFF_VESPENE = 1
 
 
 # Force Manager States
