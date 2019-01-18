@@ -23,6 +23,24 @@ class AtLeast(object):
         self.unit_type = unit_type
 
 
+class IfHasThenBuild(object):
+    """
+    Container object for use in builds
+
+    Functionally it means that if we have at least 1 units of
+    `conditional_unit_type`, then add `n` `unit_type` to the the build order.
+
+    Example that will build 10 banelings if we have a banelings nest
+        BUILD = [
+            IfHasThenBuild(BANELINGNEST, BANELING, 10),
+        ]
+    """
+    def __init__(self, conditional_unit_type, unit_type,  n=1):
+        self.conditional_unit_type = conditional_unit_type
+        self.unit_type = unit_type
+        self.n = n
+
+
 # A good basic macro opener. Always start here
 EARLY_GAME_DEFAULT_OPENER = [
     HATCHERY,  # 1
@@ -187,6 +205,8 @@ MID_GAME_ROACH_HYDRA_LURKER = [
     DRONE, DRONE, DRONE, DRONE, DRONE,
     EVOLUTIONCHAMBER,
     EVOLUTIONCHAMBER,
+    IfHasThenBuild(BANELINGNEST, ZERGLING, 2),
+    IfHasThenBuild(BANELINGNEST, BANELING, 6),
     ROACHWARREN,
     DRONE,
     EXTRACTOR,
@@ -220,8 +240,10 @@ MID_GAME_ROACH_HYDRA_LURKER += [
 ]
 MID_GAME_ROACH_HYDRA_LURKER += [HYDRALISK] * 5
 MID_GAME_ROACH_HYDRA_LURKER += [INFESTATIONPIT]
-MID_GAME_ROACH_HYDRA_LURKER += [HYDRALISK] * 5
+MID_GAME_ROACH_HYDRA_LURKER += [HYDRALISK] * 2
 MID_GAME_ROACH_HYDRA_LURKER += [EVOLVEMUSCULARAUGMENTS]
+MID_GAME_ROACH_HYDRA_LURKER += [HATCHERY]
+MID_GAME_ROACH_HYDRA_LURKER += [HYDRALISK] * 3
 MID_GAME_ROACH_HYDRA_LURKER += [DRONE] * 4
 MID_GAME_ROACH_HYDRA_LURKER += [OVERSEER, QUEEN, QUEEN] * 1
 MID_GAME_ROACH_HYDRA_LURKER += [HIVE]

@@ -16,7 +16,7 @@ from lambdanaut.builds import Builds, BuildStages, BUILD_MAPPING, DEFAULT_NEXT_B
 from lambdanaut.expiringlist import ExpiringList
 
 
-VERSION = '3.0'
+VERSION = '2.2'
 BUILD = builds.EARLY_GAME_DEFAULT_OPENER
 
 
@@ -549,6 +549,7 @@ class BuildManager(Manager):
 
             for unit in build_queue:
 
+                # Count each unit in the queue as we loop through them
                 if isinstance(unit, builds.AtLeast):
                     # AtLeast is a "special" unittype that only adds 1 if we
                     # don't have AT LEAST `n` number of units built
@@ -558,6 +559,19 @@ class BuildManager(Manager):
 
                     if existing_unit_counts[unit] < at_least.n:
                         build_order_counts[unit] += 1
+                elif isinstance(unit, builds.IfHasThenBuild):
+                    # IfHasThenBuild is a "special" unittype that only adds `n`
+                    # unit_type if we have AT LEAST 1 number
+                    # of if_has_then_build.conditional_unit_type.
+
+                    if_has_then_build = unit
+                    unit = if_has_then_build.unit_type
+                    conditional_unit_type = if_has_then_build.conditional_unit_type
+                    amount_to_add = if_has_then_build.n
+
+                    if existing_unit_counts[conditional_unit_type] >= 1:
+                        build_order_counts[unit] += amount_to_add
+
                 else:
                     build_order_counts[unit] += 1
 
@@ -724,8 +738,8 @@ class BuildManager(Manager):
                     if nearest_resources.exists:
 
                         away_from_resources = townhall.position.towards_with_random_angle(
-                            nearest_resources.center, random.randint(-13, -3),
-                            max_difference=(math.pi / 2.4),
+                            nearest_resources.center, random.randint(-13, -4),
+                            max_difference=(math.pi / 2.5),
                         )
                         location = away_from_resources
 
@@ -1463,7 +1477,7 @@ class ForceManager(StatefulManager):
         return {
             BuildStages.OPENING: 100000,  #  Don't attack
             BuildStages.EARLY_GAME: 6,  #  Only attack if we banked up some units early on
-            BuildStages.MID_GAME: 50,  #  Attack when a sizeable army is gained
+            BuildStages.MID_GAME: 55,  #  Attack when a sizeable army is gained
             BuildStages.LATE_GAME: 75,  #  Attack when a sizeable army is gained
         }[build_stage]
 
@@ -1528,7 +1542,9 @@ class ForceManager(StatefulManager):
             if len(nearby_army) < number_of_units_to_townhall:
                 far_army = army.further_than(12, townhall.position)
                 if far_army.exists:
-                    self.bot.actions.append(far_army.random.attack(townhall.position))
+                    unit = far_army.random
+                    if self.bot.known_enemy_units.closer_than(14, unit).empty:
+                        self.bot.actions.append(unit.attack(townhall.position))
 
     async def do_defending(self):
         """
@@ -1960,7 +1976,7 @@ class MicroManager(Manager):
         if spine_crawlers.exists:
             if townhalls.exists:
                 townhall = townhalls.closest_to(self.bot.enemy_start_location)
-                nearby_spine_crawlers = spine_crawlers.closer_than(16, townhall)
+                nearby_spine_crawlers = spine_crawlers.closer_than(14, townhall)
 
                 # Unroot spine crawlers that are far away from the front expansions
                 if not nearby_spine_crawlers.exists or (
@@ -1979,6 +1995,25 @@ class MicroManager(Manager):
                     self.bot.actions.append(
                         sc(const.AbilityId.SPINECRAWLERROOT_SPINECRAWLERROOT, position))
 
+    async def manage_structures(self):
+        structures = self.bot.units().structure
+
+        # Cancel damaged not-ready structures
+        for structure in structures.not_ready:
+            if structure.health_percentage < 0.1 or \
+                    (structure.build_progress > 0.9 and structure.health_percentage < 0.4):
+                self.bot.actions.append(structure(const.CANCEL))
+
+    async def manage_eggs(self):
+        egg_types = {const.BROODLORDCOCOON, const.RAVAGERCOCOON, const.BANELINGCOCOON,
+                     const.UnitTypeId.LURKEREGG, const.UnitTypeId.EGG}
+        eggs = self.bot.units(egg_types)
+
+        # Cancel damaged not-ready structures
+        for egg in eggs:
+            if egg.health_percentage < 0.4 and egg.build_progress < 0.9:
+                self.bot.actions.append(egg(const.CANCEL))
+
     async def run(self):
         await self.manage_ravagers()
         await self.manage_mutalisks()
@@ -1986,6 +2021,8 @@ class MicroManager(Manager):
         await self.manage_overseers()
         await self.manage_changelings()
         await self.manage_spine_crawlers()
+        await self.manage_structures()
+        await self.manage_eggs()
 
 
 class LambdaBot(sc2.BotAI):
