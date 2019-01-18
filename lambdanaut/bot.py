@@ -1502,7 +1502,7 @@ class ForceManager(StatefulManager):
                 # Have army defend
                 nearby_army = self.bot.units().filter(
                     lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS).\
-                    closer_than(65, th.position)
+                    closer_than(80, th.position)
 
                 for unit in nearby_army:
                     target = enemies_nearby.closest_to(unit)
