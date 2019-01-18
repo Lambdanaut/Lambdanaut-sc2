@@ -241,7 +241,7 @@ class IntelManager(Manager):
         if not self.has_scouted_enemy_air_tech:
             enemy_air_tech_types = {
                 const.STARGATE, const.STARPORT, const.SPIRE,
-                const.LIBERATOR, const.BATTLECRUISER, const.ORACLE, const.BANSHEE,
+                const.LIBERATOR, const.BATTLECRUISER, const.ORACLE, const.UnitTypeId.BANSHEE,
                 const.PHOENIX, const.BROODLORD, const.DARKSHRINE, const.GHOSTACADEMY,
                 const.GHOST, const.MUTALISK, const.CORRUPTOR,
                 const.LURKERDEN, const.LURKER, const.UnitTypeId.ROACHBURROWED,}
@@ -477,6 +477,10 @@ class BuildManager(Manager):
         # Overseer cocoons count as Overseers
         overseer_cocoons = Counter({const.OVERSEER: len(self.bot.units(const.OVERLORDCOCOON))})
 
+        # Hives count as Lairs. This is a weird one that doesn't make a lot of sense
+        # Reasoning is that when we get a Hive, we don't want the AI to act like we don't have a Lair
+        hives_as_lairs = Counter({const.LAIR: len(self.bot.units(const.HIVE))})
+
         # Uprooted spine crawlers count as spine crawlers
         spine_crawlers_uprooted = Counter({const.SPINECRAWLER: len(
             self.bot.units(const.UnitTypeId.SPINECRAWLERUPROOTED))})
@@ -500,6 +504,7 @@ class BuildManager(Manager):
         existing_unit_counts += lurker_eggs
         existing_unit_counts += brood_lord_cocoons
         existing_unit_counts += overseer_cocoons
+        existing_unit_counts += hives_as_lairs
         existing_unit_counts += spine_crawlers_uprooted
         existing_unit_counts += spore_crawlers_uprooted
         existing_unit_counts -= empty_extractors  # Subtract empty extractors
@@ -1084,8 +1089,8 @@ class OverlordManager(StatefulManager):
 
                 expansion_location = await self.bot.get_next_expansion()
 
-                overlord_mov_pos_1 = expansion_location.towards(self.bot.enemy_start_location, +10)
-                overlord_mov_pos_2 = expansion_location.towards(self.bot.enemy_start_location, -3)
+                overlord_mov_pos_1 = expansion_location.towards(self.bot.enemy_start_location, +12)
+                overlord_mov_pos_2 = expansion_location.towards(self.bot.enemy_start_location, -4)
 
                 # Move Overlord around the natural expansion
                 self.bot.actions.append(overlord.move(overlord_mov_pos_1, queue=True))
@@ -1353,9 +1358,6 @@ class ForceManager(StatefulManager):
             ForcesStates.SEARCHING: self.do_searching,
         }
 
-        # Army value needed to do an attack. Changes with the current build stage.
-        self.army_value_to_attack = 50
-
         # Map of functions to do when entering the state
         self.state_start_map = {
             ForcesStates.ATTACKING: self.start_attacking,
@@ -1366,7 +1368,15 @@ class ForceManager(StatefulManager):
             ForcesStates.DEFENDING: self.stop_defending,
             ForcesStates.ATTACKING: self.stop_attacking,
         }
+
+        # Expiring list of recent commands issued
         self._recent_commands = ExpiringList()
+
+        # Army value needed to do an attack. Changes with the current build stage.
+        self.army_value_to_attack = 50
+
+        # Last enemy army position seen
+        self.last_enemy_army_position = None
 
         # Set of worker ids of workers defending an attack.
         self.workers_defending = set()
@@ -1397,13 +1407,40 @@ class ForceManager(StatefulManager):
         enemy_structures = self.bot.known_enemy_structures
 
         # Get target to attack towards
-        if enemy_structures.exists:
+        if self.last_enemy_army_position is not None:
+            # Use the location of the last seen enemy army, and group up away from that position
+            target = self.last_enemy_army_position
+        elif enemy_structures.exists:
+            # Use enemy structure
             target = enemy_structures.closest_to(self.bot.start_location).position
         else:
+            # Use enemy start location
             target = self.bot.enemy_start_location.position
 
-        return target.towards(self.bot.start_location.position, +35)
-        # return (self.bot.start_location.position + target) / 1.5
+        return target.towards(self.bot.start_location.position, +30)
+
+    async def update_enemy_army_position(self):
+        enemy_units = self.bot.known_enemy_units.not_structure.exclude_type(
+            const2.WORKERS | const2.ENEMY_NON_ARMY)
+
+        # Set the last enemy army position if we see it
+        if enemy_units.exists and enemy_units.amount > 8:
+            enemy_position = enemy_units.center.rounded
+
+            if self.last_enemy_army_position is None:
+                print("{}: Visibility of enemy army at: {}".format(
+                    self.name, enemy_position))
+
+            self.last_enemy_army_position = enemy_position
+
+        # Set the last enemy army position to None if we scout that location
+        # and see no army.
+        if self.last_enemy_army_position is not None:
+            if self.bot.is_visible(self.last_enemy_army_position):
+                if enemy_units.empty or (enemy_units.exists and enemy_units.amount < 3):
+                    print("{}: Enemy army no longer holding position: {}".format(
+                        self.name, self.last_enemy_army_position))
+                    self.last_enemy_army_position = None
 
     async def do_housekeeping(self):
         army = self.bot.units().filter(
@@ -1569,9 +1606,9 @@ class ForceManager(StatefulManager):
         self.banelings_harassing.clear()
 
     async def do_attacking(self):
-        # Don't attackmove with these units
+        # Don't attackmove into the enemy with these units
         no_attackmove_units = {
-            const.OVERSEER, const.MUTALISK const.CORRUPTOR, const.VIPER}
+            const.OVERSEER, const.MUTALISK, const.CORRUPTOR, const.VIPER}
 
         # Do main force attacking
         army = self.bot.units().filter(
@@ -1584,8 +1621,11 @@ class ForceManager(StatefulManager):
         if not army.exists:
             return
 
-        target = self.bot.known_enemy_structures.random_or(
-            self.bot.enemy_start_location).position
+        enemy_structures = self.bot.known_enemy_structures
+        if enemy_structures.exists:
+            target = enemy_structures.closest_to(army.center).position
+        else:
+            target = self.bot.enemy_start_location
 
         for unit in army:
             self.bot.actions.append(unit.attack(target))
@@ -1711,6 +1751,10 @@ class ForceManager(StatefulManager):
                 if enemies_nearby.exists:
                     return await self.change_state(ForcesStates.DEFENDING)
 
+    async def run(self):
+        await super(ForceManager, self).run()
+
+        await self.update_enemy_army_position()
 
 class MicroManager(StatefulManager):
     """
@@ -1795,17 +1839,17 @@ class MicroManager(StatefulManager):
     async def manage_corruptors(self):
         corruptors = self.bot.units(const.CORRUPTOR)
         if corruptors.exists:
-            army = self.bot.units(const.ZERG_ARMY_UNITS)
+            army = self.bot.units(const2.ZERG_ARMY_UNITS)
             if army.exists:
                 for corruptor in corruptors:
-                    # Keep corruptor at center of army
-                    if corruptor.distance(army.center) > 15:
-                        self.bot.actions.append(corruptor.attack(army.center))
-
+                    # Keep corruptor slightly ahead center of army
+                    if corruptor.distance_to(army.center) > 6:
+                        position = army.center.towards(self.bot.enemy_start_location, 8)
+                        self.bot.actions.append(corruptor.move(position))
 
     async def manage_overseers(self):
         overseers = self.bot.units(const.OVERSEER)
-        army = self.bot.units(const.ZERG_ARMY_UNITS)
+        army = self.bot.units(const2.ZERG_ARMY_UNITS)
         for overseer in overseers:
             if overseer.energy > 50:
                 abilities = await self.bot.get_available_abilities(overseer)
@@ -1816,9 +1860,10 @@ class MicroManager(StatefulManager):
                         const.SPAWNCHANGELING_SPAWNCHANGELING))
 
             if army.exists:
-                # Keep overseer at center of army
-                if overseer.distance(army.center) > 15:
-                    self.bot.actions.append(overseer.move(army.center))
+                # Keep overseer slightly ahead center of army
+                if overseer.distance_to(army.center) > 6:
+                    position = army.center.towards(self.bot.enemy_start_location, 8)
+                    self.bot.actions.append(overseer.move(position))
 
     async def manage_changelings(self):
         changeling_types = {
@@ -1866,6 +1911,7 @@ class MicroManager(StatefulManager):
     async def run(self):
         await self.manage_ravagers()
         await self.manage_mutalisks()
+        await self.manage_corruptors()
         await self.manage_overseers()
         await self.manage_changelings()
         await self.manage_spine_crawlers()
