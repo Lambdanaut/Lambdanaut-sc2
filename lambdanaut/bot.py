@@ -16,7 +16,7 @@ from lambdanaut.builds import Builds, BuildStages, BUILD_MAPPING, DEFAULT_NEXT_B
 from lambdanaut.expiringlist import ExpiringList
 
 
-VERSION = '2.2'
+VERSION = '2.3'
 BUILD = builds.EARLY_GAME_DEFAULT_OPENER
 
 
