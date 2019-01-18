@@ -369,7 +369,9 @@ class BuildManager(Manager):
             cautious_early_game = {Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN}
             if message in cautious_early_game:
                 self.ack(message)
-                self.add_build(Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS)
+                # If we're already defending hard, don't start defending soft
+                if Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE not in self.builds:
+                    self.add_build(Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS)
 
             # Messages indicating we need to defend an early aggression/rush
             defensive_early_game = {
@@ -683,7 +685,7 @@ class BuildManager(Manager):
             if townhalls.exists:
                 if self.can_afford(build_target):
                     enemy_start_location = self.bot.enemy_start_location
-                    townhall = townhalls.closest_to(self.bot.start_location)
+                    townhall = townhalls.random
 
                     direction_of_enemy = townhall.position.towards_with_random_angle(enemy_start_location, 10)
 
