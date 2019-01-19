@@ -132,6 +132,11 @@ class BuildManagerCommands(enum.Enum):
     BUILD_OVERLORD = 1
 
 
+# Force Manager Commands
+class ForceManagerCommands(enum.Enum):
+    START_ATTACKING = 0  # When attack has started
+
+
 # Resource Manager Commands
 class ResourceManagerCommands(enum.Enum):
     QUEEN_SPAWN_TUMOR = 0
@@ -146,6 +151,7 @@ class ForcesStates(enum.Enum):
     MOVING_TO_ATTACK = 3
     ATTACKING = 4
     SEARCHING = 5
+
 
 # Overlord Scout States
 class OverlordStates(enum.Enum):

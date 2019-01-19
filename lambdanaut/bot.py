@@ -7,11 +7,12 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import sc2
 import sc2.constants as const
 
-import lambdanaut
 import lambdanaut.builds as builds
 import lambdanaut.const2 as const2
 
-from lambdanaut.const2 import Messages, BuildManagerCommands, ResourceManagerCommands, ForcesStates, OverlordStates
+from lambdanaut.const2 import \
+    (Messages, BuildManagerCommands, ForceManagerCommands, ResourceManagerCommands,
+     ForcesStates, OverlordStates)
 from lambdanaut.builds import Builds, BuildStages, BUILD_MAPPING, DEFAULT_NEXT_BUILDS
 from lambdanaut.expiringlist import ExpiringList
 
@@ -621,11 +622,14 @@ class BuildManager(Manager):
             expansion_location = await self.bot.get_next_expansion()
 
             if self.can_afford(build_target):
-                await self.do(worker.build(build_target, expansion_location))
+                drones = self.bot.units(const.DRONE)
+                if drones.exists:
+                    drone = drones.closest_to(expansion_location)
+                    await self.bot.do(drone.build(build_target, expansion_location))
 
-                # Keep from issuing another expand command for 15 seconds
-                self._recent_build_orders.add(
-                    build_target, iteration=self.bot.state.game_loop, expiry=22)
+                    # Keep from issuing another expand command for 15 seconds
+                    self._recent_build_orders.add(
+                        build_target, iteration=self.bot.state.game_loop, expiry=22)
 
             # Move drone to expansion location before construction
             elif self.bot.state.common.minerals > 200 and \
@@ -678,7 +682,8 @@ class BuildManager(Manager):
 
                     # Add structure order to recent build orders
                     if not err:
-                        self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=6)
+                        self._recent_build_orders.add(build_target, iteration=self.bot.state.game_loop, expiry=5)
+                        break  # Found the townhall to use. Break out of loop.
 
         elif build_target == const.LURKERDEN:
             # Get a hydralisk den
@@ -1510,13 +1515,8 @@ class ForceManager(StatefulManager):
             BuildStages.LATE_GAME: 75,  #  Attack when a sizeable army is gained
         }[build_stage]
 
-    def get_nearby_to_target(self):
-        """
-        Gets a point nearby the target.
-        The point is 2/3rds the distance between our starting location and the target.
-        Uses midpoint formula(math), edited slightly to get closer than midpoint.
-        """
-
+    def get_target(self):
+        """Returns enemy target to move nearby during moving_to_attack"""
         enemy_structures = self.bot.known_enemy_structures
 
         # Get target to attack towards
@@ -1530,7 +1530,15 @@ class ForceManager(StatefulManager):
             # Use enemy start location
             target = self.bot.enemy_start_location.position
 
-        return target.towards(self.bot._game_info.map_center, +30)
+        return target
+
+    def get_nearby_to_target(self, target):
+        """
+        Gets a point nearby the target.
+        The point is 2/3rds the distance between our starting location and the target.
+        """
+
+        return target.towards(self.bot._game_info.map_center, +35)
 
     async def update_enemy_army_position(self):
         enemy_units = self.bot.known_enemy_units.not_structure.exclude_type(
@@ -1576,26 +1584,27 @@ class ForceManager(StatefulManager):
                         self.bot.actions.append(unit.attack(townhall.position))
 
     async def do_escorting(self):
-        if self.escorting_workers.length(self.bot.state.game_loop):
-            # Get first escorting worker in list
-            escorting_worker_tag = self.escorting_workers.get_item(0, self.bot.state.game_loop)
-            escorting_worker = self.bot.units().of_type(const2.WORKERS).find_by_tag(escorting_worker_tag)
+        if self.bot.state.game_loop % 8 == 0:
+            if self.escorting_workers.length(self.bot.state.game_loop):
+                # Get first escorting worker in list
+                escorting_worker_tag = self.escorting_workers.get_item(0, self.bot.state.game_loop)
+                escorting_worker = self.bot.units().of_type(const2.WORKERS).find_by_tag(escorting_worker_tag)
 
-            if escorting_worker:
-                army = self.bot.units().filter(
-                    lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
-                expansion_location = await self.bot.get_next_expansion()
+                if escorting_worker:
+                    army = self.bot.units().filter(
+                        lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
+                    expansion_location = await self.bot.get_next_expansion()
 
-                # Move with worker until we get up to the expansion
-                if escorting_worker.distance_to(expansion_location) > 12:
-                    position = escorting_worker.position
+                    # Move with worker until we get up to the expansion
+                    if escorting_worker.distance_to(expansion_location) > 12:
+                        position = escorting_worker.position
 
-                else:
-                    towards_enemy = expansion_location.towards(self.bot.enemy_start_location, +8)
-                    position = towards_enemy
+                    else:
+                        towards_enemy = expansion_location.towards(self.bot.enemy_start_location, +8)
+                        position = towards_enemy
 
-                for unit in army:
-                    self.bot.actions.append(unit.attack(position))
+                    for unit in army:
+                        self.bot.actions.append(unit.attack(position))
 
     async def do_defending(self):
         """
@@ -1603,7 +1612,7 @@ class ForceManager(StatefulManager):
         """
 
         for th in self.bot.townhalls:
-            enemies_nearby = self.bot.known_enemy_units.closer_than(15, th.position)
+            enemies_nearby = self.bot.known_enemy_units.closer_than(17, th.position)
 
             if enemies_nearby.exists:
                 # Workers attack enemy
@@ -1637,9 +1646,12 @@ class ForceManager(StatefulManager):
                             self.bot.actions.append(queen.attack(target.position))
 
                 # Have army defend
+                # The harder we're attacked, the further-out army to pull back
+                nearby_army_distance = enemies_nearby.amount * 15
+
                 nearby_army = self.bot.units().filter(
                     lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS).\
-                    closer_than(80, th.position)
+                    closer_than(nearby_army_distance, th.position)
 
                 for unit in nearby_army:
                     target = enemies_nearby.closest_to(unit)
@@ -1678,8 +1690,10 @@ class ForceManager(StatefulManager):
         if not army.exists:
             return
 
+        main_target = self.get_target()
+
         # Get target to attack towards
-        nearby_target = self.get_nearby_to_target()
+        nearby_target = self.get_nearby_to_target(main_target)
 
         # Search for another spot to move to
         # if not self.bot.in_pathing_grid(nearby_target):
@@ -1689,6 +1703,10 @@ class ForceManager(StatefulManager):
             self.bot.actions.append(unit.attack(nearby_target))
 
     async def start_attacking(self):
+
+        # Command for when attacking starts
+        self._recent_commands.add(ForceManagerCommands.START_ATTACKING, self.bot.state.game_loop, expiry=5)
+
         # Do Baneling harass during attack
         banelings = self.bot.units(const.BANELING)
         if banelings.exists:
@@ -1752,6 +1770,9 @@ class ForceManager(StatefulManager):
         no_attackmove_units = {
             const.OVERSEER, const.MUTALISK, const.CORRUPTOR, const.VIPER}
 
+        # Army units to send a couple seconds before the main army
+        frontline_army_units = {const.BANELING}
+
         # Do main force attacking
         army = self.bot.units().filter(
             lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS).\
@@ -1759,6 +1780,9 @@ class ForceManager(StatefulManager):
 
         # Exclude the banelings that are currently harassing
         army -= self.bot.units().tags_in(self.banelings_harassing)
+
+        backline_army = army.exclude_type(frontline_army_units)
+        frontline_army = army.of_type(frontline_army_units)
 
         if not army.exists:
             return
@@ -1769,8 +1793,16 @@ class ForceManager(StatefulManager):
         else:
             target = self.bot.enemy_start_location
 
-        for unit in army:
+        # Hold back the backline army for a few seconds
+        if not self._recent_commands.contains(
+                ForceManagerCommands.START_ATTACKING, self.bot.state.game_loop):
+            for unit in backline_army:
+                self.bot.actions.append(unit.attack(target))
+
+        # Send in the frontline army immediatelly
+        for unit in frontline_army:
             self.bot.actions.append(unit.attack(target))
+
 
     async def do_searching(self):
         army = self.bot.units().filter(
@@ -1877,7 +1909,8 @@ class ForceManager(StatefulManager):
                     return await self.change_state(ForcesStates.HOUSEKEEPING)
 
                 # Start attacking when army has amassed
-                nearby_target = self.get_nearby_to_target()
+                target = self.get_target()
+                nearby_target = self.get_nearby_to_target(target)
                 if army.center.distance_to(nearby_target) < 7:
                     return await self.change_state(ForcesStates.ATTACKING)
 

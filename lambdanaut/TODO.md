@@ -1,11 +1,14 @@
 # PROBLEMS AND SOLUTIONS
 
+
 ## BUGS
 
-  * Fix bug where queens sometimes aren't injecting or moving to hatcheries where they're needed
+  * Fix bug where queens aren't transfusing sometimes when they should
+
 
 ## HIGH PRIORITY
 
+  * Banelings should be in front of army during attacks.
 
 
 
@@ -41,8 +44,6 @@
     * Need to scout up closer to the base until the wall is seen. Not sure of implementation yet.
 
   * Attack move to enemy ramp in case of hard walling main
-
-  * Banelings should be in front of army during attacks.
 
 
 ## DONE
@@ -84,3 +85,5 @@
       update this value
 
   * Prioritize what enemy units to attack with MicroManager. Mutas should focus workers and queens, for instance.
+
+  * Fix bug where queens sometimes aren't injecting or moving to hatcheries where they're needed
