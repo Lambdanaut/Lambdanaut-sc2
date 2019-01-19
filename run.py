@@ -1,6 +1,7 @@
 import datetime
 import importlib
 import os
+import random
 import sys
 
 import sc2
@@ -11,22 +12,30 @@ sys.path.append('lib/')
 
 import lambdanaut.bot as bot
 
-
 datetime_str = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M")
 
+
+MAPS = [
+    'AutomatonLE',
+    'DarknessSanctuaryLE',
+    'KairosJunctionLE',
+    'ParaSiteLE',
+    'CeruleanFallLE',
+    'BlueshiftLE',
+    'PortAleksanderLE',
+    'StasisLE']
+
+MAP_NAME = ""
 REALTIME = False
 DIFFICULTY = sc2.Difficulty.VeryHard
 # DIFFICULTY = sc2.Difficulty.Easy
-# (2)16-BitLE
-# DarknessSanctuaryLE
-# KairosJunctionLE
-# ParaSiteLE
-# CeruleanFallLE
-# BlueshiftLE
-MAP_NAME = "KairosJunctionLE"
 RACE = sc2.Race.Zerg
 ENEMY_RACE = sc2.Race.Terran
 REPLAY_NAME = os.path.join("replays", "last_lambdanaut_replay{}.*.sc2replay".format(datetime_str))
+
+
+if not MAP_NAME:
+    MAP_NAME = random.choice(MAPS)
 
 
 # Start game

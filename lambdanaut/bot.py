@@ -99,7 +99,7 @@ class Manager(object):
         pass
 
     async def run(self):
-        raise NotImplementedError
+        pass
 
 
 class StatefulManager(Manager):
@@ -552,9 +552,10 @@ class BuildManager(Manager):
             for unit in build_queue:
 
                 # Count each unit in the queue as we loop through them
+                # Check if the unit is a special conditional unittype
                 if isinstance(unit, builds.AtLeast):
                     # AtLeast is a "special" unittype that only adds 1 if we
-                    # don't have AT LEAST `n` number of units built
+                    # don't have AT LEAST `n` number of units built.
 
                     at_least = unit
                     unit = at_least.unit_type
@@ -573,7 +574,21 @@ class BuildManager(Manager):
 
                     if existing_unit_counts[conditional_unit_type] >= 1:
                         build_order_counts[unit] += amount_to_add
+                elif isinstance(unit, builds.OneForEach):
+                    # OneForEach is a "special" unittype that adds a unittype of
+                    # `unit_type` to the build queue for each unit_type of `for_each_unit_type`
+                    # that we already have created.
 
+                    one_for_each = unit
+                    unit = one_for_each.unit_type
+                    for_each_unit_type = one_for_each.for_each_unit_type
+
+                    try:
+                        existing_for_each_units = existing_unit_counts[for_each_unit_type]
+                    except:
+                        existing_for_each_units = 0
+
+                    build_order_counts[unit] += existing_for_each_units
                 else:
                     build_order_counts[unit] += 1
 
@@ -606,11 +621,11 @@ class BuildManager(Manager):
             expansion_location = await self.bot.get_next_expansion()
 
             if self.can_afford(build_target):
-                await self.bot.expand_now()
+                await self.do(worker.build(build_target, expansion_location))
 
                 # Keep from issuing another expand command for 15 seconds
                 self._recent_build_orders.add(
-                    build_target, iteration=self.bot.state.game_loop, expiry=15)
+                    build_target, iteration=self.bot.state.game_loop, expiry=22)
 
             # Move drone to expansion location before construction
             elif self.bot.state.common.minerals > 200 and \
@@ -623,9 +638,11 @@ class BuildManager(Manager):
                     if nearest_drone.distance_to(expansion_location) > 9:
                         self.bot.actions.append(nearest_drone.move(expansion_location))
 
+                        self.publish(Messages.DRONE_LEAVING_TO_CREATE_HATCHERY, nearest_drone.tag)
+
                         # Keep from issuing another expand move command
                         self._recent_commands.add(
-                            BuildManagerCommands.EXPAND_MOVE, self.bot.state.game_loop, expiry=15)
+                            BuildManagerCommands.EXPAND_MOVE, self.bot.state.game_loop, expiry=20)
 
         elif build_target == const.LAIR:
             # Get a hatchery
@@ -841,10 +858,15 @@ class BuildManager(Manager):
         # Upgrades below
         elif build_target in const2.ZERG_UPGRADES_TO_ABILITY:
             upgrade_structure_type = const2.ZERG_UPGRADES_TO_STRUCTURE[build_target]
-            upgrade_structure = self.bot.units(upgrade_structure_type).ready.idle
-            if self.can_afford(build_target) and upgrade_structure.exists:
+            upgrade_structures = self.bot.units(upgrade_structure_type).ready.idle
+            if self.can_afford(build_target) and upgrade_structures.exists:
+
+                # Prefer idle upgrade structures
+                if upgrade_structures.idle.exists:
+                    upgrade_structures  = upgrade_structures.idle
+
                 upgrade_ability = const2.ZERG_UPGRADES_TO_ABILITY[build_target]
-                self.bot.actions.append(upgrade_structure.first(upgrade_ability))
+                self.bot.actions.append(upgrade_structures.first(upgrade_ability))
 
                 # Send out message about upgrade started
                 self.publish(Messages.UPGRADE_STARTED, build_target)
@@ -1085,7 +1107,7 @@ class ResourceManager(Manager):
                     self.bot.state.game_loop, expiry=100)
 
     async def run(self):
-        super(ResourceManager, self).run()
+        await super(ResourceManager, self).run()
 
         await self.read_messages()
 
@@ -1201,7 +1223,7 @@ class OverlordManager(StatefulManager):
                 if scouting_overlord:
                     # Report enemy proxies
                     enemy_structures = self.bot.known_enemy_structures
-                    if enemy_structures.closer_than(90, self.bot.start_location).exists:
+                    if enemy_structures.closer_than(65, self.bot.start_location).exists:
                         self.enemy_proxy_found = True
                         self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY)
 
@@ -1438,6 +1460,7 @@ class ForceManager(StatefulManager):
         # Map of functions to do depending on the state
         self.state_map = {
             ForcesStates.HOUSEKEEPING: self.do_housekeeping,
+            ForcesStates.ESCORTING: self.do_escorting,
             ForcesStates.DEFENDING: self.do_defending,
             ForcesStates.MOVING_TO_ATTACK: self.do_moving_to_attack,
             ForcesStates.ATTACKING: self.do_attacking,
@@ -1458,6 +1481,9 @@ class ForceManager(StatefulManager):
         # Expiring list of recent commands issued
         self._recent_commands = ExpiringList()
 
+        # List of workers that we're escorting to build Hatcheries
+        self.escorting_workers = ExpiringList()
+
         # Army value needed to do an attack. Changes with the current build stage.
         self.army_value_to_attack = 50
 
@@ -1473,6 +1499,7 @@ class ForceManager(StatefulManager):
         # Subscribe to messages
         self.subscribe(Messages.NEW_BUILD_STAGE)
         self.subscribe(Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION)
+        self.subscribe(Messages.DRONE_LEAVING_TO_CREATE_HATCHERY)
 
     def get_army_value_to_attack(self, build_stage):
         """Given a build stage, returns the army value needed to begin an attack"""
@@ -1503,7 +1530,7 @@ class ForceManager(StatefulManager):
             # Use enemy start location
             target = self.bot.enemy_start_location.position
 
-        return target.towards(self.bot.start_location.position, +30)
+        return target.towards(self.bot._game_info.map_center, +30)
 
     async def update_enemy_army_position(self):
         enemy_units = self.bot.known_enemy_units.not_structure.exclude_type(
@@ -1547,6 +1574,28 @@ class ForceManager(StatefulManager):
                     unit = far_army.random
                     if self.bot.known_enemy_units.closer_than(14, unit).empty:
                         self.bot.actions.append(unit.attack(townhall.position))
+
+    async def do_escorting(self):
+        if self.escorting_workers.length(self.bot.state.game_loop):
+            # Get first escorting worker in list
+            escorting_worker_tag = self.escorting_workers.get_item(0, self.bot.state.game_loop)
+            escorting_worker = self.bot.units().of_type(const2.WORKERS).find_by_tag(escorting_worker_tag)
+
+            if escorting_worker:
+                army = self.bot.units().filter(
+                    lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
+                expansion_location = await self.bot.get_next_expansion()
+
+                # Move with worker until we get up to the expansion
+                if escorting_worker.distance_to(expansion_location) > 12:
+                    position = escorting_worker.position
+
+                else:
+                    towards_enemy = expansion_location.towards(self.bot.enemy_start_location, +8)
+                    position = towards_enemy
+
+                for unit in army:
+                    self.bot.actions.append(unit.attack(position))
 
     async def do_defending(self):
         """
@@ -1688,6 +1737,11 @@ class ForceManager(StatefulManager):
                     for mutalisk in mutalisks:
                         enemy_expansion = enemy_townhalls.random
                         self.bot.actions.append(mutalisk.move(enemy_expansion))
+                else:
+                    for mutalisk in mutalisks:
+                        target = enemy_structures.random.position
+                        self.bot.actions.append(mutalisk.move(target))
+
 
     async def stop_attacking(self):
         # Cleanup banelings that were harassing
@@ -1741,6 +1795,15 @@ class ForceManager(StatefulManager):
                     self.ack(message)
                     return await self.change_state(ForcesStates.SEARCHING)
 
+            if message in {Messages.DRONE_LEAVING_TO_CREATE_HATCHERY}:
+                if self.state == ForcesStates.HOUSEKEEPING:
+                    self.ack(message)
+
+                    # Add the escorting worker to a list for 25 seconds
+                    self.escorting_workers.add(val, iteration=self.bot.state.game_loop, expiry=25)
+
+                    return await self.change_state(ForcesStates.ESCORTING)
+
             if message in {Messages.NEW_BUILD_STAGE}:
                 self.ack(message)
                 new_army_value_to_attack = self.get_army_value_to_attack(val)
@@ -1763,6 +1826,27 @@ class ForceManager(StatefulManager):
 
                 if army_value > self.army_value_to_attack and army_health_average > 0.85:
                     return await self.change_state(ForcesStates.MOVING_TO_ATTACK)
+
+        # ESCORTING
+        elif self.state == ForcesStates.ESCORTING:
+            if not self.escorting_workers.length(self.bot.state.game_loop):
+                # We've guarded the worker for long enough, change state
+                return await self.change_state(ForcesStates.HOUSEKEEPING)
+
+            elif not self.bot.units().of_type(const2.WORKERS).find_by_tag(
+                    self.escorting_workers.get_item(0, self.bot.state.game_loop)):
+                # The worker no longer exists. Change state
+                return await self.change_state(ForcesStates.HOUSEKEEPING)
+
+            escorting_worker_tag = self.escorting_workers.get_item(0, self.bot.state.game_loop)
+            escorting_worker = self.bot.units().of_type(const2.WORKERS).find_by_tag(escorting_worker_tag)
+
+            if escorting_worker:
+                expansion_location = await self.bot.get_next_expansion()
+
+                # Worker made it to the destination.
+                if escorting_worker.distance_to(expansion_location) < 1:
+                    return await self.change_state(ForcesStates.HOUSEKEEPING)
 
         # DEFENDING
         elif self.state == ForcesStates.DEFENDING:
@@ -1861,16 +1945,18 @@ class MicroManager(Manager):
         attack_priorities = const2.WORKERS | {const.MARINE, const.ZERGLING, const.ZEALOT}
 
         for baneling in banelings:
-            nearby_enemy_units = self.bot.known_enemy_units.closer_than(10, baneling)
+            nearby_enemy_units = self.bot.known_enemy_units.closer_than(9, baneling)
             if nearby_enemy_units.exists:
                 nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priorities)
-                # Filter enemy priorities for only those that also have a nearby priority.
-                # It's only a priority if it makes the splash damage worth it.
-                nearby_enemy_priorities = nearby_enemy_priorities.filter(
-                    lambda u: nearby_enemy_units.closer_than(2).of_type(attack_priorities))
+                if nearby_enemy_priorities.exists:
+                    # Filter enemy priorities for only those that also have a nearby priority.
+                    # It's only a priority if it makes the splash damage worth it.
+                    nearby_enemy_priorities = nearby_enemy_priorities.filter(
+                        lambda u: nearby_enemy_units.closer_than(2, u).of_type(attack_priorities).exists)
 
-                nearby_enemy_unit = nearby_enemy_units.closest_to(baneling)
-                self.bot.actions.append(baneling.attack(nearby_enemy_unit))
+                    if nearby_enemy_priorities:
+                        nearby_enemy_unit = nearby_enemy_priorities.closest_to(baneling)
+                        self.bot.actions.append(baneling.attack(nearby_enemy_unit))
 
     async def manage_ravagers(self):
         ravagers = self.bot.units(const.RAVAGER)
@@ -1978,7 +2064,7 @@ class MicroManager(Manager):
         if spine_crawlers.exists:
             if townhalls.exists:
                 townhall = townhalls.closest_to(self.bot.enemy_start_location)
-                nearby_spine_crawlers = spine_crawlers.closer_than(14, townhall)
+                nearby_spine_crawlers = spine_crawlers.closer_than(22, townhall)
 
                 # Unroot spine crawlers that are far away from the front expansions
                 if not nearby_spine_crawlers.exists or (
@@ -1989,10 +2075,18 @@ class MicroManager(Manager):
 
                 # Root unrooted spine crawlers near the front expansions
                 for sc in uprooted_spine_crawlers.idle:
-                    near_townhall = townhall.position.towards_with_random_angle(
-                        self.bot.enemy_start_location, 10, max_difference=(math.pi / 3.0))
+                    nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
+                    nearby_ramp = townhall.position.closest(nearby_ramps)
+
+                    if nearby_ramp.distance_to(townhall) < 20:
+                        target = nearby_ramp
+                    else:
+                        near_townhall = townhall.position.towards_with_random_angle(
+                            self.bot.enemy_start_location, 10, max_difference=(math.pi / 3.0))
+                        target = near_townhall
+
                     position = await self.bot.find_placement(
-                        const.SPINECRAWLER, near_townhall, max_distance=20)
+                        const.SPINECRAWLER, target, max_distance=25)
 
                     self.bot.actions.append(
                         sc(const.AbilityId.SPINECRAWLERROOT_SPINECRAWLERROOT, position))
@@ -2017,6 +2111,7 @@ class MicroManager(Manager):
                 self.bot.actions.append(egg(const.CANCEL))
 
     async def run(self):
+        await self.manage_banelings()
         await self.manage_ravagers()
         await self.manage_mutalisks()
         await self.manage_corruptors()
@@ -2133,8 +2228,9 @@ class LambdaBot(sc2.BotAI):
             return None
 
     def find_nearby_pathable_point(self, near: sc2.position.Point2) -> Union[None, sc2.position.Point2]:
-        placement_step = 2
-        for distance in range(2, 30, 2):
+        DISTANCE = 70
+        placement_step = 5
+        for distance in range(2, DISTANCE, 2):
 
             possible_positions = [sc2.position.Point2(p).offset(near).to2 for p in (
                 [(dx, -distance) for dx in range(-distance, distance + 1, placement_step)] +

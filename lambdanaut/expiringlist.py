@@ -70,3 +70,22 @@ class ExpiringList(object):
 
         return [item for item, iteration, expiry in self.l]
 
+    def get_item(self, item, current_iteration):
+        for i in range(len(self.l)):
+            list_item, item_iteration, expiry = self.l[i]
+            if item == i:
+                if current_iteration - item_iteration > expiry:
+                    # Expired. Delete it
+                    self.l.pop(i)
+                else:
+                    # Not expired. Return it
+                    return list_item
+
+        raise IndexError
+
+    def length(self, current_iteration):
+        return len(self.items(current_iteration))
+
+    def __contains__(self, item_tuple):
+        item, current_iteration = item_tuple
+        return self.contains(item, current_iteration)

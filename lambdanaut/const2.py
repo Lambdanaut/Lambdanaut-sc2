@@ -122,6 +122,9 @@ class Messages(enum.Enum):
     # UNITS TRAINED MESSAGES
     UPGRADE_STARTED = 14
 
+    # UNIT ORDER MESSAGES
+    DRONE_LEAVING_TO_CREATE_HATCHERY = 15  # Value is Drone's tag
+
 
 # Build Manager Commands
 class BuildManagerCommands(enum.Enum):
@@ -138,11 +141,11 @@ class ResourceManagerCommands(enum.Enum):
 # Force Manager States
 class ForcesStates(enum.Enum):
     HOUSEKEEPING = 0  # Default keeping units at home
-    DEFENDING = 1  # Defending against active threat at home
-    MOVING_TO_ATTACK = 2
-    ATTACKING = 3
-    SEARCHING = 4
-
+    ESCORTING = 1  # Guarding drone to expansion
+    DEFENDING = 2  # Defending against active threat at home
+    MOVING_TO_ATTACK = 3
+    ATTACKING = 4
+    SEARCHING = 5
 
 # Overlord Scout States
 class OverlordStates(enum.Enum):
