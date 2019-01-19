@@ -41,8 +41,11 @@ def get_training_unit(unit):
     try:
         unit_type = getattr(const, unit_name)  # This line might fail!
     except AttributeError:
-        print("=== ERROR IN get_training_unit() COULDN'T FIND CONSTANT {} IN "
-              "sc2.constants === ".format(unit_type))
+        # Set of upgrades/training units that we can ignore here and return None
+        ignore_exception = {'RESEARCHBURROW'}
+        if unit_name not in ignore_exception:
+            print("=== ERROR IN get_training_unit() COULDN'T FIND CONSTANT {} IN "
+                  "sc2.constants === ".format(unit_name))
         return None
 
     return unit_type
@@ -1232,8 +1235,8 @@ class OverlordManager(StatefulManager):
                         self.enemy_proxy_found = True
                         self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY)
 
-                    # Report enemy rushes
-                    enemy_units = self.bot.known_enemy_units.not_structure
+                    # Report enemy ground rushes
+                    enemy_units = self.bot.known_enemy_units.not_structure.not_flying
                     if enemy_units.exists:
                         nearby_enemy_units = enemy_units.exclude_type(
                             const2.ENEMY_NON_ARMY).closer_than(90, self.bot.start_location)
@@ -1713,11 +1716,11 @@ class ForceManager(StatefulManager):
             # Take 4 banelings if we have 4, otherwise just don't harass
             # This returns a list (not a Units Group)
             try:
-                banelings: List = banelings.take(4, True)
+                harass_banelings: List = banelings.take(4, True)
             except AssertionError:
                 # This SHOULD only happen if we don't have 4 banelings
-                banelings = []
-            if banelings:
+                harass_banelings = []
+            if harass_banelings:
                 enemy_structures = self.bot.known_enemy_structures
 
                 if enemy_structures.exists:
@@ -1732,10 +1735,42 @@ class ForceManager(StatefulManager):
                         enemy_townhall = enemy_townhalls.furthest_to(
                             enemy_structures.closest_to(self.bot.start_location))
 
-                        for baneling in banelings:
+                        for baneling in harass_banelings:
                             target = enemy_townhall
                             self.bot.actions.append(baneling.move(target.position))
                             self.banelings_harassing.add(baneling.tag)
+
+            # Burrow banelings
+            burrowed_banelings = self.bot.units(const.BANELINGBURROWED)
+            # Only burrow up to six banelings at a time
+            if const.BURROW in self.bot.state.upgrades and \
+                    (not burrowed_banelings.exists or burrowed_banelings.amount < 6):
+                # Get the banelings that aren't harassing mineral lines
+                banelings = banelings.tags_not_in(self.banelings_harassing)
+
+                if banelings.exists and banelings.amount >= 4:
+                    # Get two banelings
+                    banelings = banelings[:2]
+
+                army = self.bot.units().filter(
+                    lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
+                if army.exists:
+                    for baneling in banelings:
+                        # Consider them harassing banelings for the moment
+                        self.banelings_harassing.add(baneling.tag)
+
+                        # Move them to a nearest ramp near the army center and burrow them
+                        target = army.center
+
+                        nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
+                        nearby_ramp = target.closest(nearby_ramps)  # Ramp closest to army
+
+                        if nearby_ramp.distance_to(target) < 8:
+                            target = nearby_ramp
+
+                        self.bot.actions.append(baneling.move(target))
+                        self.bot.actions.append(
+                            baneling(const.AbilityId.BURROWDOWN_BANELING, queue=True))
 
         # Do Mutalisk harass during attack
         mutalisks = self.bot.units(const.MUTALISK)
@@ -1974,9 +2009,11 @@ class MicroManager(Manager):
 
     async def manage_banelings(self):
         banelings = self.bot.units(const.BANELING)
+        burrowed_banelings = self.bot.units(const.UnitTypeId.BANELINGBURROWED)
 
         attack_priorities = const2.WORKERS | {const.MARINE, const.ZERGLING, const.ZEALOT}
 
+        # Micro banelings
         for baneling in banelings:
             nearby_enemy_units = self.bot.known_enemy_units.closer_than(9, baneling)
             if nearby_enemy_units.exists:
@@ -1990,6 +2027,13 @@ class MicroManager(Manager):
                     if nearby_enemy_priorities:
                         nearby_enemy_unit = nearby_enemy_priorities.closest_to(baneling)
                         self.bot.actions.append(baneling.attack(nearby_enemy_unit))
+
+        # Unburrow banelings if enemy nearby
+        for baneling in burrowed_banelings:
+            nearby_enemy_units = self.bot.known_enemy_units.closer_than(2, baneling)
+            if nearby_enemy_units.exists and nearby_enemy_units.amount > 3:
+                # Unburrow baneling
+                self.bot.actions.append(baneling(const.AbilityId.BURROWUP_BANELING))
 
     async def manage_ravagers(self):
         ravagers = self.bot.units(const.RAVAGER)
