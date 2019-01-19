@@ -762,8 +762,8 @@ class BuildManager(Manager):
                     if nearest_resources.exists:
 
                         away_from_resources = townhall.position.towards_with_random_angle(
-                            nearest_resources.center, random.randint(-13, -4),
-                            max_difference=(math.pi / 2.5),
+                            nearest_resources.center, random.randint(-13, -2),
+                            max_difference=(math.pi / 2.8),
                         )
                         location = away_from_resources
 
@@ -1538,7 +1538,7 @@ class ForceManager(StatefulManager):
         The point is 2/3rds the distance between our starting location and the target.
         """
 
-        return target.towards(self.bot._game_info.map_center, +35)
+        return target.towards(self.bot._game_info.map_center, +32)
 
     async def update_enemy_army_position(self):
         enemy_units = self.bot.known_enemy_units.not_structure.exclude_type(
