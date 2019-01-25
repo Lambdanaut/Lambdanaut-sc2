@@ -1,10 +1,12 @@
-
 import argparse
 
 import sys
 import asyncio
 import logging
 import aiohttp
+
+# Add lib to our path (which holds our sc2-python installation)
+sys.path.append('./lib/')
 
 import sc2
 from sc2 import Race, Difficulty

@@ -4,11 +4,11 @@ import os
 import random
 import sys
 
+# Add lib to our path (which holds our sc2-python installation)
+sys.path.append('./lib/')
+
 import sc2
 from __init__ import run_ladder_game
-
-# Lib holds
-sys.path.append('lib/')
 
 import lambdanaut.bot as bot
 
@@ -27,8 +27,8 @@ MAPS = [
 
 MAP_NAME = ""
 REALTIME = False
+# DIFFICULTY = sc2.Difficulty.CheatInsane
 DIFFICULTY = sc2.Difficulty.VeryHard
-# DIFFICULTY = sc2.Difficulty.Easy
 RACE = sc2.Race.Zerg
 ENEMY_RACE = sc2.Race.Terran
 REPLAY_NAME = os.path.join("replays", "last_lambdanaut_replay{}.*.sc2replay".format(datetime_str))

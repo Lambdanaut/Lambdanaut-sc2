@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 from .position import Point2, Point3
 from .data import Race, ActionResult, Attribute, race_worker, race_townhalls, race_gas, Target, Result
 from .unit import Unit
-from .cache import property_cache_forever
-from .game_data import AbilityData, Cost
+from .cache import property_cache_forever, property_cache_once_per_frame
+from .game_data import AbilityData
 from .ids.unit_typeid import UnitTypeId
 from .ids.ability_id import AbilityId
 from .ids.upgrade_id import UpgradeId
@@ -39,7 +39,13 @@ class BotAI:
     @property
     def time(self) -> Union[int, float]:
         """ Returns time in seconds, assumes the game is played on 'faster' """
-        return self.state.game_loop / 22.4 # / (1/1.4) * (1/16)
+        return self.state.game_loop / 22.4  # / (1/1.4) * (1/16)
+
+    @property
+    def time_formatted(self) -> str:
+        """ Returns time as string in min:sec format """
+        t = self.time
+        return f"{int(t // 60):02}:{int(t % 60):02}"
 
     @property
     def game_info(self) -> "GameInfo":
@@ -54,15 +60,15 @@ class BotAI:
         """Possible start locations for enemies."""
         return self._game_info.start_locations
 
-    @property
+    @property_cache_once_per_frame
     def known_enemy_units(self) -> Units:
         """List of known enemy units, including structures."""
-        return self.state.units.enemy
+        return self.state.enemy_units
 
-    @property
+    @property_cache_once_per_frame
     def known_enemy_structures(self) -> Units:
         """List of known enemy units, structures only."""
-        return self.state.units.enemy.structure
+        return self.state.enemy_units.structure
 
     @property
     def main_base_ramp(self) -> "Ramp":
@@ -71,38 +77,41 @@ class BotAI:
             return self.cached_main_base_ramp
         self.cached_main_base_ramp = min(
             {ramp for ramp in self.game_info.map_ramps if len(ramp.upper2_for_ramp_wall) == 2},
-            key=(lambda r: self.start_location.distance_to(r.top_center))
+            key=(lambda r: self.start_location.distance_to(r.top_center)),
         )
         return self.cached_main_base_ramp
 
     @property_cache_forever
     def expansion_locations(self) -> Dict[Point2, Units]:
         """List of possible expansion locations."""
-
-        RESOURCE_SPREAD_THRESHOLD = 144
-        all_resources = self.state.mineral_field | self.state.vespene_geyser
+        # RESOURCE_SPREAD_THRESHOLD = 144
+        RESOURCE_SPREAD_THRESHOLD = 225
+        minerals = self.state.mineral_field
+        geysers = self.state.vespene_geyser
+        all_resources = minerals | geysers
 
         # Group nearby minerals together to form expansion locations
-        r_groups = []
+        resource_groups = []
         for mf in all_resources:
             mf_height = self.get_terrain_height(mf.position)
-            for g in r_groups:
-                if any(
-                    mf_height == self.get_terrain_height(p.position)
-                    and mf.position._distance_squared(p.position) < RESOURCE_SPREAD_THRESHOLD
-                    for p in g
-                ):
-                    g.append(mf)
+            for cluster in resource_groups:
+                # bases on standard maps dont have more than 10 resources
+                if len(cluster) == 10:
+                    continue
+                if mf.position._distance_squared(
+                    cluster[0].position
+                ) < RESOURCE_SPREAD_THRESHOLD and mf_height == self.get_terrain_height(cluster[0].position):
+                    cluster.append(mf)
                     break
             else:  # not found
-                r_groups.append([mf])
+                resource_groups.append([mf])
         # Filter out bases with only one mineral field
-        r_groups = [g for g in r_groups if len(g) > 1]
+        resource_groups = [cluster for cluster in resource_groups if len(cluster) > 1]
         # distance offsets from a gas geysir
         offsets = [(x, y) for x in range(-9, 10) for y in range(-9, 10) if 75 >= x ** 2 + y ** 2 >= 49]
         centers = {}
         # for every resource group:
-        for resources in r_groups:
+        for resources in resource_groups:
             # possible expansion points
             # resources[-1] is a gas geysir which always has (x.5, y.5) coordinates, just like an expansion
             possible_points = (
@@ -113,10 +122,7 @@ class BotAI:
             possible_points = [
                 point
                 for point in possible_points
-                if all(
-                    point.distance_to(resource) >= (6 if resource in self.state.mineral_field else 7)
-                    for resource in resources
-                )
+                if all(point.distance_to(resource) >= (7 if resource in geysers else 6) for resource in resources)
             ]
             # choose best fitting point
             result = min(possible_points, key=lambda p: sum(p.distance_to(resource) for resource in resources))
@@ -518,7 +524,7 @@ class BotAI:
         for unit in self.units:
             self._units_previous_map[unit.tag] = unit
 
-        self.units: Units = state.units.owned
+        self.units: Units = state.own_units
         self.workers: Units = self.units(race_worker[self.race])
         self.townhalls: Units = self.units(race_townhalls[self.race])
         self.geysers: Units = self.units(race_gas[self.race])
@@ -528,6 +534,9 @@ class BotAI:
         self.supply_used: Union[float, int] = state.common.food_used
         self.supply_cap: Union[float, int] = state.common.food_cap
         self.supply_left: Union[float, int] = self.supply_cap - self.supply_used
+        # reset cached values
+        self.cached_known_enemy_structures = None
+        self.cached_known_enemy_units = None
 
     async def issue_events(self):
         """ This function will be automatically run from main.py and triggers the following functions:
@@ -544,6 +553,9 @@ class BotAI:
         for unit in self.units.not_structure:
             if unit.tag not in self._units_previous_map:
                 await self.on_unit_created(unit)
+        for unit in self.units.structure:
+            if unit.tag not in self._units_previous_map:
+                await self.on_building_construction_started(unit)
 
     async def _issue_building_complete_event(self, unit):
         if unit.build_progress < 1:
@@ -565,6 +577,10 @@ class BotAI:
         pass
 
     async def on_unit_created(self, unit: Unit):
+        """ Override this in your bot class. """
+        pass
+
+    async def on_building_construction_started(self, unit: Unit):
         """ Override this in your bot class. """
         pass
 

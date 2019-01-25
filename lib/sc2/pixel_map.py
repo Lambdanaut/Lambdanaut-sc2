@@ -2,6 +2,7 @@ from typing import Callable, Set, FrozenSet, List
 
 from .position import Point2
 
+
 class PixelMap:
     def __init__(self, proto):
         self._proto = proto
@@ -38,12 +39,13 @@ class PixelMap:
         return int.from_bytes(data, byteorder="little", signed=False)
 
     def __setitem__(self, pos, val):
+        """ Example usage: self._game_info.pathing_grid[Point2((20, 20))] = [255] """
         x, y = pos
 
         assert 0 <= x < self.width, f"x is {x}, self.width is {self.width}"
         assert 0 <= y < self.height, f"y is {y}, self.height is {self.height}"
 
-        index = self.width * y + x
+        index = -self.width * y + x
         start = index * self.bytes_per_pixel
         self.data[start : start + self.bytes_per_pixel] = val
 
@@ -71,11 +73,10 @@ class PixelMap:
 
             if pred(self[x, y]):
                 nodes.add(Point2((x, y)))
-
-                queue.append(Point2((x + 1, y)))
-                queue.append(Point2((x - 1, y)))
-                queue.append(Point2((x, y + 1)))
-                queue.append(Point2((x, y - 1)))
+                for a in [-1, 0, 1]:
+                    for b in [-1, 0, 1]:
+                        if not (a == 0 and b == 0):
+                            queue.append(Point2((x + a, y + b)))
 
         return nodes
 

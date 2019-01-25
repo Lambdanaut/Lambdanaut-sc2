@@ -3,16 +3,15 @@ import random
 from .unit import Unit
 from .ids.unit_typeid import UnitTypeId
 from .position import Point2, Point3
-from typing import List, Dict, Set, Tuple, Any, Optional, Union # mypy type checking
+from typing import List, Dict, Set, Tuple, Any, Optional, Union  # mypy type checking
+
 
 class Units(list):
     """A collection for units. Makes it easy to select units by selectors."""
+
     @classmethod
     def from_proto(cls, units, game_data):
-        return cls(
-            (Unit(u, game_data) for u in units),
-            game_data
-        )
+        return cls((Unit(u, game_data) for u in units), game_data)
 
     def __init__(self, units, game_data):
         super().__init__(units)
@@ -24,20 +23,38 @@ class Units(list):
     def select(self, *args, **kwargs):
         return UnitSelection(self, *args, **kwargs)
 
+    def copy(self):
+        return self.subgroup(self)
+
     def __or__(self, other: "Units") -> "Units":
+        if self is None:
+            return other
+        if other is None:
+            return self
         tags = {unit.tag for unit in self}
         units = self + [unit for unit in other if unit.tag not in tags]
         return Units(units, self.game_data)
 
     def __and__(self, other: "Units") -> "Units":
+        if self is None:
+            return other
+        if other is None:
+            return self
         tags = {unit.tag for unit in self}
         units = [unit for unit in other if unit.tag in tags]
         return Units(units, self.game_data)
 
     def __sub__(self, other: "Units") -> "Units":
+        if self is None:
+            return Units([], self.game_data)
+        if other is None:
+            return self
         tags = {unit.tag for unit in other}
         units = [unit for unit in self if unit.tag not in tags]
         return Units(units, self.game_data)
+
+    def __hash__(self):
+        return hash(unit.tag for unit in self)
 
     @property
     def amount(self) -> int:
@@ -45,11 +62,11 @@ class Units(list):
 
     @property
     def empty(self) -> bool:
-        return self.amount == 0
+        return not bool(self)
 
     @property
     def exists(self) -> bool:
-        return bool(self.amount)
+        return bool(self)
 
     def find_by_tag(self, tag) -> Optional[Unit]:
         for unit in self:
@@ -65,10 +82,10 @@ class Units(list):
 
     @property
     def first(self) -> Unit:
-        assert self.exists
+        assert self
         return self[0]
 
-    def take(self, n: int, require_all: bool=True) -> "Units":
+    def take(self, n: int, require_all: bool = True) -> "Units":
         assert (not require_all) or len(self) >= n
         return self[:n]
 
@@ -84,6 +101,7 @@ class Units(list):
             return other
 
     def random_group_of(self, n):
+        # TODO allow n > amount with n = min(n,amount)?
         assert 0 <= n <= self.amount
         if n == 0:
             return self.subgroup([])
@@ -92,7 +110,7 @@ class Units(list):
         else:
             return self.subgroup(random.sample(self, n))
 
-    def in_attack_range_of(self, unit: Unit, bonus_distance: Union[int, float]=0) -> "Units":
+    def in_attack_range_of(self, unit: Unit, bonus_distance: Union[int, float] = 0) -> "Units":
         """ Filters units that are in attack range of the unit in parameter """
         return self.filter(lambda x: unit.target_in_range(x, bonus_distance=bonus_distance))
 
@@ -101,7 +119,9 @@ class Units(list):
         assert self.exists
         if isinstance(position, Unit):
             position = position.position
-        return position.distance_to_closest([u.position for u in self]) # Note: list comprehension creation is 0-5% faster than set comprehension
+        return position.distance_to_closest(
+            [u.position for u in self]
+        )  # Note: list comprehension creation is 0-5% faster than set comprehension
 
     def furthest_distance_to(self, position: Union[Unit, Point2, Point3]) -> Union[int, float]:
         """ Returns the distance between the furthest unit from this group to the target unit """
@@ -140,12 +160,12 @@ class Units(list):
     def filter(self, pred: callable) -> "Units":
         return self.subgroup(filter(pred, self))
 
-    def sorted(self, keyfn: callable, reverse: bool=False) -> "Units":
-        if len(self) in [0, 1]:
+    def sorted(self, keyfn: callable, reverse: bool = False) -> "Units":
+        if len(self) in {0, 1}:
             return self
         return self.subgroup(sorted(self, key=keyfn, reverse=reverse))
 
-    def sorted_by_distance_to(self, position: Union[Unit, Point2], reverse: bool=False) -> "Units":
+    def sorted_by_distance_to(self, position: Union[Unit, Point2], reverse: bool = False) -> "Units":
         """ This function should be a bit faster than using units.sorted(keyfn=lambda u: u.distance_to(position)) """
         if len(self) in [0, 1]:
             return self
@@ -175,7 +195,9 @@ class Units(list):
             other = set(other)
         return self.filter(lambda unit: unit.type_id in other)
 
-    def exclude_type(self, other: Union[UnitTypeId, Set[UnitTypeId], List[UnitTypeId], Dict[UnitTypeId, Any]]) -> "Units":
+    def exclude_type(
+        self, other: Union[UnitTypeId, Set[UnitTypeId], List[UnitTypeId], Dict[UnitTypeId, Any]]
+    ) -> "Units":
         """ Filters all units that are not of a specific type """
         # example: self.known_enemy_units.exclude_type([OVERLORD])
         if isinstance(other, UnitTypeId):
@@ -199,10 +221,11 @@ class Units(list):
             if tech_alias:
                 for same in tech_alias:
                     tech_alias_types.add(same)
-        return self.filter(lambda unit:
-                unit.type_id in tech_alias_types
-                or unit._type_data.tech_alias is not None
-                and any(same in tech_alias_types for same in unit._type_data.tech_alias))
+        return self.filter(
+            lambda unit: unit.type_id in tech_alias_types
+            or unit._type_data.tech_alias is not None
+            and any(same in tech_alias_types for same in unit._type_data.tech_alias)
+        )
 
     def same_unit(self, other: Union[UnitTypeId, Set[UnitTypeId], List[UnitTypeId], Dict[UnitTypeId, Any]]) -> "Units":
         """ Usage:
@@ -220,17 +243,22 @@ class Units(list):
             unit_alias = self.game_data.units[unitType.value].unit_alias
             if unit_alias:
                 unit_alias_types.add(unit_alias)
-        return self.filter(lambda unit:
-                unit.type_id in unit_alias_types
-                or unit._type_data.unit_alias is not None
-                and unit._type_data.unit_alias in unit_alias_types)
+        return self.filter(
+            lambda unit: unit.type_id in unit_alias_types
+            or unit._type_data.unit_alias is not None
+            and unit._type_data.unit_alias in unit_alias_types
+        )
 
     @property
     def center(self) -> Point2:
         """ Returns the central point of all units in this list """
-        assert self.exists
-        pos = Point2((sum([unit.position.x for unit in self]) / self.amount, \
-            sum([unit.position.y for unit in self]) / self.amount))
+        assert self
+        pos = Point2(
+            (
+                sum([unit.position.x for unit in self]) / self.amount,
+                sum([unit.position.y for unit in self]) / self.amount,
+            )
+        )
         return pos
 
     @property

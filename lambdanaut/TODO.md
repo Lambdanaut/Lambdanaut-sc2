@@ -3,15 +3,12 @@
 
 ## BUGS
 
-  * Fix bug where queens aren't transfusing sometimes when they should
-
 
 ## HIGH PRIORITY
 
-  * Banelings should be in front of army during attacks.
-
-
-
+  * Remember friendly units so we can figure out if they're being attacked. Like so:
+    * https://github.com/Hannessa/sc2-bots/blob/master/cannon-lover/base_bot.py#L334
+  
 ## MEDIUM PRIORITY
 
   * Search for further enemy expansions and structures.
@@ -20,6 +17,15 @@
   * Add late game builds that are triggered based on scouting info
     * Corruptor BroodLord
     * Ultralisk Corruptor
+    
+  * Add baneling drops
+    * Upgrade ventrical sacks
+    * Upgrade overlord and save its tag
+    * Load banelings
+    * Move Overlord to nearest corner of map
+    * Move Overlord to adjacent corner of map
+    * Move Overlord to enemy start location
+    * Unload banelings
 
   * Add infestors and infestor micro
 
@@ -87,3 +93,12 @@
   * Prioritize what enemy units to attack with MicroManager. Mutas should focus workers and queens, for instance.
 
   * Fix bug where queens sometimes aren't injecting or moving to hatcheries where they're needed
+  
+  * Banelings should be in front of army during attacks.
+
+  * Fix bug where 2nd expo can't be placed on kairo junction (Fixed by tweakimp)
+
+  * Keep army at closest base to enemy while housekeeping
+
+  * Fix bug where queens aren't transfusing sometimes when they should
+
