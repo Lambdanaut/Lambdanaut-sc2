@@ -3,6 +3,10 @@
 
 ## BUGS
 
+  * Fix bug where the build order stalls if hatchery cannot be placed in the next_expansion_location. 
+    * Maybe write a custom version of next_expansion_location that takes an index to get the expansion location after
+      the next expansion location. Use that if building the hatchery fails.  
+  
 
 ## HIGH PRIORITY
 
@@ -18,15 +22,6 @@
     * Corruptor BroodLord
     * Ultralisk Corruptor
     
-  * Add baneling drops
-    * Upgrade ventrical sacks
-    * Upgrade overlord and save its tag
-    * Load banelings
-    * Move Overlord to nearest corner of map
-    * Move Overlord to adjacent corner of map
-    * Move Overlord to enemy start location
-    * Unload banelings
-
   * Add infestors and infestor micro
 
   * Add lurker and lurker micro
@@ -101,4 +96,13 @@
   * Keep army at closest base to enemy while housekeeping
 
   * Fix bug where queens aren't transfusing sometimes when they should
+
+  * Add baneling drops
+    * Upgrade ventrical sacks
+    * Upgrade overlord and save its tag
+    * Load banelings
+    * Move Overlord to nearest corner of map
+    * Move Overlord to adjacent corner of map
+    * Move Overlord to enemy start location
+    * Unload banelings
 

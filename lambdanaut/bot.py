@@ -22,36 +22,6 @@ VERSION = '2.3'
 BUILD = builds.EARLY_GAME_DEFAULT_OPENER
 
 
-def get_training_unit(unit):
-    """
-    If a hatchery is training a queen, this returns the QUEEN unit type
-    If an egg is mutating a zergling, this returns the ZERGLING unit type
-
-    TODO: This is quite hacky. I'm not sure if it'll always work.
-    """
-
-    unit_orders = unit.orders
-
-    # If nothing is currently trained(no orders), then return None
-    if not len(unit_orders):
-        return None
-
-    unit_name = unit_orders[0].ability.link_name
-    unit_name = unit_name.upper()  # Uppercase the string
-    unit_name.replace(" ", "")  # Remove all whitespace from string
-    try:
-        unit_type = getattr(const, unit_name)  # This line might fail!
-    except AttributeError:
-        # Set of upgrades/training units that we can ignore here and return None
-        ignore_exception = {'RESEARCHBURROW'}
-        if unit_name not in ignore_exception:
-            print("=== ERROR IN get_training_unit() COULDN'T FIND CONSTANT {} IN "
-                  "sc2.constants === ".format(unit_name))
-        return None
-
-    return unit_type
-
-
 class Manager(object):
     """
     Base class for all AI managers
