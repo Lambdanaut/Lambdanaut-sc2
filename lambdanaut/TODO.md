@@ -12,6 +12,8 @@
 
   * Remember friendly units so we can figure out if they're being attacked. Like so:
     * https://github.com/Hannessa/sc2-bots/blob/master/cannon-lover/base_bot.py#L334
+    
+  * Move army in unison towards different targets. Perhaps using sc2.client.query_pathings?
   
 ## MEDIUM PRIORITY
 

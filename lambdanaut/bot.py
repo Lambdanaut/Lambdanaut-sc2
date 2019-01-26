@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import sc2
 import sc2.constants as const
+from sc2.position import Point2
 
 import lambdanaut.builds as builds
 import lambdanaut.const2 as const2
@@ -302,6 +303,9 @@ class BuildManager(Manager):
         self.subscribe(Messages.ENEMY_AIR_TECH_SCOUTED)
         self.subscribe(Messages.ENEMY_COUNTER_WITH_ROACHES_SCOUTED)
         self.subscribe(Messages.ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD)
+
+        # Expansion index used for trying other expansions if the one we're trying is blocked
+        self.next_expansion_index = 0
 
         # Recent commands issued. Uses constants defined in const2.py
         self._recent_commands = ExpiringList()
@@ -654,15 +658,26 @@ class BuildManager(Manager):
         # Check type of unit we're building to determine how to build
 
         if build_target == const.HATCHERY:
-            expansion_location = await self.bot.get_next_expansion()
+            expansion_locations = await self.bot.get_open_expansions()
+            try:
+                expansion_location = expansion_locations[self.next_expansion_index]
+            except IndexError:
+                self.print("Couldn't build expansion. All spots are taken.")
+                return None
 
             if self.can_afford(build_target):
                 drones = self.bot.units(const.DRONE)
                 if drones.exists:
                     drone = drones.closest_to(expansion_location)
-                    # target = await self.bot.find_placement(build_target, near=expansion_location)
-                    if expansion_location is not None:
-                        self.bot.actions.append(drone.build(build_target, expansion_location))
+
+                    err = await self.bot.do(drone.build(build_target, expansion_location))
+
+                    if err:
+                        # Try the next expansion location
+                        self.next_expansion_index += 1
+                    else:
+                        # Expansion worked! Reset expansion index.
+                        self.next_expansion_index = 0
 
             # Move drone to expansion location before construction
             elif self.bot.state.common.minerals > 200 and \
@@ -681,7 +696,7 @@ class BuildManager(Manager):
 
                             # Keep from issuing another expand move command
                             self._recent_commands.add(
-                                BuildManagerCommands.EXPAND_MOVE, self.bot.state.game_loop, expiry=20)
+                                BuildManagerCommands.EXPAND_MOVE, self.bot.state.game_loop, expiry=22)
 
         elif build_target == const.LAIR:
             # Get a hatchery
@@ -713,10 +728,9 @@ class BuildManager(Manager):
 
                     drone = self.bot.workers.closest_to(geyser)
 
-                    err = self.bot.actions.append(drone.build(build_target, geyser))
+                    self.bot.actions.append(drone.build(build_target, geyser))
 
-                    if not err:
-                        break  # Found the townhall to use. Break out of loop.
+                    break  # Found the townhall to use. Break out of loop.
 
         elif build_target == const.GREATERSPIRE:
             # Get a spire
@@ -2613,6 +2627,30 @@ class LambdaBot(sc2.BotAI):
             return self.get_enemy_expansion_positions()[1]
         except IndexError:
             return None
+
+    async def get_open_expansions(self) -> List[Point2]:
+        """Gets a sorted list of open expansions from the start location"""
+
+        expansions = []
+
+        startp = self._game_info.player_start_location
+
+        for el in startp.sort_by_distance(self.expansion_locations):
+
+            def is_near_to_expansion(t):
+                return t.position.distance_to(el) < self.EXPANSION_GAP_THRESHOLD
+
+            if any(map(is_near_to_expansion, self.townhalls)):
+                # already taken
+                continue
+
+            d = await self._client.query_pathing(startp, el)
+            if d is None:
+                continue
+
+            expansions.append(el)
+
+        return expansions
 
     def find_nearby_pathable_point(self, near: sc2.position.Point2) -> Union[None, sc2.position.Point2]:
         DISTANCE = 70
