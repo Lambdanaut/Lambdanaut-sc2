@@ -4,7 +4,15 @@ import sc2
 from sc2.constants import *
 
 
-class AtLeast(object):
+class SpecialBuildTarget(object):
+    def extract_unit_type(self):
+        """
+        Gets the unit type from this special container
+        """
+        return self.unit_type
+
+
+class AtLeast(SpecialBuildTarget):
     """
     Container object for use in builds
 
@@ -23,7 +31,7 @@ class AtLeast(object):
         self.unit_type = unit_type
 
 
-class IfHasThenBuild(object):
+class IfHasThenBuild(SpecialBuildTarget):
     """
     Container object for use in builds
 
@@ -41,7 +49,25 @@ class IfHasThenBuild(object):
         self.n = n
 
 
-class OneForEach(object):
+class IfHasThenDontBuild(SpecialBuildTarget):
+    """
+    Container object for use in builds
+
+    Functionally it means that if we don't have any units of type
+    `conditional_unit_type`, then add `n` `unit_type` to the the build order.
+
+    Example that will build 10 banelings if we have a banelings nest
+        BUILD = [
+            IfHasThenBuild(BANELINGNEST, BANELING, 10),
+        ]
+    """
+    def __init__(self, conditional_unit_type, unit_type,  n=1):
+        self.conditional_unit_type = conditional_unit_type
+        self.unit_type = unit_type
+        self.n = n
+
+
+class OneForEach(SpecialBuildTarget):
     """
     Container object for use in builds
 
@@ -59,7 +85,7 @@ class OneForEach(object):
         self.unit_type = unit_type
 
 
-class CanAfford(object):
+class CanAfford(SpecialBuildTarget):
     """
     Container object for use in builds
 
@@ -197,24 +223,25 @@ EARLY_GAME_HATCHERY_FIRST = [
 # Get a ling-bane composition for early attacks and then into mutas
 MID_GAME_LING_BANE_MUTA = [
     AtLeast(1, ZERGLINGMOVEMENTSPEED),
-    HATCHERY,
     DRONE, DRONE, DRONE, DRONE,
+    HATCHERY,
     DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
     QUEEN,
     ZERGLING, ZERGLING, ZERGLING, ZERGLING,
-    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
+    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
+    EXTRACTOR,
+    EXTRACTOR,
+    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
     BANELINGNEST,
-    EXTRACTOR,
-    EXTRACTOR,
     DRONE, DRONE,
     QUEEN,
     DRONE, DRONE,
-    EVOLUTIONCHAMBER,
     EVOLUTIONCHAMBER,
     CanAfford(LAIR),
     QUEEN,
     ZERGLING, ZERGLING, BANELING, BANELING,
     DRONE, DRONE, DRONE, DRONE, DRONE,
+    EVOLUTIONCHAMBER,
     EXTRACTOR,
     CanAfford(UpgradeId.OVERLORDSPEED),  # Baneling drops
     CanAfford(ZERGMELEEWEAPONSLEVEL1),
@@ -226,28 +253,27 @@ MID_GAME_LING_BANE_MUTA += [
     CanAfford(BURROW),
     CanAfford(ZERGMELEEWEAPONSLEVEL2),
     CanAfford(ZERGGROUNDARMORSLEVEL2),
-    DRONE, DRONE, DRONE, DRONE,
-    EXTRACTOR,
+    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
     HATCHERY,
     QUEEN,
     OVERSEER,
     QUEEN,
     QUEEN,
 ]
+MID_GAME_LING_BANE_MUTA += [EXTRACTOR]
 MID_GAME_LING_BANE_MUTA += ([ZERGLING] * 24 + [BANELING] * 10) * 2
 
 
 MID_GAME_ROACH_HYDRA_LURKER = [
     AtLeast(1, ZERGLINGMOVEMENTSPEED),
-    HATCHERY,
     DRONE, DRONE, DRONE, DRONE,
+    HATCHERY,
     DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
     ZERGLING, ZERGLING, ZERGLING, ZERGLING,
     QUEEN,
     DRONE, DRONE, DRONE, DRONE, DRONE,
     QUEEN,
     DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
-    HATCHERY,
     DRONE, DRONE, DRONE, DRONE, DRONE,
     EVOLUTIONCHAMBER,
     EVOLUTIONCHAMBER,
@@ -259,8 +285,7 @@ MID_GAME_ROACH_HYDRA_LURKER = [
     CanAfford(ZERGMISSILEWEAPONSLEVEL1),
     CanAfford(ZERGGROUNDARMORSLEVEL1),
     CanAfford(LAIR),
-    EXTRACTOR,
-    EXTRACTOR,
+    HATCHERY,
     EXTRACTOR,
     EXTRACTOR,
     QUEEN,
@@ -275,6 +300,8 @@ MID_GAME_ROACH_HYDRA_LURKER = [
     QUEEN,
     CanAfford(ZERGMISSILEWEAPONSLEVEL2),
     CanAfford(ZERGGROUNDARMORSLEVEL2),
+    EXTRACTOR,
+    EXTRACTOR
 ]
 MID_GAME_ROACH_HYDRA_LURKER += [CanAfford(GLIALRECONSTITUTION)]
 MID_GAME_ROACH_HYDRA_LURKER += [ROACH] * 13
@@ -283,6 +310,7 @@ MID_GAME_ROACH_HYDRA_LURKER += [RAVAGER] * 2
 MID_GAME_ROACH_HYDRA_LURKER += [HYDRALISKDEN]
 MID_GAME_ROACH_HYDRA_LURKER += [CanAfford(BURROW)]
 MID_GAME_ROACH_HYDRA_LURKER += [CanAfford(TUNNELINGCLAWS)]  # Roach burrow move
+MID_GAME_ROACH_HYDRA_LURKER += [EXTRACTOR]
 MID_GAME_ROACH_HYDRA_LURKER += [OVERSEER]
 MID_GAME_ROACH_HYDRA_LURKER += [CanAfford(EVOLVEGROOVEDSPINES)]
 MID_GAME_ROACH_HYDRA_LURKER += [HYDRALISK] * 5
@@ -292,7 +320,6 @@ MID_GAME_ROACH_HYDRA_LURKER += [HATCHERY]
 MID_GAME_ROACH_HYDRA_LURKER += [HYDRALISK] * 3
 MID_GAME_ROACH_HYDRA_LURKER += [OVERSEER, QUEEN] * 1
 MID_GAME_ROACH_HYDRA_LURKER += [HYDRALISK] * 5
-MID_GAME_ROACH_HYDRA_LURKER += [EXTRACTOR]
 MID_GAME_ROACH_HYDRA_LURKER += [EVOLVEMUSCULARAUGMENTS]
 
 # Tech up to Corruptor Brood Lord ASAP vs Tanks
@@ -308,7 +335,7 @@ MID_GAME_CORRUPTOR_BROOD_LORD_RUSH = [
     AtLeast(1, INFESTATIONPIT),
     AtLeast(5, HATCHERY),
     AtLeast(9, EXTRACTOR),
-    SPIRE,
+    IfHasThenDontBuild(GREATERSPIRE, SPIRE),
     HIVE,
     AtLeast(70, DRONE),
     IfHasThenBuild(ROACHWARREN, ROACH, 3),
@@ -329,7 +356,8 @@ MID_GAME_CORRUPTOR_BROOD_LORD_RUSH += [ZERGFLYERARMORSLEVEL1]
 LATE_GAME_CORRUPTOR_BROOD_LORD = [
     AtLeast(75, DRONE),
     AtLeast(1, INFESTATIONPIT),
-    AtLeast(1, SPIRE),  # ASSUMES SPIRE EXISTS
+    # Require at least one spire unless we have a Greater Spire
+    IfHasThenDontBuild(GREATERSPIRE, AtLeast(1, SPIRE)),
     AtLeast(1, HIVE),
     AtLeast(6, HATCHERY),
     AtLeast(8, EXTRACTOR),

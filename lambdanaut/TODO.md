@@ -3,10 +3,6 @@
 
 ## BUGS
 
-  * Fix bug where the build order stalls if hatchery cannot be placed in the next_expansion_location. 
-    * Maybe write a custom version of next_expansion_location that takes an index to get the expansion location after
-      the next expansion location. Use that if building the hatchery fails.  
-  
 
 ## HIGH PRIORITY
 
@@ -108,3 +104,7 @@
     * Move Overlord to enemy start location
     * Unload banelings
 
+  * Fix bug where the build order stalls if hatchery cannot be placed in the next_expansion_location. 
+    * Maybe write a custom version of next_expansion_location that takes an index to get the expansion location after
+      the next expansion location. Use that if building the hatchery fails.  
+  

@@ -421,7 +421,7 @@ class BuildManager(Manager):
             # Messages indicating roach_hydra mid game is ideal
             roach_hydra_mid_game = {
                 Messages.OVERLORD_SCOUT_FOUND_ENEMY_DEFENSIVE_STRUCTURES,
-                # Messages.ENEMY_COUNTER_WITH_ROACHES_SCOUTED,
+                Messages.ENEMY_COUNTER_WITH_ROACHES_SCOUTED,
             }
             if message in roach_hydra_mid_game:
                 self.ack(message)
@@ -438,6 +438,111 @@ class BuildManager(Manager):
                 if self.build_stage != BuildStages.LATE_GAME:
                     self.add_build(Builds.MID_GAME_CORRUPTOR_BROOD_LORD_RUSH)
 
+    def parse_special_build_target(self,
+                                   unit: builds.SpecialBuildTarget,
+                                   existing_unit_counts: Counter,
+                                   build_order_counts: Counter) -> Union[const.UnitTypeId, const.UpgradeId]:
+
+        """
+        Parses a SpecialBuildTarget `unit` and performs relevant mutations on
+        `build_order_counts`
+
+        :returns A build target id if it's applicable, else returns None
+        """
+
+        if isinstance(unit, builds.AtLeast):
+            # AtLeast is a "special" unittype that only adds 1 if we
+            # don't have AT LEAST `n` number of units built.
+
+            at_least = unit
+            unit = at_least.unit_type
+
+            if existing_unit_counts[unit] < at_least.n:
+                if isinstance(unit, builds.SpecialBuildTarget):
+                    return self.parse_special_build_target(unit, existing_unit_counts, build_order_counts)
+                else:
+                    build_order_counts[unit] += 1
+                    return unit
+            else:
+                return unit
+
+        elif isinstance(unit, builds.IfHasThenBuild):
+            # IfHasThenBuild is a "special" unittype that only adds `n`
+            # unit_type if we have AT LEAST 1 number
+            # of if_has_then_build.conditional_unit_type.
+
+            if_has_then_build = unit
+            unit = if_has_then_build.unit_type
+            conditional_unit_type = if_has_then_build.conditional_unit_type
+            amount_to_add = if_has_then_build.n
+
+            if existing_unit_counts[conditional_unit_type] >= 1:
+                if isinstance(unit, builds.SpecialBuildTarget):
+                    return self.parse_special_build_target(unit, existing_unit_counts, build_order_counts)
+                else:
+                    build_order_counts[unit] += amount_to_add
+                    return unit
+            else:
+                return unit
+
+        elif isinstance(unit, builds.IfHasThenDontBuild):
+            # IfHasThenDontBuild is a "special" unittype that only adds `n`
+            # unit_type if we have 0 of `conditional_unit_type`.
+
+            if_has_then_dont_build = unit
+            unit = if_has_then_dont_build.unit_type
+            conditional_unit_type = if_has_then_dont_build.conditional_unit_type
+            amount_to_add = if_has_then_dont_build.n
+
+            if existing_unit_counts[conditional_unit_type] == 0:
+                if isinstance(unit, builds.SpecialBuildTarget):
+                    return self.parse_special_build_target(unit, existing_unit_counts, build_order_counts)
+                else:
+                    build_order_counts[unit] += amount_to_add
+                    return unit
+            else:
+                return unit
+
+        elif isinstance(unit, builds.OneForEach):
+            # OneForEach is a "special" unittype that adds a unittype of
+            # `unit_type` to the build queue for each unit_type of `for_each_unit_type`
+            # that we already have created.
+
+            one_for_each = unit
+            unit = one_for_each.unit_type
+            for_each_unit_type = one_for_each.for_each_unit_type
+
+            try:
+                existing_for_each_units = existing_unit_counts[for_each_unit_type]
+            except:
+                existing_for_each_units = 0
+
+            if existing_for_each_units:
+                if isinstance(unit, builds.SpecialBuildTarget):
+                    return self.parse_special_build_target(unit, existing_unit_counts, build_order_counts)
+                else:
+                    build_order_counts[unit] += existing_for_each_units
+                    return unit
+            else:
+                return unit
+
+        elif isinstance(unit, builds.CanAfford):
+            # CanAfford is a "special" unittype that adds a unittype of
+            # `unit_type` to the build queue only if we can afford it
+
+            can_afford = unit
+            unit = can_afford.unit_type
+
+            if self.can_afford(unit):
+                if isinstance(unit, builds.SpecialBuildTarget):
+                    return self.parse_special_build_target(unit, existing_unit_counts, build_order_counts)
+                else:
+                    build_order_counts[unit] += 1
+                    return unit
+            else:
+                return unit
+
+
     def overlord_is_build_target(self) -> bool:
         """
         Build Overlords automatically once the bot has built three or more
@@ -447,10 +552,11 @@ class BuildManager(Manager):
         # Only build overlords if we haven't yet reached max supply
         if self.bot.supply_cap < 200:
             # Subtract supply from damaged overlords. Assume we'll lose them.
-            overlords = self.bot.units(const.OVERLORD)
+            overlords = self.bot.units(
+                {const.OVERLORD, const.UnitTypeId.OVERLORDTRANSPORT, const.UnitTypeId.OVERSEER})
             damaged_overlord_supply = 0
             if overlords.exists:
-                damaged_overlords = overlords.filter(lambda o: o.health_percentage < 0.7)
+                damaged_overlords = overlords.filter(lambda o: o.health_percentage < 0.85)
                 if damaged_overlords.exists:
                     damaged_overlord_supply = damaged_overlords.amount * 8  # Overlords provide 8 supply
 
@@ -471,25 +577,36 @@ class BuildManager(Manager):
 
         return False
 
-    def current_build_target(self) -> Union[None, const.UnitTypeId]:
+    def current_build_targets(self, n_targets=6) -> List[const.UnitTypeId]:
         """
         Goes through the build order one by one counting up all the units and
-        stopping once we hit a unit we don't yet have
+        stopping once we hit a unit we don't yet have.
 
-        :returns Unit Type or None
+        `n_targets` specifies the number of build targets to return.
         """
+
+        build_targets = []
 
         if self.overlord_is_build_target():
             unit = const.OVERLORD
             self.last_build_target = self.build_target
             self.build_target = unit
-            return unit
+            return [unit]
 
         # Count of existing units {unit.type_id: count}
         existing_unit_counts = Counter(map(lambda unit: unit.type_id, self.bot.units))
 
         # Count of units being trained or built
         pending_units = Counter({u: self.bot.already_pending(u, all_units=True) for u in self.our_unit_types})
+
+        # Add an extra zergling for each zergling in an egg
+        zergling_creation_ability = self.bot._game_data.units[const.ZERGLING.value].creation_ability
+        zergling_eggs = Counter({
+            const.ZERGLING: sum(
+                [egg.orders[0].ability == zergling_creation_ability
+                 for egg in self.bot.units(const.UnitTypeId.EGG)]
+            )
+        })
 
         # Burrowed Zerglings count as zerglings
         burrowed_zergling = Counter({const.ZERGLING: len(self.bot.units(const.ZERGLINGBURROWED))})
@@ -528,6 +645,7 @@ class BuildManager(Manager):
                                                  for u in const2.ZERG_UPGRADES})
 
         existing_unit_counts += pending_units
+        existing_unit_counts += zergling_eggs
         existing_unit_counts += burrowed_zergling
         existing_unit_counts += burrowed_banelings
         existing_unit_counts += burrowed_roaches
@@ -559,60 +677,20 @@ class BuildManager(Manager):
         # Go through each build looking for the unit we don't have
         for build in self.builds:
             if build is None:
-                return None
+                return []
 
             build_queue = builds.BUILD_MAPPING[build]
 
-            for unit in build_queue:
+            for unit_i in range(len(build_queue)):
+                unit = build_queue[unit_i]
 
                 # Count each unit in the queue as we loop through them
                 # Check if the unit is a special conditional unittype
-                if isinstance(unit, builds.AtLeast):
-                    # AtLeast is a "special" unittype that only adds 1 if we
-                    # don't have AT LEAST `n` number of units built.
-
-                    at_least = unit
-                    unit = at_least.unit_type
-
-                    if existing_unit_counts[unit] < at_least.n:
-                        build_order_counts[unit] += 1
-                elif isinstance(unit, builds.IfHasThenBuild):
-                    # IfHasThenBuild is a "special" unittype that only adds `n`
-                    # unit_type if we have AT LEAST 1 number
-                    # of if_has_then_build.conditional_unit_type.
-
-                    if_has_then_build = unit
-                    unit = if_has_then_build.unit_type
-                    conditional_unit_type = if_has_then_build.conditional_unit_type
-                    amount_to_add = if_has_then_build.n
-
-                    if existing_unit_counts[conditional_unit_type] >= 1:
-                        build_order_counts[unit] += amount_to_add
-                elif isinstance(unit, builds.OneForEach):
-                    # OneForEach is a "special" unittype that adds a unittype of
-                    # `unit_type` to the build queue for each unit_type of `for_each_unit_type`
-                    # that we already have created.
-
-                    one_for_each = unit
-                    unit = one_for_each.unit_type
-                    for_each_unit_type = one_for_each.for_each_unit_type
-
-                    try:
-                        existing_for_each_units = existing_unit_counts[for_each_unit_type]
-                    except:
-                        existing_for_each_units = 0
-
-                    build_order_counts[unit] += existing_for_each_units
-                elif isinstance(unit, builds.CanAfford):
-                    # CanAfford is a "special" unittype that adds a unittype of
-                    # `unit_type` to the build queue only if we can afford it
-
-                    can_afford = unit
-                    unit = can_afford.unit_type
-
-                    if self.can_afford(unit):
-                        build_order_counts[unit] += 1
-
+                if isinstance(unit, builds.SpecialBuildTarget):
+                    result = self.parse_special_build_target(
+                        unit, existing_unit_counts, build_order_counts)
+                    if result is not None:
+                        unit = result
                 else:
                     build_order_counts[unit] += 1
 
@@ -633,6 +711,7 @@ class BuildManager(Manager):
 
                     if (tech_requirement is None or existing_unit_counts[tech_requirement]) > 0 and \
                             (idle_building_structure is None or idle_building_structure.exists):
+
                         # Found build target
                         self.last_build_target = self.build_target
                         self.build_target = unit
@@ -643,13 +722,24 @@ class BuildManager(Manager):
                             self.build_stage = build_stage
                             self.publish(Messages.NEW_BUILD_STAGE, build_stage)
 
-                        return unit
+                        # Add the build target
+                        build_targets.append(unit)
 
-        return None
+                        # Pretend like we have this unit already and see if
+                        # there are more units we can add to the build_targets list
+                        existing_unit_counts[unit] += 1
 
-    async def create_build_target(self, build_target):
+                        # If we have enough build targets, return.
+                        if len(build_targets) == n_targets:
+                            return build_targets
+
+        return build_targets
+
+    async def create_build_target(self, build_target) -> bool:
         """
         Main function that issues commands to build a build order target
+
+        Returns a boolean indicating if the build was a success
         """
 
         if self.last_build_target != build_target:
@@ -663,7 +753,7 @@ class BuildManager(Manager):
                 expansion_location = expansion_locations[self.next_expansion_index]
             except IndexError:
                 self.print("Couldn't build expansion. All spots are taken.")
-                return None
+                return False
 
             if self.can_afford(build_target):
                 drones = self.bot.units(const.DRONE)
@@ -674,10 +764,13 @@ class BuildManager(Manager):
 
                     if err:
                         # Try the next expansion location
+                        self.print("Error while building the expansion at {}. "
+                                   "Trying the next expansion location. ".format(expansion_location))
                         self.next_expansion_index += 1
                     else:
                         # Expansion worked! Reset expansion index.
                         self.next_expansion_index = 0
+                        return True
 
             # Move drone to expansion location before construction
             elif self.bot.state.common.minerals > 200 and \
@@ -706,6 +799,7 @@ class BuildManager(Manager):
             if self.can_afford(build_target) and hatcheries.exists:
                 hatchery = hatcheries.closest_to(self.bot.start_location)
                 self.bot.actions.append(hatchery.build(build_target))
+                return True
 
         elif build_target == const.HIVE:
             # Get a lair
@@ -714,6 +808,7 @@ class BuildManager(Manager):
             # Train the unit
             if self.can_afford(build_target) and lairs.exists:
                 self.bot.actions.append(lairs.random.build(build_target))
+                return True
 
         elif build_target == const.EXTRACTOR:
             if self.can_afford(build_target):
@@ -730,7 +825,7 @@ class BuildManager(Manager):
 
                     self.bot.actions.append(drone.build(build_target, geyser))
 
-                    break  # Found the townhall to use. Break out of loop.
+                    return True
 
         elif build_target == const.GREATERSPIRE:
             # Get a spire
@@ -739,6 +834,8 @@ class BuildManager(Manager):
             # Train the unit
             if spire.exists and self.can_afford(build_target):
                 self.bot.actions.append(spire.random.build(build_target))
+
+                return True
 
         elif build_target == const.SPINECRAWLER:
             townhalls = self.bot.townhalls.ready
@@ -751,6 +848,8 @@ class BuildManager(Manager):
                     direction_of_enemy = townhall.position.towards_with_random_angle(enemy_start_location, 10)
 
                     await self.bot.build(build_target, near=direction_of_enemy)
+
+                    return True
 
         elif build_target == const.SPORECRAWLER:
             townhalls = self.bot.townhalls.ready
@@ -782,6 +881,8 @@ class BuildManager(Manager):
 
                     await self.bot.build(build_target, near=location)
 
+                    return True
+
         elif build_target in const2.ZERG_STRUCTURES_FROM_DRONES:
             townhalls = self.bot.townhalls.ready
 
@@ -804,6 +905,8 @@ class BuildManager(Manager):
 
                     await self.bot.build(build_target, near=location)
 
+                    return True
+
         elif build_target == const.QUEEN:
 
             townhalls = self.bot.townhalls.idle
@@ -811,6 +914,8 @@ class BuildManager(Manager):
             if self.can_afford(build_target) and townhalls.exists:
                 self.bot.actions.append(
                     townhalls.random.train(build_target))
+
+                return True
 
         elif build_target in const2.ZERG_UNITS_FROM_LARVAE:
             # Get a larvae
@@ -825,6 +930,7 @@ class BuildManager(Manager):
                         BuildManagerCommands.BUILD_OVERLORD, self.bot.state.game_loop, expiry=18)
 
                 self.bot.actions.append(larvae.random.train(build_target))
+                return True
 
         elif build_target == const.BANELING:
             # Get a zergling
@@ -839,6 +945,7 @@ class BuildManager(Manager):
 
                 zergling = zerglings.closest_to(self.bot.start_location)
                 self.bot.actions.append(zergling.train(build_target))
+                return True
 
         elif build_target == const.RAVAGER:
             # Get a Roach
@@ -853,6 +960,7 @@ class BuildManager(Manager):
 
                 roach = roaches.closest_to(self.bot.start_location)
                 self.bot.actions.append(roach.train(build_target))
+                return True
 
         elif build_target == const.LURKERMP:
             # Get a hydralisk
@@ -867,6 +975,7 @@ class BuildManager(Manager):
 
                 hydralisk = hydralisks.closest_to(self.bot.start_location)
                 self.bot.actions.append(hydralisk.train(build_target))
+                return True
 
         elif build_target == const.BROODLORD:
             # Get a Corruptor
@@ -881,6 +990,7 @@ class BuildManager(Manager):
 
                 corruptor = corruptors.closest_to(self.bot.start_location)
                 self.bot.actions.append(corruptor.train(build_target))
+                return True
 
         elif build_target == const.OVERSEER:
             # Get an overlord
@@ -890,6 +1000,7 @@ class BuildManager(Manager):
             if self.can_afford(build_target) and overlords.exists:
                 overlord = overlords.closest_to(self.bot.start_location)
                 self.bot.actions.append(overlord.train(build_target))
+                return True
 
         # Upgrades below
         elif isinstance(build_target, const.UpgradeId):
@@ -907,22 +1018,40 @@ class BuildManager(Manager):
                 # Send out message about upgrade started
                 self.publish(Messages.UPGRADE_STARTED, build_target)
 
+                return True
+
         else:
             self.print("Could not determine how to create build_target `{}`".format(build_target))
+
+        return False
+
+    async def create_build_targets(self, build_targets: list) -> bool:
+        """
+        Creates a list of build targets, stopping at the first one that is
+        unable to be built. Returns a boolean indicating if they were all
+        built
+        """
+
+        for build_target in build_targets:
+            result = await self.create_build_target(build_target)
+            if not result:
+                return False
+
+        return True
 
     async def run(self):
         # Read messages and act on them
         await self.read_messages()
 
         # Get the current build target
-        current_build_target = self.current_build_target()
+        current_build_targets = self.current_build_targets()
 
-        if current_build_target is None:
+        if not current_build_targets:
             # If we are at the end of the build queue, then add a default build
             self.add_next_default_build()
         else:
-            # Build the current build target
-            await self.create_build_target(current_build_target)
+            # Build the current build targets
+            await self.create_build_targets(current_build_targets)
 
 
 class ResourceManager(Manager):
@@ -948,6 +1077,12 @@ class ResourceManager(Manager):
         # Message subscriptions
         self.subscribe(Messages.NEW_BUILD)
         self.subscribe(Messages.UPGRADE_STARTED)
+
+    async def initialize_workers(self):
+        minerals = self.bot.state.mineral_field
+        for worker in self.bot.workers:
+            mineral = minerals.closest_to(worker)
+            self.bot.actions.append(worker.gather(mineral))
 
     async def manage_mineral_saturation(self):
         """
@@ -991,11 +1126,22 @@ class ResourceManager(Manager):
             self.bot.actions.append(worker.gather(mineral))
 
     async def manage_vespene(self):
+        # If we have over 5 times the vespene than we do minerals, hold off on gas
+        if self.bot.vespene > 350 and self.bot.minerals > 50 \
+                and self.bot.vespene / self.bot.minerals > 6 and \
+                not self._recent_commands.contains(
+                    ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
+                    self.bot.state.game_loop):
+            # Mine only 1 worker per vespene geysers
+            self._recent_commands.add(
+                ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
+                self.bot.state.game_loop, expiry=30)
+
         saturated_extractors = self.bot.units(const.EXTRACTOR).filter(
-            lambda extr: extr.assigned_harvesters > extr.ideal_harvesters)
+            lambda extr: extr.assigned_harvesters > (extr.ideal_harvesters)).ready
 
         unsaturated_extractors = self.bot.units(const.EXTRACTOR).filter(
-            lambda extr: extr.assigned_harvesters < extr.ideal_harvesters)
+            lambda extr: extr.assigned_harvesters < (extr.ideal_harvesters)).ready
 
         if self._recent_commands.contains(
                 ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE, self.bot.state.game_loop):
@@ -1123,8 +1269,7 @@ class ResourceManager(Manager):
                                     # Spawn creep tumor if we have none
                                     if const.BUILD_CREEPTUMOR_QUEEN in abilities:
                                         position = townhall.position.towards_with_random_angle(
-                                            self.bot.enemy_start_location, random.randint(9, 11),
-                                            max_difference=(math.pi / 1.5))
+                                            self.bot.enemy_start_location, random.randint(5, 7))
 
                                         self._recent_commands.add(
                                             ResourceManagerCommands.QUEEN_SPAWN_TUMOR,
@@ -1376,92 +1521,115 @@ class OverlordManager(StatefulManager):
         """
 
         # Ensure we have Ventrical Sacks upgraded
-        if const.OVERLORDSPEED in self.bot.state.upgrades:
+        if const.OVERLORDSPEED in self.bot.state.upgrades \
+                and self.bot.units(const.BANELINGNEST).exists:
             # Get overlords
             overlords = self.bot.units(const.UnitTypeId.OVERLORD).ready.\
                 tags_not_in(self.scouting_overlord_tags)
             overlord_transports = self.bot.units(const.UnitTypeId.OVERLORDTRANSPORT).ready. \
                 tags_not_in(self.scouting_overlord_tags - {self.baneling_drop_overlord_tag})
 
-            if overlords.exists:
-                if self.baneling_drop_overlord_tag is None:
-                    if overlord_transports.exists:
-                        # Tag an overlord transport to drop with
-                        self.print("Tagging overlord transport for a baneling drop")
-                        overlord = overlord_transports.closest_to(self.bot.start_location)
-                        self.baneling_drop_overlord_tag = overlord.tag
-                    elif overlords.exists:
-                        # Morph to transport overlord
-                        self.print("Morphing Overlord for baneling drop")
-                        overlord = overlords.closest_to(self.bot.start_location)
-                        self.bot.actions.append(overlord(const.MORPH_OVERLORDTRANSPORT))
-                else:
-                    # Get our overlord transport by tag
-                    overlord = overlord_transports.find_by_tag(self.baneling_drop_overlord_tag)
-                    if overlord is None:
-                        # Overlord has died, continue on (rest his soul)
-                        self.print("Baneling dropping overlord has died")
-                        self.baneling_drop_overlord_tag = None
-                    elif overlord.cargo_used < overlord.cargo_max:
-                        # Load banelings
-                        banelings = self.bot.units(const.BANELING)
-                        if banelings.exists and banelings.amount > 3:
-                            self.print("Loading banelings for baneling drop")
-                            nearest_banelings = banelings.sorted(
-                                lambda b: b.distance_to(overlord)).take(
-                                4, require_all=False)
-                            for baneling in nearest_banelings:
-                                self.bot.actions.append(baneling.move(overlord.position))
-                                self.bot.actions.append(overlord(
-                                    const.AbilityId.LOAD_OVERLORD, baneling, queue=True))
+            if self.baneling_drop_overlord_tag is None:
+                if overlord_transports.exists:
+                    # Tag an overlord transport to drop with
+                    self.print("Tagging overlord transport for a baneling drop")
+                    overlord = overlord_transports.closest_to(self.bot.start_location)
+                    self.baneling_drop_overlord_tag = overlord.tag
+                elif overlords.exists:
+                    # Morph to transport overlord
+                    self.print("Morphing Overlord for baneling drop")
+                    overlord = overlords.closest_to(self.bot.start_location)
+                    self.baneling_drop_overlord_tag = overlord.tag
+                    self.bot.actions.append(overlord(const.MORPH_OVERLORDTRANSPORT))
+            else:
+                # Get our overlord transport by tag
+                overlord = overlord_transports.find_by_tag(self.baneling_drop_overlord_tag)
+                if overlord is None:
+                    # Overlord has died, continue on (rest his soul)
+                    self.print("Baneling dropping overlord has died")
+                    self.baneling_drop_overlord_tag = None
+                elif overlord.cargo_used < overlord.cargo_max:
+                    # Load banelings
+                    banelings = self.bot.units(const.BANELING)
+                    if banelings.exists and banelings.amount > 3:
+                        self.print("Loading banelings for baneling drop")
+                        baneling = banelings.closest_to(overlord)
 
-                    elif overlord.is_idle:
-                        # Move to enemy
-                        self.print("Moving transport overlord for baneling drop")
-                        corners = self.bot.rect_corners(
-                            self.bot._game_info.playable_area)
-                        closest_corner = overlord.position.closest(corners)
-                        closest_corner_to_enemy = self.bot.enemy_start_location.closest(corners)
-                        adjacent_corners = self.bot.adjacent_corners(
-                            self.bot._game_info.playable_area, closest_corner)
-                        closest_adjacent_to_enemy = \
-                            self.bot.enemy_start_location.closest(adjacent_corners)
+                        # Add baneling to harassing group so it won't attack
+                        self.bot.occupied_units.add(baneling.tag)
 
-                        if closest_corner_to_enemy == closest_adjacent_to_enemy:
-                            # Move straight to enemy and drop
-                            towards_enemy = self.bot.enemy_start_location.towards(
-                                self.bot.start_location, 3)
-                            self.bot.actions.append(overlord.move(
-                                towards_enemy, queue=True))
-                            self.bot.actions.append(overlord(
-                                const.AbilityId.UNLOADALLAT_OVERLORD, overlord, queue=True))
-                            self.bot.actions.append(overlord.move(
-                                self.bot.enemy_start_location))
-                        else:
-                            # Move around the corners of the map and drop
-                            self.bot.actions.append(overlord.move(
-                                closest_adjacent_to_enemy))
-                            towards_enemy = self.bot.enemy_start_location.towards(
-                                closest_adjacent_to_enemy, 3)
-                            self.bot.actions.append(overlord.move(
-                                towards_enemy, queue=True))
-                            self.bot.actions.append(overlord(
-                                const.AbilityId.UNLOADALLAT_OVERLORD, overlord, queue=True))
-                            self.bot.actions.append(overlord.move(
-                                self.bot.enemy_start_location, queue=True))
+                        self.bot.actions.append(baneling.move(overlord.position))
+                        self.bot.actions.append(overlord(
+                            const.AbilityId.LOAD_OVERLORD, baneling, queue=True))
+
+                elif overlord.is_idle:
+                    # Move to enemy
+                    self.print("Moving transport overlord for baneling drop")
+                    corners = self.bot.rect_corners(
+                        self.bot._game_info.playable_area)
+                    closest_corner = overlord.position.closest(corners)
+                    closest_corner_to_enemy = self.bot.enemy_start_location.closest(corners)
+                    adjacent_corners = self.bot.adjacent_corners(
+                        self.bot._game_info.playable_area, closest_corner)
+                    closest_adjacent_to_enemy = \
+                        self.bot.enemy_start_location.closest(adjacent_corners)
+
+                    if closest_corner_to_enemy == closest_adjacent_to_enemy:
+                        # Move straight to enemy and drop
+                        towards_enemy = self.bot.enemy_start_location.towards(
+                            self.bot.start_location, 3)
+                        self.bot.actions.append(overlord.move(
+                            towards_enemy, queue=True))
+                        self.bot.actions.append(overlord(
+                            const.AbilityId.UNLOADALLAT_OVERLORD, overlord, queue=True))
+                        self.bot.actions.append(overlord.move(
+                            self.bot.enemy_start_location, queue=True))
+                        self.bot.actions.append(overlord.move(
+                            self.bot.start_location, queue=True))
                     else:
-                        # Drop banelings if near enemy workers or about to die
+                        # Move around the corners of the map and drop
+                        corner_towards_enemy = closest_adjacent_to_enemy.towards(
+                            self.bot.enemy_start_location, 30)
+                        self.bot.actions.append(overlord.move(
+                            corner_towards_enemy))
+                        towards_enemy = self.bot.enemy_start_location.towards(
+                            closest_adjacent_to_enemy, 3)
+                        self.bot.actions.append(overlord.move(
+                            towards_enemy, queue=True))
+                        self.bot.actions.append(overlord(
+                            const.AbilityId.UNLOADALLAT_OVERLORD, overlord, queue=True))
+                        self.bot.actions.append(overlord.move(
+                            self.bot.enemy_start_location, queue=True))
+                        self.bot.actions.append(overlord.move(
+                            self.bot.start_location, queue=True))
+                else:
+                    # Drop banelings if near enemy workers or about to die
+                    enemy_priorities = const2.WORKERS | {
+                        const.MARINE, const.PHOENIX, const.VIKING, const.MISSILETURRET}
+                    enemy_targets = self.bot.known_enemy_units.of_type(enemy_priorities).\
+                        closer_than(9, overlord)
+                    if enemy_targets.exists and enemy_targets.amount > 6:
                         self.print("Unloading banelings on enemy workers")
-                        enemy_workers = self.bot.known_enemy_units.of_type(const2.WORKERS).\
-                            closer_than(7, overlord)
-                        if (enemy_workers.exists and enemy_workers.amount > 7)\
-                                or overlord.health_percentage < 0.5:
-                            self.bot.actions.append(overlord(
-                                const.AbilityId.UNLOADALLAT_OVERLORD, overlord))
-                            self.bot.actions.append(overlord.move(
-                                enemy_workers.center, queue=True))
-                            self.bot.actions.append(overlord.move(
-                                self.bot.start_location, queue=True))
+                        self.bot.actions.append(overlord(
+                            const.AbilityId.UNLOADALLAT_OVERLORD, overlord))
+                        self.bot.actions.append(overlord.move(
+                            enemy_targets.center))
+                        towards_start_location = overlord.position.towards(
+                            self.bot.start_location, 40)
+                        self.bot.actions.append(overlord.move(
+                            towards_start_location, queue=True))
+
+                    elif overlord.health_percentage < 0.7:
+                        self.print("Unloading banelings from damaged Overlord")
+                        self.bot.actions.append(overlord(
+                            const.AbilityId.UNLOADALLAT_OVERLORD, overlord))
+                        target = utils.towards_direction(overlord.position, overlord.facing, +4)
+                        self.bot.actions.append(overlord.move(
+                            target))
+                        towards_start_location = overlord.position.towards(
+                            self.bot.start_location, 40)
+                        self.bot.actions.append(overlord.move(
+                            towards_start_location, queue=True))
 
     async def do_initial(self):
         """
@@ -1733,7 +1901,8 @@ class ForceManager(StatefulManager):
         zerg_army_units = const2.ZERG_ARMY_UNITS | {const.ROACHBURROWED}
 
         army = self.bot.units().filter(
-            lambda unit: unit.type_id in zerg_army_units)
+            lambda unit: unit.type_id in zerg_army_units).\
+            tags_not_in(self.bot.occupied_units)
 
         townhalls = self.bot.townhalls
 
@@ -1783,7 +1952,8 @@ class ForceManager(StatefulManager):
 
                 if escorting_worker:
                     army = self.bot.units().filter(
-                        lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
+                        lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS).\
+                        tags_not_in(self.bot.occupied_units)
                     expansion_location = await self.bot.get_next_expansion()
 
                     # Move with worker until we get up to the expansion
@@ -1815,8 +1985,9 @@ class ForceManager(StatefulManager):
                         if len(self.workers_defending) <= ground_enemies.amount:
                             if worker.tag not in self.workers_defending:
                                 target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
-                                self.bot.actions.append(worker.attack(target.position))
-                                self.workers_defending.add(worker.tag)
+                                if target.type_id != const.BANELING:
+                                    self.bot.actions.append(worker.attack(target.position))
+                                    self.workers_defending.add(worker.tag)
 
                 # Have queens defend
                 queens = self.bot.units(const.QUEEN)
@@ -1892,7 +2063,8 @@ class ForceManager(StatefulManager):
         army_units = const2.ZERG_ARMY_UNITS
 
         army = self.bot.units().filter(
-            lambda unit: unit.type_id in army_units)
+            lambda unit: unit.type_id in army_units).\
+            tags_not_in(self.bot.occupied_units)
 
         if not army.exists:
             return
@@ -1915,7 +2087,8 @@ class ForceManager(StatefulManager):
         self._recent_commands.add(ForceManagerCommands.START_ATTACKING, self.bot.state.game_loop, expiry=4)
 
         # Do Baneling harass during attack
-        banelings = self.bot.units(const.BANELING)
+        banelings = self.bot.units(const.BANELING)\
+            .tags_not_in(self.bot.occupied_units)
         if banelings.exists:
             # Take 4 banelings if we have 4, otherwise just don't harass
             # This returns a list (not a Units Group)
@@ -1969,7 +2142,7 @@ class ForceManager(StatefulManager):
                         nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
                         nearby_ramp = target.closest(nearby_ramps)  # Ramp closest to army
 
-                        if nearby_ramp.distance_to(target) < 8:
+                        if nearby_ramp.distance_to(target) < 14:
                             target = nearby_ramp
 
                         self.bot.actions.append(baneling.move(target))
@@ -1999,10 +2172,12 @@ class ForceManager(StatefulManager):
                         target = enemy_structures.random.position
                         self.bot.actions.append(mutalisk.move(target))
 
-
     async def stop_attacking(self):
         # Cleanup banelings that were harassing
         self.banelings_harassing.clear()
+
+        # Reset the occupied units
+        self.bot.occupied_units.clear()
 
     async def do_attacking(self):
         # Don't attackmove into the enemy with these units
@@ -2015,7 +2190,8 @@ class ForceManager(StatefulManager):
         # Do main force attacking
         army = self.bot.units().filter(
             lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS).\
-            exclude_type(no_attackmove_units)
+            exclude_type(no_attackmove_units).\
+            tags_not_in(self.bot.occupied_units)
 
         # Exclude the banelings that are currently harassing
         army -= self.bot.units().tags_in(self.banelings_harassing)
@@ -2045,7 +2221,8 @@ class ForceManager(StatefulManager):
 
     async def do_searching(self):
         army = self.bot.units().filter(
-            lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS).idle
+            lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS).\
+            tags_not_in(self.bot.occupied_units).idle
 
         if not army.exists:
             return
@@ -2477,9 +2654,9 @@ class MicroManager(Manager):
 
         enemy_units =self.bot.known_enemy_units
         if unit.can_attack_ground:
-            enemy_units = enemy_units.closer_than(unit.ground_range * 1.2, unit).not_flying
+            enemy_units = enemy_units.closer_than(unit.ground_range * 1.3, unit).not_flying
         if unit.can_attack_air:
-            enemy_units = enemy_units.closer_than(unit.air_range * 1.2, unit).flying
+            enemy_units = enemy_units.closer_than(unit.air_range * 1.3, unit).flying
 
         if enemy_units.exists:
             target = self.bot.closest_and_most_damaged(
@@ -2538,6 +2715,10 @@ class LambdaBot(sc2.BotAI):
         self.enemy_start_location = None
         self.not_enemy_start_locations = None
 
+        # Set of units currently occupied in some way. Don't order them.
+        # This is cleared every time an attack ends
+        self.occupied_units = set()
+
     async def on_step(self, iteration):
         self.iteration = iteration
 
@@ -2558,7 +2739,9 @@ class LambdaBot(sc2.BotAI):
             self.force_manager = ForceManager(self)
             self.micro_manager = MicroManager(self)
 
-        if iteration == 10:
+            # Send all workers to the closest mineral patch
+            await self.resource_manager.initialize_workers()
+
             await self.chat_send("λ LΛMBDANAUT λ - {}".format(VERSION))
 
         await self.intel_manager.run()  # Run before all other managers
@@ -2603,7 +2786,6 @@ class LambdaBot(sc2.BotAI):
     def unsubscribe(self, manager, message_type):
         """Unsubscribes a manager to a type of message"""
         self._message_subscriptions[message_type].remove(manager)
-
 
     def get_expansion_positions(self) -> List[sc2.position.Point2]:
         """Returns our expansion positions in order from nearest to furthest"""
