@@ -204,6 +204,8 @@ RAVAGER_ALL_IN = [
     ROACH,
     IfHasThenDontBuild(RAVAGER, ROACH, 2),
     PublishMessage(Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP),  # Send the second overlord to the enemy's main ramp
+    RAVAGER, RAVAGER, RAVAGER, RAVAGER, RAVAGER, RAVAGER, RAVAGER,
+    QUEEN,
 ]
 RAVAGER_ALL_IN += [RAVAGER] * 100
 

@@ -336,6 +336,7 @@ class BuildManager(Manager):
                                if unit.race == self.bot.race if unit_id in [u.value for u in const.UnitTypeId]}
 
     async def init(self):
+        self.determine_opening_build()
         self.add_build(self.starting_build)
 
     def can_afford(self, unit):
@@ -347,6 +348,12 @@ class BuildManager(Manager):
             can_afford.can_afford_minerals and \
             can_afford.can_afford_vespene and \
             can_afford.have_enough_supply
+
+    def determine_opening_build(self):
+        # Randomly do ravager all-ins against terran and protoss
+        if self.bot.enemy_race in {sc2.Race.Terran, sc2.Race.Protoss}:
+            if not random.randint(0, 7):
+                self.starting_build = Builds.RAVAGER_ALL_IN
 
     def add_build(self, build):
         self.print("Adding build order: {}".format(build.name))
@@ -1469,9 +1476,8 @@ class OverlordManager(StatefulManager):
                             nearby_ramp = self.bot.enemy_start_location.towards(
                                 self.bot.start_location, 6).closest(ramps)
 
-                            target = nearby_ramp.towards(self.bot.start_location, 11)
+                            target = nearby_ramp.towards(self.bot.start_location, 10.5)
                             self.bot.actions.append(overlord.move(target))
-
 
     async def turn_on_generate_creep(self):
         # Spread creep on last scouted expansion location like a fucking dick head
