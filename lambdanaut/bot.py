@@ -19,8 +19,8 @@ from lambdanaut.builds import Builds, BuildStages, BUILD_MAPPING, DEFAULT_NEXT_B
 from lambdanaut.expiringlist import ExpiringList
 
 
-VERSION = '2.3'
-BUILD = Builds.RAVAGER_ALL_IN
+VERSION = '2.4'
+BUILD = Builds.EARLY_GAME_DEFAULT_OPENER
 
 
 class Manager(object):
