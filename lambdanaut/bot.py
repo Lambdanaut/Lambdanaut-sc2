@@ -20,7 +20,7 @@ from lambdanaut.expiringlist import ExpiringList
 
 
 VERSION = '2.3'
-BUILD = builds.EARLY_GAME_DEFAULT_OPENER
+BUILD = Builds.RAVAGER_ALL_IN
 
 
 class Manager(object):
@@ -37,6 +37,13 @@ class Manager(object):
         self.bot = bot
 
         self._messages = {}
+
+    async def init(self):
+        """
+        To be called after init in order to publish messages and do setup
+        that touches other Managers
+        """
+        pass
 
     def inbox(self, message_type: const2.Messages, value: Optional[Any] = None):
         """
@@ -123,6 +130,10 @@ class StatefulManager(Manager):
 
         # Set the new state
         self.state = new_state
+
+        # Publish message about state change
+        self.publish(Messages.STATE_ENTERED, self.state)
+        self.publish(Messages.STATE_EXITED, self.previous_state)
 
     async def run_state(self):
         # Run function for current state
@@ -279,11 +290,13 @@ class BuildManager(Manager):
 
         assert isinstance(starting_build, Builds)
 
+        self.starting_build = starting_build
+
         self.builds = [
-            starting_build,
-            None,
-            None,
-            None
+            None,  # Opener
+            None,  # Early-game
+            None,  # Mid-game
+            None,  # Late-game
         ]
         self.build_stage = builds.get_build_stage(starting_build)
 
@@ -310,6 +323,9 @@ class BuildManager(Manager):
         # Recent commands issued. Uses constants defined in const2.py
         self._recent_commands = ExpiringList()
 
+        # Set of the ids of the special build targets that are currently active
+        self.active_special_build_target_ids = set()
+
         # Constant mapping of unit_type to its creation ability for fast access
         # (like the creation ability for spawning a drone)
         self.unit_type_to_creation_ability_map = {
@@ -318,6 +334,9 @@ class BuildManager(Manager):
         # Set of all units in our bot's race
         self.our_unit_types = {unit.id for unit_id, unit in self.bot._game_data.units.items()
                                if unit.race == self.bot.race if unit_id in [u.value for u in const.UnitTypeId]}
+
+    async def init(self):
+        self.add_build(self.starting_build)
 
     def can_afford(self, unit):
         """Returns boolean indicating if the player has enough minerals,
@@ -450,6 +469,8 @@ class BuildManager(Manager):
         :returns A build target id if it's applicable, else returns None
         """
 
+        assert(isinstance(unit, builds.SpecialBuildTarget))
+
         if isinstance(unit, builds.AtLeast):
             # AtLeast is a "special" unittype that only adds 1 if we
             # don't have AT LEAST `n` number of units built.
@@ -514,7 +535,7 @@ class BuildManager(Manager):
 
             try:
                 existing_for_each_units = existing_unit_counts[for_each_unit_type]
-            except:
+            except IndexError:
                 existing_for_each_units = 0
 
             if existing_for_each_units:
@@ -533,15 +554,52 @@ class BuildManager(Manager):
             can_afford = unit
             unit = can_afford.unit_type
 
-            if self.can_afford(unit):
-                if isinstance(unit, builds.SpecialBuildTarget):
-                    return self.parse_special_build_target(unit, existing_unit_counts, build_order_counts)
-                else:
-                    build_order_counts[unit] += 1
-                    return unit
+            if isinstance(unit, builds.SpecialBuildTarget):
+                result = self.parse_special_build_target(unit, existing_unit_counts, build_order_counts)
+                if self.can_afford(result):
+                    return result
+            elif self.can_afford(unit):
+                build_order_counts[unit] += 1
+                return unit
             else:
                 return unit
 
+        elif isinstance(unit, builds.PullWorkersOffVespeneUntil):
+            # PullWorkersOffVespeneUntil is a "special" unittype that pulls `n`
+            # workers off vespene until `unit_type` is constructed
+
+            pull_workers_off_vespene_until = unit
+            unit = pull_workers_off_vespene_until.unit_type
+            amount_of_workers_to_mine = pull_workers_off_vespene_until.n
+            special_id = pull_workers_off_vespene_until.id
+
+            if existing_unit_counts[unit]:
+                # Return workers to vespene mining
+                if special_id in self.active_special_build_target_ids:
+                    self.active_special_build_target_ids.discard(special_id)
+                    self.publish(Messages.PULL_WORKERS_OFF_VESPENE, None)
+                return None
+            else:
+                # Pull workers off vespene
+                if special_id not in self.active_special_build_target_ids:
+                    self.active_special_build_target_ids.add(special_id)
+                    self.publish(Messages.PULL_WORKERS_OFF_VESPENE, amount_of_workers_to_mine)
+                return None
+
+        elif isinstance(unit, builds.PublishMessage):
+            # PublishMessage is a "special" unittype that publishes a message
+            # the first time this build target is hit
+
+            publish_message = unit
+            message = publish_message.message
+            value = publish_message.value
+            special_id = publish_message.id
+
+            if special_id not in self.active_special_build_target_ids:
+                self.active_special_build_target_ids.add(special_id)
+                self.publish(message, value)
+
+            return None
 
     def overlord_is_build_target(self) -> bool:
         """
@@ -1074,11 +1132,19 @@ class ResourceManager(Manager):
         # Townhall tag -> Queen tag mapping of what queens belong to what townhalls
         self._townhall_queens = {}
 
+        # Sets the number of workers to mine vespene gas per geyser
+        self._ideal_vespene_worker_count: Optional[int] = None
+
         # Message subscriptions
         self.subscribe(Messages.NEW_BUILD)
         self.subscribe(Messages.UPGRADE_STARTED)
+        self.subscribe(Messages.PULL_WORKERS_OFF_VESPENE)
 
-    async def initialize_workers(self):
+    async def init(self):
+        # Send all workers to the closest mineral patch
+        self.initialize_workers()
+
+    def initialize_workers(self):
         minerals = self.bot.state.mineral_field
         for worker in self.bot.workers:
             mineral = minerals.closest_to(worker)
@@ -1132,16 +1198,16 @@ class ResourceManager(Manager):
                 not self._recent_commands.contains(
                     ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
                     self.bot.state.game_loop):
-            # Mine only 1 worker per vespene geysers
+
             self._recent_commands.add(
                 ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
                 self.bot.state.game_loop, expiry=30)
 
         saturated_extractors = self.bot.units(const.EXTRACTOR).filter(
-            lambda extr: extr.assigned_harvesters > (extr.ideal_harvesters)).ready
+            lambda extr: extr.assigned_harvesters > (self._ideal_vespene_worker_count or extr.ideal_harvesters)).ready
 
         unsaturated_extractors = self.bot.units(const.EXTRACTOR).filter(
-            lambda extr: extr.assigned_harvesters < (extr.ideal_harvesters)).ready
+            lambda extr: extr.assigned_harvesters < (self._ideal_vespene_worker_count or extr.ideal_harvesters)).ready
 
         if self._recent_commands.contains(
                 ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE, self.bot.state.game_loop):
@@ -1257,11 +1323,10 @@ class ResourceManager(Manager):
                                 creep_tumors = self.bot.units({const.CREEPTUMOR, const.CREEPTUMORBURROWED})
 
                                 # Get creep tumors nearby the closest townhall
-                                if creep_tumors.exists:
-                                    creep_tumors = creep_tumors.closer_than(17, townhall)
+                                nearby_creep_tumors = creep_tumors.closer_than(17, townhall)
 
                                 # If there are no nearby creep tumors or any at all, then spawn a creep tumor
-                                if not creep_tumors.exists and \
+                                if not nearby_creep_tumors.exists and \
                                         not self._recent_commands.contains(
                                             ResourceManagerCommands.QUEEN_SPAWN_TUMOR,
                                             self.bot.state.game_loop):
@@ -1273,7 +1338,7 @@ class ResourceManager(Manager):
 
                                         self._recent_commands.add(
                                             ResourceManagerCommands.QUEEN_SPAWN_TUMOR,
-                                            self.bot.state.game_loop, expiry=20)
+                                            self.bot.state.game_loop, expiry=50)
 
                                         self.bot.actions.append(queen(const.BUILD_CREEPTUMOR_QUEEN, position))
 
@@ -1312,13 +1377,20 @@ class ResourceManager(Manager):
 
             new_build = {Messages.NEW_BUILD}
             if message in new_build:
-                # Early game defensive started. Pull workers off vespene
+                # Early game pool first defense started. Pull workers off vespene.
                 if val == builds.EARLY_GAME_POOL_FIRST_DEFENSIVE:
                     self.ack(message)
 
                     self._recent_commands.add(
                         ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
                         self.bot.state.game_loop, expiry=80)
+
+            pull_workers_off_vespene = {Messages.PULL_WORKERS_OFF_VESPENE}
+            if message in pull_workers_off_vespene:
+                # Pull `n` workers off vespene, or set them back to working
+                self.ack(message)
+
+                self._ideal_vespene_worker_count = val
 
     async def run(self):
         await super(ResourceManager, self).run()
@@ -1367,12 +1439,39 @@ class OverlordManager(StatefulManager):
         # Tags of overlords with creep turned on
         self.overlord_tags_with_creep_turned_on = set()
 
+        # Message subscriptions
+        self.subscribe(Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP)
+
     @property
     def scouting_overlord_tags(self):
         return {self.scouting_overlord_tag,
                 self.proxy_scouting_overlord_tag,
                 self.third_expansion_scouting_overlord_tag,
                 self.baneling_drop_overlord_tag}
+
+    async def read_messages(self):
+        for message, val in self.messages.items():
+
+            # Move proxy scouting overlord to see enemy's main ramp
+            move_overlord_scout_to_enemy_ramp = {
+                Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP}
+            if message in move_overlord_scout_to_enemy_ramp:
+                self.ack(message)
+
+                if self.proxy_scouting_overlord_tag is not None:
+                    overlords = self.bot.units(const.OVERLORD)
+                    if overlords.exists:
+                        overlord = overlords.find_by_tag(self.proxy_scouting_overlord_tag)
+                        if overlord:
+                            # Move them to the nearest ramp
+
+                            ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
+                            nearby_ramp = self.bot.enemy_start_location.towards(
+                                self.bot.start_location, 6).closest(ramps)
+
+                            target = nearby_ramp.towards(self.bot.start_location, 11)
+                            self.bot.actions.append(overlord.move(target))
+
 
     async def turn_on_generate_creep(self):
         # Spread creep on last scouted expansion location like a fucking dick head
@@ -1767,6 +1866,8 @@ class OverlordManager(StatefulManager):
     async def run(self):
         await super(OverlordManager, self).run()
 
+        await self.read_messages()
+
         await self.overlord_dispersal()
         await self.turn_on_generate_creep()
         await self.proxy_scout_with_second_overlord()
@@ -1825,7 +1926,13 @@ class ForceManager(StatefulManager):
         self.escorting_workers = ExpiringList()
 
         # Army value needed to do an attack. Changes with the current build stage.
-        self.army_value_to_attack = 50
+        self.army_value_to_attack = \
+            self.get_army_value_to_attack(BuildStages.OPENING)
+
+        # The army must be closer to the moving_to_attack position than this
+        # in order to start an attack
+        self.distance_to_moving_to_attack = \
+            self.get_army_center_distance_to_attack(BuildStages.OPENING)
 
         # Last enemy army position seen
         self.last_enemy_army_position = None
@@ -1844,10 +1951,22 @@ class ForceManager(StatefulManager):
     def get_army_value_to_attack(self, build_stage):
         """Given a build stage, returns the army value needed to begin an attack"""
         return {
-            BuildStages.OPENING: 100000,  # Don't attack
+            BuildStages.OPENING: 0,  # Assume rush. Attack with whatever we've got.
             BuildStages.EARLY_GAME: 6,  # Only attack if we banked up some units early on
             BuildStages.MID_GAME: 55,  # Attack when a sizeable army is gained
             BuildStages.LATE_GAME: 75,  # Attack when a sizeable army is gained
+        }[build_stage]
+
+    def get_army_center_distance_to_attack(self, build_stage):
+        """
+        Based on the build stage, we may want to allow attacking when fewer or
+        more units have met up at the moving_to_attack position.
+        """
+        return {
+            BuildStages.OPENING: 60,  # Allow greater distances for rush
+            BuildStages.EARLY_GAME: 5,
+            BuildStages.MID_GAME: 5,
+            BuildStages.LATE_GAME: 5,
         }[build_stage]
 
     def get_target(self):
@@ -1920,7 +2039,7 @@ class ForceManager(StatefulManager):
                 number_of_units_to_townhall = round((len(army) / len(townhalls)) * 0.1)
                 if townhall.tag == closest_townhall.tag:
                     # The closest townhall to the enemy should have more army
-                    number_of_units_to_townhall = round((len(army) / len(townhalls)) * 2)
+                    number_of_units_to_townhall = round((len(army) / len(townhalls)) * 3)
 
                 nearby_army = army.closer_than(22, townhall.position)
 
@@ -1937,7 +2056,7 @@ class ForceManager(StatefulManager):
                             nearby_ramp = target.towards(self.bot.enemy_start_location, 4).\
                                 closest(nearby_ramps)  # Ramp closest to townhall
 
-                            if nearby_ramp.distance_to(target) < 12:
+                            if nearby_ramp.distance_to(target) < 20:
                                 target = nearby_ramp
 
                             self.bot.actions.append(unit.attack(target))
@@ -2033,7 +2152,9 @@ class ForceManager(StatefulManager):
 
                     if unit.can_attack_ground and not target.is_flying or \
                             unit.can_attack_air and target.is_flying:
-                        self.bot.actions.append(unit.attack(target.position))
+
+                        if not unit.weapon_cooldown:
+                            self.bot.actions.append(unit.attack(target.position))
 
             # Bring back defending workers that have drifted too far from town halls
             workers_defending_to_remove = set()
@@ -2212,11 +2333,13 @@ class ForceManager(StatefulManager):
         if not self._recent_commands.contains(
                 ForceManagerCommands.START_ATTACKING, self.bot.state.game_loop):
             for unit in backline_army:
-                self.bot.actions.append(unit.attack(target))
+                if not unit.is_attacking:
+                    self.bot.actions.append(unit.attack(target))
 
         # Send in the frontline army immediatelly
         for unit in frontline_army:
-            self.bot.actions.append(unit.attack(target))
+            if not unit.is_attacking:
+                self.bot.actions.append(unit.attack(target))
 
 
     async def do_searching(self):
@@ -2254,10 +2377,16 @@ class ForceManager(StatefulManager):
 
             if message in {Messages.NEW_BUILD_STAGE}:
                 self.ack(message)
+
+                # Update army value required to attack
                 new_army_value_to_attack = self.get_army_value_to_attack(val)
                 self.army_value_to_attack = new_army_value_to_attack
                 self.print("New army value to attack with: {}".format(
                     new_army_value_to_attack))
+
+                # Update distance to moving_to_attack meetup center required to attack
+                new_distance_to_moving_to_attack = self.get_army_center_distance_to_attack(val)
+                self.distance_to_moving_to_attack = new_distance_to_moving_to_attack
 
         # HOUSEKEEPING
         if self.state == ForcesStates.HOUSEKEEPING:
@@ -2321,7 +2450,7 @@ class ForceManager(StatefulManager):
                 # Start attacking when army has amassed
                 target = self.get_target()
                 nearby_target = self.get_nearby_to_target(target)
-                if army.center.distance_to(nearby_target) < 5:
+                if army.center.distance_to(nearby_target) < self.distance_to_moving_to_attack:
                     return await self.change_state(ForcesStates.ATTACKING)
 
         # ATTACKING
@@ -2329,20 +2458,22 @@ class ForceManager(StatefulManager):
             army = self.bot.units().filter(
                 lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
 
-            # Value of the army
-            army_value = sum([const2.ZERG_ARMY_VALUE[unit.type_id] for unit in army])
+            if army.exists:
 
-            if army_value < self.army_value_to_attack * 0.4:
-                return await self.change_state(ForcesStates.HOUSEKEEPING)
+                # Value of the army
+                army_value = sum([const2.ZERG_ARMY_VALUE[unit.type_id] for unit in army])
 
-            enemy_start_location = self.bot.enemy_start_location.position
-            # Start searching the map if we're at the enemy's base and can't find them.
-            if army.center.distance_to(enemy_start_location) < 25 and \
-                    not self.bot.known_enemy_structures.exists:
+                if army_value < self.army_value_to_attack * 0.4:
+                    return await self.change_state(ForcesStates.HOUSEKEEPING)
 
-                self.publish(Messages.ARMY_COULDNT_FIND_ENEMY_BASE)
+                enemy_start_location = self.bot.enemy_start_location.position
+                # Start searching the map if we're at the enemy's base and can't find them.
+                if army.center.distance_to(enemy_start_location) < 25 and \
+                        not self.bot.known_enemy_structures.exists:
 
-                return await self.change_state(ForcesStates.SEARCHING)
+                    self.publish(Messages.ARMY_COULDNT_FIND_ENEMY_BASE)
+
+                    return await self.change_state(ForcesStates.SEARCHING)
 
         # SEARCHING
         elif self.state == ForcesStates.SEARCHING:
@@ -2494,29 +2625,46 @@ class MicroManager(Manager):
         }
 
         for ravager in ravagers:
-            # Perform bile attacks
-            # Bile range is 9
             nearby_enemy_units = self.bot.known_enemy_units.closer_than(9, ravager)
             if nearby_enemy_units.exists:
+                # Perform bile attacks
+                # Bile range is 9
                 nearby_enemy_priorities = nearby_enemy_units.of_type(bile_priorities)
                 nearby_enemy_priorities = nearby_enemy_priorities | self.bot.state.units(bile_priorities_neutral)
 
                 # Prefer targeting our bile_priorities
-                nearby_enemy_units = nearby_enemy_priorities if nearby_enemy_priorities.exists else nearby_enemy_units
+                nearby_enemy_priorities = nearby_enemy_priorities \
+                    if nearby_enemy_priorities.exists else nearby_enemy_units
 
-                for enemy_unit in nearby_enemy_units.sorted(
+                abilities = await self.bot.get_available_abilities(ravager)
+                for enemy_unit in nearby_enemy_priorities.sorted(
                         lambda unit: ravager.distance_to(unit), reverse=True):
-                    our_closest_unit_to_enemy = self.bot.units().closest_to(enemy_unit)
-                    if our_closest_unit_to_enemy.distance_to(enemy_unit.position) > 1:
 
-                        # Only bile a forcefield at most once
-                        if enemy_unit.type_id == const.UnitTypeId.FORCEFIELD:
-                            if enemy_unit.tag in self.biled_forcefields:
-                                continue
-                            self.biled_forcefields.add(enemy_unit.tag)
+                    can_cast = await self.bot.can_cast(ravager, const.AbilityId.EFFECT_CORROSIVEBILE,
+                                                       enemy_unit.position,
+                                                       cached_abilities_of_unit=abilities)
+                    if can_cast:
+                        our_closest_unit_to_enemy = self.bot.units().closest_to(enemy_unit)
+                        if our_closest_unit_to_enemy.distance_to(enemy_unit.position) > 1:
 
-                        self.bot.actions.append(ravager(const.EFFECT_CORROSIVEBILE, enemy_unit.position))
-                        break
+                            # Only bile a forcefield at most once
+                            if enemy_unit.type_id == const.UnitTypeId.FORCEFIELD:
+                                if enemy_unit.tag in self.biled_forcefields:
+                                    continue
+                                self.biled_forcefields.add(enemy_unit.tag)
+
+                            self.bot.actions.append(ravager(const.EFFECT_CORROSIVEBILE, enemy_unit.position))
+                            break
+                else:
+                    # If we're not using bile, then micro back ravagers
+                    closest_enemy = nearby_enemy_units.closest_to(ravager)
+                    if ravager.weapon_cooldown and closest_enemy.distance_to(ravager) < ravager.ground_range:
+                        away_from_enemy = ravager.position.towards(closest_enemy, -3)
+
+                        distance = await self.bot._client.query_pathing(ravager, away_from_enemy)
+                        if distance and distance < 5:
+                            self.bot.actions.append(ravager.move(away_from_enemy))
+
 
     async def manage_mutalisks(self):
         mutalisks = self.bot.units(const.MUTALISK)
@@ -2599,7 +2747,7 @@ class MicroManager(Manager):
         if spine_crawlers.exists:
             if townhalls.exists:
                 townhall = townhalls.closest_to(self.bot.enemy_start_location)
-                nearby_spine_crawlers = spine_crawlers.closer_than(20, townhall)
+                nearby_spine_crawlers = spine_crawlers.closer_than(25, townhall)
 
                 # Unroot spine crawlers that are far away from the front expansions
                 if not nearby_spine_crawlers.exists or (
@@ -2646,8 +2794,29 @@ class MicroManager(Manager):
             if egg.health_percentage < 0.4 and egg.build_progress < 0.9:
                 self.bot.actions.append(egg(const.CANCEL))
 
+    async def avoid_biles(self):
+        """Avoid incoming bile attacks"""
+        for bile in filter(lambda e: e.id == const.EffectId.RAVAGERCORROSIVEBILECP,
+                           self.bot.state.effects):
+            try:
+                position = bile.positions[0]
+            except IndexError:
+                pass
+
+            units = self.bot.units().closer_than(1.5, position)
+
+            if units.exists:
+                for unit in units:
+                    target = position.towards(unit.position, 2)
+                    self.bot.actions.append(unit.move(target))
+
+
     async def manage_combat(self, unit, attack_priorities=None):
         """Handles combat micro for the given unit"""
+
+        if unit.weapon_cooldown:
+            # Don't manage combat if we're moving
+            return
 
         if attack_priorities is None:
             attack_priorities = set()
@@ -2674,13 +2843,45 @@ class MicroManager(Manager):
                                        const.MEDIVAC, const.WARPPRISM}
 
         units = self.bot.units(micro_combat_unit_types)
+        enemy = self.bot.known_enemy_units.filter(lambda u: u.is_visible)
 
+        # Micro closer to enemy army if our dps is higher
+        if units.exists and enemy.exists:
+            army_center = units.center
+            enemy_army_center = enemy.center
+
+            if army_center.distance_to(enemy_army_center) < 25:
+                types_not_to_move = {const.ZERGLING, const.LURKERMP, const.QUEEN, const.ULTRALISK}
+                nearby_army = units.filter(lambda u: u.distance_to(enemy_army_center) < 17).\
+                    exclude_type(types_not_to_move)
+                nearby_enemy = enemy.filter(lambda u: u.distance_to(enemy_army_center) < 16)
+
+                if nearby_army.exists and nearby_enemy.exists:
+                    army_dps = sum([u.ground_dps for u in nearby_army])
+                    enemy_dps = sum([u.ground_dps for u in nearby_enemy])
+
+                    if army_dps > enemy_dps * 1.2:
+                        for unit in nearby_army:
+                            if unit.movement_speed > 0 and \
+                                    unit.ground_range > 2 and \
+                                    unit.weapon_cooldown and \
+                                    not unit.is_moving:
+                                nearest_enemy_unit = nearby_enemy.closest_to(unit)
+                                distance_to_enemy_unit = unit.distance_to(nearest_enemy_unit)
+                                if distance_to_enemy_unit > unit.ground_range * 0.5:
+                                    how_far_to_move = distance_to_enemy_unit * 0.6
+                                    towards_enemy = unit.position.towards(
+                                        nearest_enemy_unit, how_far_to_move)
+                                    self.bot.actions.append(unit.move(towards_enemy))
+
+        # Do combat priority selection
         for unit in units:
             await self.manage_combat(unit, attack_priorities=priorities)
 
     async def run(self):
         await self.do_combat()
 
+        await self.avoid_biles()
         await self.manage_zerglings()
         await self.manage_banelings()
         await self.manage_roaches()
@@ -2702,6 +2903,8 @@ class LambdaBot(sc2.BotAI):
         self.overlord_manager = None
         self.force_manager = None
         self.micro_manager = None
+
+        self.managers = {}
 
         self.iteration = 0
 
@@ -2733,21 +2936,31 @@ class LambdaBot(sc2.BotAI):
             # Load up managers
             self.intel_manager = IntelManager(self)
             self.build_manager = BuildManager(
-                self, starting_build=Builds.EARLY_GAME_DEFAULT_OPENER)
+                self, starting_build=BUILD)
             self.resource_manager = ResourceManager(self)
             self.overlord_manager = OverlordManager(self)
             self.force_manager = ForceManager(self)
             self.micro_manager = MicroManager(self)
 
-            # Send all workers to the closest mineral patch
-            await self.resource_manager.initialize_workers()
+            self.managers = {
+                self.intel_manager,
+                self.build_manager,
+                self.resource_manager,
+                self.overlord_manager,
+                self.force_manager,
+                self.micro_manager,
+            }
+
+            # Initialize managers
+            for manager in self.managers:
+                await manager.init()
 
             await self.chat_send("λ LΛMBDANAUT λ - {}".format(VERSION))
 
         await self.intel_manager.run()  # Run before all other managers
 
-        await self.build_manager.run()
         await self.resource_manager.run()
+        await self.build_manager.run()
         await self.force_manager.run()
         await self.micro_manager.run()
 
@@ -2762,6 +2975,7 @@ class LambdaBot(sc2.BotAI):
         self.actions = []
 
     async def on_unit_created(self, unit):
+        self.publish(None, Messages.UNIT_CREATED, unit)
 
         # Always allow banelings to attack structures
         if unit.type_id == const.BANELING:

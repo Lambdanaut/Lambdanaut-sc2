@@ -6,6 +6,13 @@
 
 ## HIGH PRIORITY
 
+  * Group army groups together using centroids and k-means
+    * With this, we can refine micro by getting closer/further than enemy units based on the centroid's dps
+
+  * Keep tags of all seen enemy units
+
+  * Disable drone and expansion build targets while defending
+ 
   * Remember friendly units so we can figure out if they're being attacked. Like so:
     * https://github.com/Hannessa/sc2-bots/blob/master/cannon-lover/base_bot.py#L334
     
@@ -23,6 +30,9 @@
   * Add infestors and infestor micro
 
   * Add lurker and lurker micro
+  
+  * Zergling micro. Catch up and surround vulnerable prey
+    * A trickier one, but can be done. 
 
 ## LOW PRIORITY
 
@@ -108,3 +118,5 @@
     * Maybe write a custom version of next_expansion_location that takes an index to get the expansion location after
       the next expansion location. Use that if building the hatchery fails.  
   
+  * Move army closer to enemy army if our units near army center have a higher dps than units near enemy army center
+

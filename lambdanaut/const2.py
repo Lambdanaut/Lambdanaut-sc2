@@ -131,10 +131,17 @@ class Messages(enum.Enum):
     NEW_BUILD_STAGE = 15  # New build stage entered
 
     # UNITS TRAINED MESSAGES
-    UPGRADE_STARTED = 16
+    UNIT_CREATED = 16
+    UPGRADE_STARTED = 17
 
     # UNIT ORDER MESSAGES
-    DRONE_LEAVING_TO_CREATE_HATCHERY = 17  # Value is Drone's tag
+    DRONE_LEAVING_TO_CREATE_HATCHERY = 18  # Value is Drone's tag
+    OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 19  # Move the second overlord scout to the enemy's main ramp
+    PULL_WORKERS_OFF_VESPENE = 20  # Value is int of workers to mine vespene. None if return to default.
+
+    # STATE MACHINE CHANGE MESSAGES
+    STATE_ENTERED = 21  # Value is State being left
+    STATE_EXITED = 22  # Value is State entered
 
 
 # Build Manager Commands

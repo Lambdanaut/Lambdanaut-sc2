@@ -1,10 +1,16 @@
 import enum
+import uuid
 
 import sc2
 from sc2.constants import *
 
+from lambdanaut.const2 import Messages
+
 
 class SpecialBuildTarget(object):
+    def __init__(self):
+        self.id = uuid.uuid4()
+
     def extract_unit_type(self):
         """
         Gets the unit type from this special container
@@ -27,6 +33,8 @@ class AtLeast(SpecialBuildTarget):
         ]
     """
     def __init__(self, n, unit_type):
+        super(AtLeast, self).__init__()
+
         self.n = n
         self.unit_type = unit_type
 
@@ -44,6 +52,8 @@ class IfHasThenBuild(SpecialBuildTarget):
         ]
     """
     def __init__(self, conditional_unit_type, unit_type,  n=1):
+        super(IfHasThenBuild, self).__init__()
+
         self.conditional_unit_type = conditional_unit_type
         self.unit_type = unit_type
         self.n = n
@@ -62,6 +72,8 @@ class IfHasThenDontBuild(SpecialBuildTarget):
         ]
     """
     def __init__(self, conditional_unit_type, unit_type,  n=1):
+        super(IfHasThenDontBuild, self).__init__()
+
         self.conditional_unit_type = conditional_unit_type
         self.unit_type = unit_type
         self.n = n
@@ -81,6 +93,8 @@ class OneForEach(SpecialBuildTarget):
         ]
     """
     def __init__(self, unit_type, for_each_unit_type):
+        super(OneForEach, self).__init__()
+
         self.for_each_unit_type = for_each_unit_type
         self.unit_type = unit_type
 
@@ -101,7 +115,60 @@ class CanAfford(SpecialBuildTarget):
         ]
     """
     def __init__(self, unit_type):
+        super(CanAfford, self).__init__()
+
         self.unit_type = unit_type
+
+
+class PullWorkersOffVespeneUntil(SpecialBuildTarget):
+    """
+    Container object for use in builds
+
+    Functionally it means to only mine each geyser with `n` vespene workers
+    until `unit_type` is constructed
+
+    NOTE: Cannot be wrapped recursively.
+    This is not valid: `PullWorkersOffVespeneUntil(AtLeast(1, ZERGLING))`
+
+    Example that will only mine with 2 gas workers per geyser until a Roach
+    is constructed.
+        BUILD = [
+            PullWorkersOffVespeneUntil(ROACH, n=2),
+            ZERGLING,
+            ZERGLING,
+            ROACH,  # Put 3 workers back on vespene at this point
+        ]
+    """
+    def __init__(self, unit_type, n=0):
+        super(PullWorkersOffVespeneUntil, self).__init__()
+
+        self.unit_type = unit_type
+        self.n = n
+
+
+class PublishMessage(SpecialBuildTarget):
+    """
+    Container object for use in builds
+
+    Functionally it means that we publish the message `message_type` with
+    optional value `value` the first time we reach this point in the build.
+
+    NOTE: Cannot be wrapped recursively.
+    This is not valid: `PublishMessage(AtLeast(1, ZERGLING))`
+
+    Example that will publish a message to sent the second overlord to the
+    enemy's main ramp
+
+        BUILD = [
+            PublishMessage(Messages., n=2),
+        ]
+    """
+    def __init__(self, message, value=None):
+        super(PublishMessage, self).__init__()
+
+        self.unit_type = None
+        self.message = message
+        self.value = value
 
 
 # A good basic macro opener. Always start here
@@ -117,6 +184,28 @@ EARLY_GAME_DEFAULT_OPENER = [
     DRONE,  # 17
     DRONE,  # 18
 ]
+
+# Ravager all-in
+RAVAGER_ALL_IN = [
+    PullWorkersOffVespeneUntil(ROACH, n=2),  # Mine with only 2 workers until we have a roach
+    HATCHERY,  # 1
+    OVERLORD,  # 1
+    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,  # 12
+    DRONE,  # 13
+    DRONE,  # 14
+    SPAWNINGPOOL,
+    EXTRACTOR,  # 1
+    OVERLORD,  # 2
+    EXTRACTOR, # 2
+    ZERGLING, ZERGLING,  # 15
+    OVERLORD,  # 3
+    ROACHWARREN,
+    ROACH,
+    ROACH,
+    IfHasThenDontBuild(RAVAGER, ROACH, 2),
+    PublishMessage(Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP),  # Send the second overlord to the enemy's main ramp
+]
+RAVAGER_ALL_IN += [RAVAGER] * 100
 
 # Suspect enemy cheese but no proof. Get a spawning pool first with Zerglings
 EARLY_GAME_POOL_FIRST_CAUTIOUS = [
@@ -356,19 +445,21 @@ MID_GAME_CORRUPTOR_BROOD_LORD_RUSH += [ZERGFLYERARMORSLEVEL1]
 LATE_GAME_CORRUPTOR_BROOD_LORD = [
     AtLeast(75, DRONE),
     AtLeast(1, INFESTATIONPIT),
+    # If we have a hydralisk den, build additional hydras until we have a greater spire
+    IfHasThenBuild(HYDRALISKDEN, IfHasThenDontBuild(GREATERSPIRE, HYDRALISK, 8)),
     # Require at least one spire unless we have a Greater Spire
     IfHasThenDontBuild(GREATERSPIRE, AtLeast(1, SPIRE)),
     AtLeast(1, HIVE),
     AtLeast(6, HATCHERY),
     AtLeast(8, EXTRACTOR),
     AtLeast(6, CORRUPTOR),
-    GREATERSPIRE,
-    OVERSEER,
     # Get late game upgrades
+    IfHasThenBuild(ZERGMELEEWEAPONSLEVEL2, ZERGLINGATTACKSPEED),
     IfHasThenBuild(ZERGMISSILEWEAPONSLEVEL2, ZERGMISSILEWEAPONSLEVEL3),
     IfHasThenBuild(ZERGGROUNDARMORSLEVEL2, ZERGGROUNDARMORSLEVEL3),
-    IfHasThenBuild(ZERGMELEEWEAPONSLEVEL2, ZERGLINGATTACKSPEED),
     IfHasThenBuild(ZERGMELEEWEAPONSLEVEL2, ZERGMELEEWEAPONSLEVEL3),
+    GREATERSPIRE,
+    OVERSEER,
 ]
 LATE_GAME_CORRUPTOR_BROOD_LORD += [BROODLORD] * 20
 LATE_GAME_CORRUPTOR_BROOD_LORD += [
@@ -380,10 +471,11 @@ class Builds(enum.Enum):
     """Build Types"""
 
     EARLY_GAME_DEFAULT_OPENER = 0
+    RAVAGER_ALL_IN = 1
 
-    EARLY_GAME_POOL_FIRST_CAUTIOUS = 1
-    EARLY_GAME_POOL_FIRST_DEFENSIVE = 2
-    EARLY_GAME_POOL_FIRST_OFFENSIVE = 3
+    EARLY_GAME_POOL_FIRST_CAUTIOUS = 2
+    EARLY_GAME_POOL_FIRST_DEFENSIVE = 3
+    EARLY_GAME_POOL_FIRST_OFFENSIVE = 4
     EARLY_GAME_POOL_FIRST = 5
     EARLY_GAME_HATCHERY_FIRST = 6
     EARLY_GAME_SPORE_CRAWLERS = 7
@@ -405,6 +497,7 @@ class BuildStages(enum.Enum):
 
 OPENER_BUILDS = {
     Builds.EARLY_GAME_DEFAULT_OPENER,
+    Builds.RAVAGER_ALL_IN,
 }
 
 EARLY_GAME_BUILDS = {
@@ -448,6 +541,7 @@ def get_build_stage(build: Builds):
 # Mapping from Build Type to Build Targets list
 BUILD_MAPPING = {
     Builds.EARLY_GAME_DEFAULT_OPENER: EARLY_GAME_DEFAULT_OPENER,
+    Builds.RAVAGER_ALL_IN: RAVAGER_ALL_IN,
     Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS: EARLY_GAME_POOL_FIRST_CAUTIOUS,
     Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE: EARLY_GAME_POOL_FIRST_DEFENSIVE,
     Builds.EARLY_GAME_POOL_FIRST_OFFENSIVE: EARLY_GAME_POOL_FIRST_OFFENSIVE,
@@ -466,6 +560,7 @@ BUILD_MAPPING = {
 # The default build is switched to if the build is at its end
 DEFAULT_NEXT_BUILDS = {
     Builds.EARLY_GAME_DEFAULT_OPENER: Builds.EARLY_GAME_POOL_FIRST,
+    Builds.RAVAGER_ALL_IN: None,
     Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS: Builds.MID_GAME_ROACH_HYDRA_LURKER,
     Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE: Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS,
     Builds.EARLY_GAME_POOL_FIRST_OFFENSIVE: Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS,
