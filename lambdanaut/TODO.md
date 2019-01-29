@@ -3,22 +3,25 @@
 
 ## BUGS
 
+  * DEFENDING state doesn't defend with banelings. FIX THIS OMG
 
+  * Fix spine crawler placement. It's atrocious and is losing us matches!
+    * Idea: Place at base with least pathing_distance to the enemy start location :D
+    * Idea: No uprooting while defending
+    
 ## HIGH PRIORITY
 
   * Group army groups together using centroids and k-means
     * With this, we can refine micro by getting closer/further than enemy units based on the centroid's dps
-
-  * Keep tags of all seen enemy units
 
   * Disable drone and expansion build targets while defending
  
   * Remember friendly units so we can figure out if they're being attacked. Like so:
     * https://github.com/Hannessa/sc2-bots/blob/master/cannon-lover/base_bot.py#L334
     
-  * Move army in unison towards different targets. Perhaps using sc2.client.query_pathings?
-  
 ## MEDIUM PRIORITY
+
+  * Keep tags of all seen enemy units
 
   * Search for further enemy expansions and structures.
     * ForceManager could enter a state of searching for further expansions
@@ -34,6 +37,8 @@
   * Zergling micro. Catch up and surround vulnerable prey
     * A trickier one, but can be done. 
 
+  * Move army in unison towards different targets. Perhaps using sc2.client.query_pathings?
+  
 ## LOW PRIORITY
 
   * Target artosis pylons
@@ -119,4 +124,9 @@
       the next expansion location. Use that if building the hatchery fails.  
   
   * Move army closer to enemy army if our units near army center have a higher dps than units near enemy army center
+
+  * Fix bug where worker rallies to spawn a hatchery, then returns to base, then rallies again. 
+    * Problem is when we look ahead to the next build target, it sends the worker to build the hatchery
+    
+  * Fix hatchery placement on some maps. Build closer to the start location via ground-pathing distance
 

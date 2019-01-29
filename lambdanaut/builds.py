@@ -276,8 +276,10 @@ EARLY_GAME_SPORE_CRAWLERS = [
     QUEEN,  # 1
     ZERGLINGMOVEMENTSPEED,
     ZERGLING, ZERGLING,
-    QUEEN,  # 2
     OneForEach(SPORECRAWLER, HATCHERY),  # One Spore Crawler for each Hatchery we own
+    QUEEN,  # 2
+    QUEEN,  # 3
+    QUEEN,  # 4
 ]
 
 # Early game pool first with 4 defensive Zerglings

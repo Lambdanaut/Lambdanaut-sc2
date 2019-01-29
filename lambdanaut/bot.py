@@ -33,7 +33,7 @@ class Manager(object):
     # Managers can receive messages by subscribing to certain events
     # with self.subscribe(EVENT_NAME)
 
-    def __init__(self, bot, build_order=None):
+    def __init__(self, bot):
         self.bot = bot
 
         self._messages = {}
@@ -215,9 +215,9 @@ class IntelManager(Manager):
         """Checks the map to see if there are any visible units we should counter with a broodlord rush"""
         if not self.has_scouted_enemy_counter_midgame_broodlord_rush:
 
-            factory_count = self.bot.known_enemy_units.of_type(const.FACTORY).amount
-            tank_count = self.bot.known_enemy_units.of_type(
-                {const.SIEGETANK, const.SIEGETANKSIEGED}).amount
+            factory_count = len(self.bot.known_enemy_units.of_type(const.FACTORY))
+            tank_count = len(self.bot.known_enemy_units.of_type(
+                {const.SIEGETANK, const.SIEGETANKSIEGED}))
 
             if factory_count > 2 or tank_count > 3:
                 self.has_scouted_enemy_counter_midgame_broodlord_rush = True
@@ -233,10 +233,10 @@ class IntelManager(Manager):
 
             enemy_counter_with_roach_units = self.bot.known_enemy_units.of_type(enemy_counter_with_roach_types)
 
-            factory_count = self.bot.known_enemy_units.of_type(const.FACTORY).amount
-            # reaper_count = self.bot.known_enemy_units.of_type(const.REAPER).amount
-            tank_count = self.bot.known_enemy_units.of_type(
-                {const.SIEGETANK, const.SIEGETANKSIEGED}).amount
+            factory_count = len(self.bot.known_enemy_units.of_type(const.FACTORY))
+            # reaper_count = len(self.bot.known_enemy_units.of_type(const.REAPER))
+            tank_count = len(self.bot.known_enemy_units.of_type(
+                {const.SIEGETANK, const.SIEGETANKSIEGED}))
 
             if enemy_counter_with_roach_units.exists \
                     or factory_count > 1 \
@@ -623,7 +623,7 @@ class BuildManager(Manager):
             if overlords.exists:
                 damaged_overlords = overlords.filter(lambda o: o.health_percentage < 0.85)
                 if damaged_overlords.exists:
-                    damaged_overlord_supply = damaged_overlords.amount * 8  # Overlords provide 8 supply
+                    damaged_overlord_supply = len(damaged_overlords) * 8  # Overlords provide 8 supply
 
             # Calculate the supply coming from overlords in eggs
             overlord_egg_count = self.bot.already_pending(const.OVERLORD)
@@ -637,7 +637,7 @@ class BuildManager(Manager):
                 # when you have 7 supply left. This seems reasonable.
 
                 # Ensure we have over 3 overlords.
-                if overlords.exists and overlords.amount >= 3:
+                if len(overlords) >= 3:
                     return True
 
         return False
@@ -787,6 +787,15 @@ class BuildManager(Manager):
                             self.build_stage = build_stage
                             self.publish(Messages.NEW_BUILD_STAGE, build_stage)
 
+                        # Return early if the next build target is a town hall.
+                        # This prevents sending worker to create townhall before
+                        # its time
+                        if unit in const2.TOWNHALLS:
+                            if not build_targets:
+                                return [unit]
+                            else:
+                                return build_targets
+
                         # Add the build target
                         build_targets.append(unit)
 
@@ -797,6 +806,7 @@ class BuildManager(Manager):
                         # If we have enough build targets, return.
                         if len(build_targets) == n_targets:
                             return build_targets
+
 
         return build_targets
 
@@ -1507,7 +1517,7 @@ class OverlordManager(StatefulManager):
         overlords = self.bot.units(const.OVERLORD)
 
         if self.proxy_scouting_overlord_tag is None:
-            if overlords.exists and overlords.amount == 2:
+            if len(overlords) == 2:
                 overlord = overlords.filter(lambda ov: ov.tag not in self.scouting_overlord_tags).first
                 self.proxy_scouting_overlord_tag = overlord.tag
 
@@ -1550,12 +1560,12 @@ class OverlordManager(StatefulManager):
                             const2.ENEMY_NON_ARMY).closer_than(150, self.bot.start_location)
                         enemy_workers = nearby_enemy_units.of_type(const2.WORKERS)
                         nearby_enemy_units = nearby_enemy_units - enemy_workers
-                        if enemy_workers.exists and enemy_workers.amount > 2:
+                        if enemy_workers.exists and len(enemy_workers) > 2:
                             if enemy_workers.center.distance_to(self.bot.enemy_start_location) > 70:
                                 # Found enemy worker rush
                                 self.enemy_proxy_found = True
                                 self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH)
-                        elif nearby_enemy_units.exists and nearby_enemy_units.amount > 1:
+                        elif len(nearby_enemy_units) > 1:
                             if nearby_enemy_units.center.distance_to(self.bot.enemy_start_location) > 65:
                                 # Found enemy non-worker rush
                                 self.enemy_proxy_found = True
@@ -1583,7 +1593,7 @@ class OverlordManager(StatefulManager):
         overlords = self.bot.units(const.OVERLORD)
 
         if self.third_expansion_scouting_overlord_tag is None:
-            if overlords.exists and overlords.amount == 3:
+            if len(overlords) == 3:
                 overlord = overlords.filter(lambda ov: ov.tag not in self.scouting_overlord_tags).first
                 self.third_expansion_scouting_overlord_tag = overlord.tag
 
@@ -1656,7 +1666,7 @@ class OverlordManager(StatefulManager):
                 elif overlord.cargo_used < overlord.cargo_max:
                     # Load banelings
                     banelings = self.bot.units(const.BANELING)
-                    if banelings.exists and banelings.amount > 3:
+                    if len(banelings) > 3:
                         self.print("Loading banelings for baneling drop")
                         baneling = banelings.closest_to(overlord)
 
@@ -1713,7 +1723,7 @@ class OverlordManager(StatefulManager):
                         const.MARINE, const.PHOENIX, const.VIKING, const.MISSILETURRET}
                     enemy_targets = self.bot.known_enemy_units.of_type(enemy_priorities).\
                         closer_than(9, overlord)
-                    if enemy_targets.exists and enemy_targets.amount > 6:
+                    if len(enemy_targets) > 6:
                         self.print("Unloading banelings on enemy workers")
                         self.bot.actions.append(overlord(
                             const.AbilityId.UNLOADALLAT_OVERLORD, overlord))
@@ -1830,7 +1840,7 @@ class OverlordManager(StatefulManager):
             # If we didn't find an enemy proxy/rush, and the search is off
             # Then suicide dive in to get more information
             if not self.enemy_proxy_found and self.proxy_search_concluded:
-                if self.bot.known_enemy_structures.amount < 4:
+                if len(self.bot.known_enemy_structures) < 4:
                     await self.change_state(OverlordStates.SUICIDE_DIVE)
 
         elif self.state == OverlordStates.INITIAL_DIVE:
@@ -2005,7 +2015,7 @@ class ForceManager(StatefulManager):
             const2.WORKERS | const2.ENEMY_NON_ARMY)
 
         # Set the last enemy army position if we see it
-        if enemy_units.exists and enemy_units.amount > 3:
+        if len(enemy_units) > 3:
             enemy_position = enemy_units.center.rounded
 
             if self.last_enemy_army_position is None:
@@ -2017,7 +2027,7 @@ class ForceManager(StatefulManager):
         # and see no army.
         if self.last_enemy_army_position is not None:
             if self.bot.is_visible(self.last_enemy_army_position):
-                if enemy_units.empty or (enemy_units.exists and enemy_units.amount < 3):
+                if enemy_units.empty or (len(enemy_units) < 3):
                     self.print("Enemy army no longer holding position: {}".format(
                         self.last_enemy_army_position))
                     self.last_enemy_army_position = None
@@ -2105,9 +2115,9 @@ class ForceManager(StatefulManager):
                 ground_enemies = enemies_nearby.not_flying
                 workers = self.bot.workers.closer_than(15, enemies_nearby.random.position)
                 if workers.exists and ground_enemies.exists and \
-                        workers.amount > ground_enemies.amount:
+                        len(workers) > len(ground_enemies):
                     for worker in workers:
-                        if len(self.workers_defending) <= ground_enemies.amount:
+                        if len(self.workers_defending) <= len(ground_enemies):
                             if worker.tag not in self.workers_defending:
                                 target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
                                 if target.type_id != const.BANELING:
@@ -2117,7 +2127,7 @@ class ForceManager(StatefulManager):
                 # Have queens defend
                 queens = self.bot.units(const.QUEEN)
                 if queens.exists:
-                    if enemies_nearby.amount > 2:
+                    if len(enemies_nearby) > 2:
                         # Try to get the most energized queens
                         defending_queens = queens.filter(
                             lambda q: q.energy > 49
@@ -2148,7 +2158,7 @@ class ForceManager(StatefulManager):
                     lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
 
                 # The harder we're attacked, the further-out army to pull back
-                if enemies_nearby.amount < 5:
+                if len(enemies_nearby) < 5:
                     army.closer_than(self.bot.start_location_to_enemy_start_location_distance * 0.6,
                                      self.bot.enemy_start_location)
 
@@ -2248,11 +2258,11 @@ class ForceManager(StatefulManager):
             burrowed_banelings = self.bot.units(const.BANELINGBURROWED)
             # Only burrow up to six banelings at a time
             if const.BURROW in self.bot.state.upgrades and \
-                    (not burrowed_banelings.exists or burrowed_banelings.amount < 4):
+                    (not burrowed_banelings.exists or len(burrowed_banelings) < 4):
                 # Get the banelings that aren't harassing mineral lines
                 banelings = banelings.tags_not_in(self.banelings_harassing)
 
-                if banelings.exists and banelings.amount >= 4:
+                if len(banelings) >= 4:
                     # Get two banelings
                     banelings = banelings[:2]
 
@@ -2346,7 +2356,6 @@ class ForceManager(StatefulManager):
         for unit in frontline_army:
             if not unit.is_attacking:
                 self.bot.actions.append(unit.attack(target))
-
 
     async def do_searching(self):
         army = self.bot.units().filter(
@@ -2577,7 +2586,7 @@ class MicroManager(Manager):
         # Unburrow banelings if enemy nearby
         for baneling in burrowed_banelings:
             nearby_enemy_units = self.bot.known_enemy_units.closer_than(2, baneling)
-            if nearby_enemy_units.exists and nearby_enemy_units.amount > 3:
+            if len(nearby_enemy_units) > 3:
                 # Unburrow baneling
                 self.bot.actions.append(baneling(const.BURROWUP_BANELING))
 
@@ -2606,7 +2615,7 @@ class MicroManager(Manager):
             if roach:
                 if roach.health_percentage > 0.96:
                     nearby_enemy_units = self.bot.known_enemy_units.closer_than(10, roach)
-                    if nearby_enemy_units.empty or nearby_enemy_units.amount < 2:
+                    if nearby_enemy_units.empty or len(nearby_enemy_units) < 2:
                         # Untag roach as a healing roach
                         to_remove_from_healing.add(roach_tag)
 
@@ -2687,7 +2696,7 @@ class MicroManager(Manager):
                     nearby_enemy_can_attack_air = nearby_enemy_units.filter(lambda u: u.can_attack_air)
 
                     # TOO MANY BADDIES. GET OUT OF DODGE
-                    if nearby_enemy_can_attack_air.amount > 1:
+                    if len(nearby_enemy_can_attack_air) > 1:
                         towards_start_location = mutalisk.position.towards(self.bot.start_location, 80)
                         self.bot.actions.append(mutalisk.move(towards_start_location))
 
@@ -2753,11 +2762,12 @@ class MicroManager(Manager):
         if spine_crawlers.exists:
             if townhalls.exists:
                 townhall = townhalls.closest_to(self.bot.enemy_start_location)
-                nearby_spine_crawlers = spine_crawlers.closer_than(25, townhall)
+
+                nearby_spine_crawlers = spine_crawlers.closer_than(20, townhall)
 
                 # Unroot spine crawlers that are far away from the front expansions
                 if not nearby_spine_crawlers.exists or (
-                        nearby_spine_crawlers.exists and nearby_spine_crawlers.amount < spine_crawlers.amount / 2):
+                        len(nearby_spine_crawlers) < len(spine_crawlers) / 2):
 
                     for sc in rooted_spine_crawlers.idle:
                         self.bot.actions.append(sc(const.AbilityId.SPINECRAWLERUPROOT_SPINECRAWLERUPROOT))
@@ -2768,7 +2778,7 @@ class MicroManager(Manager):
                     nearby_ramp = townhall.position.towards(
                         self.bot.enemy_start_location, 6).closest(nearby_ramps)
 
-                    if nearby_ramp.distance_to(townhall) < 19:
+                    if nearby_ramp.distance_to(townhall) < 14:
                         target = nearby_ramp
                     else:
                         near_townhall = townhall.position.towards_with_random_angle(
@@ -3035,9 +3045,15 @@ class LambdaBot(sc2.BotAI):
 
         expansions = []
 
-        startp = self._game_info.player_start_location
+        start_p = self._game_info.player_start_location
+        start_p = self.find_nearby_pathable_point(start_p)
 
-        for el in startp.sort_by_distance(self.expansion_locations):
+        expansion_locations = self.expansion_locations.keys()
+
+        sorted_expansions = await self.sort_pathing_distances_to(
+            expansion_locations, start_p)
+
+        for el in sorted_expansions:
 
             def is_near_to_expansion(t):
                 return t.position.distance_to(el) < self.EXPANSION_GAP_THRESHOLD
@@ -3046,13 +3062,34 @@ class LambdaBot(sc2.BotAI):
                 # already taken
                 continue
 
-            d = await self._client.query_pathing(startp, el)
+            d = await self._client.query_pathing(start_p, el)
             if d is None:
                 continue
 
             expansions.append(el)
 
         return expansions
+
+    async def sort_pathing_distances_to(self, l: List[Union[Point2, sc2.unit.Unit]],
+                                        end_p: Union[Point2, sc2.unit.Unit]) -> List[Union[float, int]]:
+        """
+        Sorts each item in `l` based on its pathing distance from `end_p`
+
+        :param l: List of units/points to sort distances from `end_p`
+        :param end_p: Point/Unit to sort distances of each item in `l` from
+        """
+
+        # Zip the list together with the start point
+        zipped_list = [[start_p, end_p] for start_p in l]
+
+        distances = await self._client.query_pathings(zipped_list)
+
+        zip_with_distances = zip(distances, l)
+        zip_with_distances = sorted(zip_with_distances, key=(lambda dp: dp[0]))
+
+        sorted_l = [p for d, p in zip_with_distances]
+
+        return sorted_l
 
     def find_nearby_pathable_point(self, near: sc2.position.Point2) -> Union[None, sc2.position.Point2]:
         DISTANCE = 70
