@@ -213,16 +213,18 @@ RAVAGER_ALL_IN += [RAVAGER] * 100
 EARLY_GAME_POOL_FIRST_CAUTIOUS = [
     SPAWNINGPOOL,
     HATCHERY,
-    DRONE,
-    OVERLORD,  # 3
     EXTRACTOR,
+    DRONE,
+    CanAfford(QUEEN),  # 1
+    ZERGLING, ZERGLING,
+    OVERLORD,  # 3
+    CanAfford(SPINECRAWLER),
+    ZERGLING, ZERGLING,
+    QUEEN,
     CanAfford(ZERGLINGMOVEMENTSPEED),
-    ZERGLING, ZERGLING, ZERGLING, ZERGLING, ZERGLING, ZERGLING,
-    QUEEN,
     ZERGLING, ZERGLING, ZERGLING, ZERGLING,
-    DRONE, DRONE, DRONE,
     QUEEN,
-    SPINECRAWLER,
+    DRONE, DRONE,
 ]
 
 # Enemy cheese found. Get a spawning pool first with Zerglings and Spine Crawlers
@@ -450,7 +452,7 @@ LATE_GAME_CORRUPTOR_BROOD_LORD = [
     AtLeast(75, DRONE),
     AtLeast(1, INFESTATIONPIT),
     # If we have a hydralisk den, build additional hydras until we have a greater spire
-    IfHasThenBuild(HYDRALISKDEN, IfHasThenDontBuild(GREATERSPIRE, HYDRALISK, 8)),
+    IfHasThenBuild(HYDRALISKDEN, IfHasThenDontBuild(GREATERSPIRE, HYDRALISK, 10)),
     # Require at least one spire unless we have a Greater Spire
     IfHasThenDontBuild(GREATERSPIRE, AtLeast(1, SPIRE)),
     AtLeast(1, HIVE),
@@ -585,6 +587,7 @@ DEFAULT_NEXT_BUILDS_TERRAN = {
     Builds.EARLY_GAME_SPORE_CRAWLERS: Builds.MID_GAME_LING_BANE_MUTA,
 }
 DEFAULT_NEXT_BUILDS_ZERG = {
+    Builds.EARLY_GAME_DEFAULT_OPENER: Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS,
     Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS: Builds.MID_GAME_LING_BANE_MUTA,
     Builds.EARLY_GAME_HATCHERY_FIRST: Builds.MID_GAME_LING_BANE_MUTA,
     Builds.EARLY_GAME_POOL_FIRST: Builds.MID_GAME_LING_BANE_MUTA,

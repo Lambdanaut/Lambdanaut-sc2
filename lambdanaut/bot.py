@@ -34,7 +34,7 @@ class Manager(object):
     # with self.subscribe(EVENT_NAME)
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: LambdaBot = bot
 
         self._messages = {}
 
@@ -782,7 +782,7 @@ class BuildManager(Manager):
                         self.build_target = unit
 
                         build_stage = builds.get_build_stage(build)
-                        if build_stage != self.build_stage:
+                        if build_stage != self.build_stage and build_targets == []:
                             # Update build stage
                             self.build_stage = build_stage
                             self.publish(Messages.NEW_BUILD_STAGE, build_stage)
@@ -919,10 +919,21 @@ class BuildManager(Manager):
                 if self.can_afford(build_target):
                     enemy_start_location = self.bot.enemy_start_location
                     townhall = townhalls.random
+                    nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
+                    nearby_ramp = townhall.position.towards(
+                        enemy_start_location, 1).closest(nearby_ramps)
 
-                    direction_of_enemy = townhall.position.towards_with_random_angle(enemy_start_location, 10)
+                    if nearby_ramp.distance_to(townhall) < 18:
+                        target = nearby_ramp
+                    else:
+                        near_townhall = townhall.position.towards_with_random_angle(
+                            enemy_start_location, 10, max_difference=(math.pi / 2.0))
+                        target = near_townhall
 
-                    await self.bot.build(build_target, near=direction_of_enemy)
+                    position = await self.bot.find_placement(
+                        const.SPINECRAWLER, target, max_distance=25)
+
+                    await self.bot.build(build_target, near=position)
 
                     return True
 
@@ -1959,6 +1970,9 @@ class ForceManager(StatefulManager):
         # Set of banelings attacking mineral lines
         self.banelings_harassing = set()
 
+        # Set of roaches attacking mineral lines
+        self.roaches_harassing = set()
+
         # Subscribe to messages
         self.subscribe(Messages.NEW_BUILD_STAGE)
         self.subscribe(Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION)
@@ -2155,7 +2169,7 @@ class ForceManager(StatefulManager):
 
                 # Have army defend
                 army = self.bot.units().filter(
-                    lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
+                    lambda u: u.type_id in const2.ZERG_ARMY_UNITS)
 
                 # The harder we're attacked, the further-out army to pull back
                 if len(enemies_nearby) < 5:
@@ -2166,9 +2180,7 @@ class ForceManager(StatefulManager):
 
                     target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
 
-                    if unit.can_attack_ground and not target.is_flying or \
-                            unit.can_attack_air and target.is_flying:
-
+                    if self.bot.can_attack(unit, target):
                         if not unit.weapon_cooldown:
                             self.bot.actions.append(unit.attack(target.position))
 
@@ -2219,7 +2231,6 @@ class ForceManager(StatefulManager):
             self.bot.actions.append(unit.attack(nearby_target))
 
     async def start_attacking(self):
-
         # Command for when attacking starts
         self._recent_commands.add(ForceManagerCommands.START_ATTACKING, self.bot.state.game_loop, expiry=4)
 
@@ -2286,6 +2297,42 @@ class ForceManager(StatefulManager):
                         self.bot.actions.append(
                             baneling(const.AbilityId.BURROWDOWN_BANELING, queue=True))
 
+        # Do burrow roach harass during attack
+        roaches = self.bot.units(const.ROACH)
+        if roaches.exists and const.BURROW in self.bot.state.upgrades and \
+                const.UpgradeId.TUNNELINGCLAWS in self.bot.state.upgrades:
+            # Get the roaches that aren't harassing mineral lines
+            roaches = roaches.tags_not_in(self.roaches_harassing)
+
+            if len(roaches) >= 4:
+                # Get two roaches
+                roaches = roaches[:2]
+
+                enemy_structures = self.bot.known_enemy_structures
+                if enemy_structures.exists:
+                    # Get expansion locations starting from enemy start location
+                    enemy_townhalls = enemy_structures.of_type(
+                        const2.TOWNHALLS)
+
+                    if enemy_townhalls.exists:
+                        # Get the enemy townhall that we know of that is the furthest away from
+                        # the closest enemy structure we know of. Hopefully this means they attack
+                        # far away from where the main army will be attacking
+                        enemy_townhall = enemy_townhalls.furthest_to(
+                            enemy_structures.closest_to(self.bot.start_location))
+                        enemy_townhall = self.bot.find_nearby_pathable_point(
+                            enemy_townhall.position)
+
+                        for roach in roaches:
+                            # Consider them harassing roaches for the moment
+                            self.roaches_harassing.add(roach.tag)
+
+                            self.bot.actions.append(
+                                roach(const.AbilityId.BURROWDOWN_ROACH))
+                            self.bot.actions.append(roach.move(enemy_townhall, queue=True))
+                            self.bot.actions.append(
+                                roach(const.AbilityId.BURROWUP_ROACH, queue=True))
+
         # Do Mutalisk harass during attack
         mutalisks = self.bot.units(const.MUTALISK)
         if mutalisks.exists:
@@ -2313,6 +2360,16 @@ class ForceManager(StatefulManager):
         # Cleanup banelings that were harassing
         self.banelings_harassing.clear()
 
+        # Cleanup roaches that were harassing
+        roaches = self.bot.units(const.ROACHBURROWED)
+        if roaches:
+            roaches = roaches.tags_in(self.roaches_harassing)
+            for roach in roaches:
+                self.bot.actions.append(
+                    roach(const.AbilityId.BURROWUP_ROACH))
+
+        self.roaches_harassing.clear()
+
         # Reset the occupied units
         self.bot.occupied_units.clear()
 
@@ -2323,6 +2380,14 @@ class ForceManager(StatefulManager):
 
         # Army units to send a couple seconds before the main army
         frontline_army_units = {const.BANELING, const.BROODLORD}
+
+        # Unburrow idle harassing roaches
+        roaches = self.bot.units(const.ROACHBURROWED)
+        if roaches:
+            roaches = roaches.tags_in(self.roaches_harassing).idle
+            for roach in roaches:
+                self.bot.actions.append(
+                    roach(const.AbilityId.BURROWUP_ROACH))
 
         # Do main force attacking
         army = self.bot.units().filter(
@@ -2754,8 +2819,8 @@ class MicroManager(Manager):
                 self.bot.actions.append(c.move(expansion_location, queue=True))
 
     async def manage_spine_crawlers(self):
-        rooted_spine_crawlers = self.bot.units(const.SPINECRAWLER)
-        uprooted_spine_crawlers = self.bot.units(const.SPINECRAWLERUPROOTED)
+        rooted_spine_crawlers = self.bot.units(const.SPINECRAWLER).ready
+        uprooted_spine_crawlers = self.bot.units(const.SPINECRAWLERUPROOTED).ready
         spine_crawlers = rooted_spine_crawlers | uprooted_spine_crawlers
         townhalls = self.bot.townhalls.ready
 
@@ -2763,22 +2828,23 @@ class MicroManager(Manager):
             if townhalls.exists:
                 townhall = townhalls.closest_to(self.bot.enemy_start_location)
 
-                nearby_spine_crawlers = spine_crawlers.closer_than(20, townhall)
+                nearby_spine_crawlers = spine_crawlers.closer_than(25, townhall)
 
                 # Unroot spine crawlers that are far away from the front expansions
                 if not nearby_spine_crawlers.exists or (
                         len(nearby_spine_crawlers) < len(spine_crawlers) / 2):
 
                     for sc in rooted_spine_crawlers.idle:
-                        self.bot.actions.append(sc(const.AbilityId.SPINECRAWLERUPROOT_SPINECRAWLERUPROOT))
+                        self.bot.actions.append(sc(
+                            const.AbilityId.SPINECRAWLERUPROOT_SPINECRAWLERUPROOT))
 
                 # Root unrooted spine crawlers near the front expansions
                 for sc in uprooted_spine_crawlers.idle:
                     nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
                     nearby_ramp = townhall.position.towards(
-                        self.bot.enemy_start_location, 6).closest(nearby_ramps)
+                        self.bot.enemy_start_location, 2).closest(nearby_ramps)
 
-                    if nearby_ramp.distance_to(townhall) < 14:
+                    if nearby_ramp.distance_to(townhall) < 18:
                         target = nearby_ramp
                     else:
                         near_townhall = townhall.position.towards_with_random_angle(
@@ -2998,6 +3064,11 @@ class LambdaBot(sc2.BotAI):
             self.actions.append(unit(const.BEHAVIOR_BUILDINGATTACKON))
 
     @property
+    def pathable_start_location(self):
+        """Pathable point near start location"""
+        return self.find_nearby_pathable_point(self.start_location)
+
+    @property
     def start_location_to_enemy_start_location_distance(self):
         return self.start_location.distance_to(self.enemy_start_location)
 
@@ -3016,6 +3087,12 @@ class LambdaBot(sc2.BotAI):
     def unsubscribe(self, manager, message_type):
         """Unsubscribes a manager to a type of message"""
         self._message_subscriptions[message_type].remove(manager)
+
+    def can_attack(self, unit, target):
+        can = (unit.can_attack_ground and not target.is_flying) or \
+              (unit.can_attack_air and target.is_flying) or \
+              (unit.type_id == const.BANELING and not target.is_flying)
+        return can
 
     def get_expansion_positions(self) -> List[sc2.position.Point2]:
         """Returns our expansion positions in order from nearest to furthest"""
@@ -3045,8 +3122,7 @@ class LambdaBot(sc2.BotAI):
 
         expansions = []
 
-        start_p = self._game_info.player_start_location
-        start_p = self.find_nearby_pathable_point(start_p)
+        start_p = self.pathable_start_location
 
         expansion_locations = self.expansion_locations.keys()
 

@@ -3,12 +3,7 @@
 
 ## BUGS
 
-  * DEFENDING state doesn't defend with banelings. FIX THIS OMG
 
-  * Fix spine crawler placement. It's atrocious and is losing us matches!
-    * Idea: Place at base with least pathing_distance to the enemy start location :D
-    * Idea: No uprooting while defending
-    
 ## HIGH PRIORITY
 
   * Group army groups together using centroids and k-means
@@ -129,4 +124,9 @@
     * Problem is when we look ahead to the next build target, it sends the worker to build the hatchery
     
   * Fix hatchery placement on some maps. Build closer to the start location via ground-pathing distance
+
+  * Fix spine crawler placement. It's atrocious and is losing us matches!
+    * Idea: Place at base with least pathing_distance to the enemy start location :D
+    
+  * DEFENDING state doesn't defend with banelings. FIX THIS OMG
 
