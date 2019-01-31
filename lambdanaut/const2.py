@@ -98,6 +98,7 @@ ZERG_ARMY_VALUE = \
 
 
 TOWNHALLS = {townhall for subset in sc2.data.race_townhalls.values() for townhall in subset}
+UNUPGRADED_TOWNHALLS = {const.HATCHERY, const.NEXUS, const.COMMANDCENTER}
 
 # Attributes
 # {'Light': 1, 'Armored': 2, 'Biological': 3, 'Mechanical': 4,
@@ -123,25 +124,26 @@ class Messages(enum.Enum):
     ENEMY_AIR_TECH_SCOUTED = 9
     ENEMY_COUNTER_WITH_ROACHES_SCOUTED = 10
     ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD = 11
+    DEFENDING_AGAINST_MULTIPLE_ENEMIES = 12
 
     # STRATEGIC NOTES MESSAGES
-    ENEMY_EARLY_NATURAL_EXPAND_TAKEN = 12
-    ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN = 13
-    NEW_BUILD = 14  # New build added
-    NEW_BUILD_STAGE = 15  # New build stage entered
+    ENEMY_EARLY_NATURAL_EXPAND_TAKEN = 13
+    ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN = 14
+    NEW_BUILD = 15  # New build added
+    NEW_BUILD_STAGE = 16  # New build stage entered
 
     # UNITS TRAINED MESSAGES
-    UNIT_CREATED = 16
-    UPGRADE_STARTED = 17
+    UNIT_CREATED = 17
+    UPGRADE_STARTED = 18
 
     # UNIT ORDER MESSAGES
-    DRONE_LEAVING_TO_CREATE_HATCHERY = 18  # Value is Drone's tag
-    OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 19  # Move the second overlord scout to the enemy's main ramp
-    PULL_WORKERS_OFF_VESPENE = 20  # Value is int of workers to mine vespene. None if return to default.
+    DRONE_LEAVING_TO_CREATE_HATCHERY = 19  # Value is Drone's tag
+    OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 20  # Move the second overlord scout to the enemy's main ramp
+    PULL_WORKERS_OFF_VESPENE = 21  # Value is int of workers to mine vespene. None if return to default.
 
     # STATE MACHINE CHANGE MESSAGES
-    STATE_ENTERED = 21  # Value is State being left
-    STATE_EXITED = 22  # Value is State entered
+    STATE_ENTERED = 22  # Value is State being left
+    STATE_EXITED = 23  # Value is State entered
 
 
 # Build Manager Commands

@@ -19,7 +19,7 @@ from lambdanaut.builds import Builds, BuildStages, BUILD_MAPPING, DEFAULT_NEXT_B
 from lambdanaut.expiringlist import ExpiringList
 
 
-VERSION = '2.4'
+VERSION = '2.5'
 BUILD = Builds.EARLY_GAME_DEFAULT_OPENER
 
 
@@ -254,7 +254,7 @@ class IntelManager(Manager):
                 const.BANSHEE, const.SMBANSHEE, const.SMARMORYBANSHEE,
                 const.PHOENIX, const.BROODLORD, const.DARKSHRINE, const.GHOSTACADEMY,
                 const.GHOST, const.MUTALISK, const.LURKERDENMP, const.LURKERMP, const.ROACHBURROWED,
-                const.STARPORTTECHLAB}
+                const.STARPORTTECHLAB, const.DARKTEMPLAR, const.LURKER, const.LURKERDEN}
 
             enemy_air_tech_units = self.bot.known_enemy_units.of_type(enemy_air_tech_types)
 
@@ -306,6 +306,10 @@ class BuildManager(Manager):
         # Flag for if we've already changed the midgame. We only want to do this once
         self.has_switched_midgame = False
 
+        # Flags to decide whether we should disregard worker and townhall build targets
+        self.stop_worker_production = False
+        self.stop_townhall_production = False
+
         # Message subscriptions
         self.subscribe(Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN)
         self.subscribe(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
@@ -316,6 +320,8 @@ class BuildManager(Manager):
         self.subscribe(Messages.ENEMY_AIR_TECH_SCOUTED)
         self.subscribe(Messages.ENEMY_COUNTER_WITH_ROACHES_SCOUTED)
         self.subscribe(Messages.ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD)
+        self.subscribe(Messages.DEFENDING_AGAINST_MULTIPLE_ENEMIES)
+        self.subscribe(Messages.STATE_EXITED)
 
         # Expansion index used for trying other expansions if the one we're trying is blocked
         self.next_expansion_index = 0
@@ -350,10 +356,12 @@ class BuildManager(Manager):
             can_afford.have_enough_supply
 
     def determine_opening_build(self):
-        # Randomly do ravager all-ins against terran and protoss
-        if self.bot.enemy_race in {sc2.Race.Terran, sc2.Race.Protoss}:
-            if not random.randint(0, 7):
-                self.starting_build = Builds.RAVAGER_ALL_IN
+        # Chance of cheese on smaller maps (2 player start locations)
+        if len(self.bot.enemy_start_locations) < 3:
+            # Randomly do ravager all-ins against terran and protoss
+            if self.bot.enemy_race in {sc2.Race.Terran, sc2.Race.Protoss}:
+                if not random.randint(0, 7):
+                    self.starting_build = Builds.RAVAGER_ALL_IN
 
     def add_build(self, build):
         self.print("Adding build order: {}".format(build.name))
@@ -464,6 +472,21 @@ class BuildManager(Manager):
                 if self.build_stage != BuildStages.LATE_GAME:
                     self.add_build(Builds.MID_GAME_CORRUPTOR_BROOD_LORD_RUSH)
 
+            # Stop townhall and worker production during defending
+            large_defense = {Messages.DEFENDING_AGAINST_MULTIPLE_ENEMIES,}
+            if message in large_defense:
+                self.ack(message)
+                self.stop_townhall_production = True
+                self.stop_worker_production = True
+
+            # Restart townhall and worker production when defending stops
+            exit_state = {Messages.STATE_EXITED,}
+            if message in exit_state:
+                self.ack(message)
+                if val == ForcesStates.DEFENDING:
+                    self.stop_townhall_production = False
+                    self.stop_worker_production = False
+
     def parse_special_build_target(self,
                                    unit: builds.SpecialBuildTarget,
                                    existing_unit_counts: Counter,
@@ -484,12 +507,13 @@ class BuildManager(Manager):
 
             at_least = unit
             unit = at_least.unit_type
+            amount_required = at_least.n
 
-            if existing_unit_counts[unit] < at_least.n:
+            if existing_unit_counts[unit] < amount_required:
                 if isinstance(unit, builds.SpecialBuildTarget):
                     return self.parse_special_build_target(unit, existing_unit_counts, build_order_counts)
                 else:
-                    build_order_counts[unit] += 1
+                    build_order_counts[unit] += at_least.n - existing_unit_counts[unit]
                     return unit
             else:
                 return unit
@@ -773,6 +797,12 @@ class BuildManager(Manager):
                         # Check for upgrade tech requirements
                         tech_requirement = const2.ZERG_UPGRADES_TO_TECH_REQUIREMENT[unit]
                         idle_building_structure = self.bot.units(const2.ZERG_UPGRADES_TO_STRUCTURE[unit]).ready.idle
+
+                    # Skip worker and townhall build targets if these flags are set
+                    if self.stop_townhall_production and unit in const2.UNUPGRADED_TOWNHALLS:
+                            continue
+                    if self.stop_worker_production and unit in const2.WORKERS:
+                            continue
 
                     if (tech_requirement is None or existing_unit_counts[tech_requirement]) > 0 and \
                             (idle_building_structure is None or idle_building_structure.exists):
@@ -1964,6 +1994,10 @@ class ForceManager(StatefulManager):
         # Last enemy army position seen
         self.last_enemy_army_position = None
 
+        # Flag to set if we've published a message about defending against multiple
+        # enemies since we last switched to the DEFENDING state
+        self.published_defending_against_multiple_enemies = False
+
         # Set of worker ids of workers defending an attack.
         self.workers_defending = set()
 
@@ -2125,6 +2159,12 @@ class ForceManager(StatefulManager):
             enemies_nearby = self.bot.known_enemy_units.closer_than(35, th.position)
 
             if enemies_nearby.exists:
+                # Publish message if there are multiple enemies
+                if not self.published_defending_against_multiple_enemies and \
+                        len(enemies_nearby) > 4:
+                    self.publish(Messages.DEFENDING_AGAINST_MULTIPLE_ENEMIES)
+                    self.published_defending_against_multiple_enemies = True
+
                 # Workers attack enemy
                 ground_enemies = enemies_nearby.not_flying
                 workers = self.bot.workers.closer_than(15, enemies_nearby.random.position)
@@ -2134,9 +2174,10 @@ class ForceManager(StatefulManager):
                         if len(self.workers_defending) <= len(ground_enemies):
                             if worker.tag not in self.workers_defending:
                                 target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
-                                if target.type_id != const.BANELING:
-                                    self.bot.actions.append(worker.attack(target.position))
-                                    self.workers_defending.add(worker.tag)
+                                if target:
+                                    if target.type_id != const.BANELING:
+                                        self.bot.actions.append(worker.attack(target.position))
+                                        self.workers_defending.add(worker.tag)
 
                 # Have queens defend
                 queens = self.bot.units(const.QUEEN)
@@ -2159,7 +2200,7 @@ class ForceManager(StatefulManager):
                     for queen in defending_queens:
                         target = self.bot.closest_and_most_damaged(enemies_nearby, queen)
 
-                        if queen.distance_to(target) > 8:
+                        if target and queen.distance_to(target) > 8:
                             if target.distance_to(queen) < queen.ground_range:
                                 # Target
                                 self.bot.actions.append(queen.attack(target))
@@ -2180,9 +2221,8 @@ class ForceManager(StatefulManager):
 
                     target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
 
-                    if self.bot.can_attack(unit, target):
-                        if not unit.weapon_cooldown:
-                            self.bot.actions.append(unit.attack(target.position))
+                    if target and unit.weapon_cooldown <= 0:
+                        self.bot.actions.append(unit.attack(target.position))
 
             # Bring back defending workers that have drifted too far from town halls
             workers_defending_to_remove = set()
@@ -2207,6 +2247,9 @@ class ForceManager(StatefulManager):
                 nearest_townhall = self.bot.townhalls.closest_to(worker.position)
                 self.bot.actions.append(worker.move(nearest_townhall.position))
         self.workers_defending.clear()  # Remove worker ids from set
+
+        # Reset flag saying that we're defending against multiple enemies
+        self.published_defending_against_multiple_enemies = False
 
     async def do_moving_to_attack(self):
         army_units = const2.ZERG_ARMY_UNITS
@@ -2277,25 +2320,25 @@ class ForceManager(StatefulManager):
                     # Get two banelings
                     banelings = banelings[:2]
 
-                army = self.bot.units().filter(
-                    lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
-                if army.exists:
-                    for baneling in banelings:
-                        # Consider them harassing banelings for the moment
-                        self.banelings_harassing.add(baneling.tag)
+                    army = self.bot.units().filter(
+                        lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
+                    if army.exists:
+                        for baneling in banelings:
+                            # Consider them harassing banelings for the moment
+                            self.banelings_harassing.add(baneling.tag)
 
-                        # Move them to a nearest ramp near the army center and burrow them
-                        target = army.center
+                            # Move them to a nearest ramp near the army center and burrow them
+                            target = army.center
 
-                        nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
-                        nearby_ramp = target.closest(nearby_ramps)  # Ramp closest to army
+                            nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
+                            nearby_ramp = target.closest(nearby_ramps)  # Ramp closest to army
 
-                        if nearby_ramp.distance_to(target) < 14:
-                            target = nearby_ramp
+                            if nearby_ramp.distance_to(target) < 14:
+                                target = nearby_ramp
 
-                        self.bot.actions.append(baneling.move(target))
-                        self.bot.actions.append(
-                            baneling(const.AbilityId.BURROWDOWN_BANELING, queue=True))
+                            self.bot.actions.append(baneling.move(target))
+                            self.bot.actions.append(
+                                baneling(const.AbilityId.BURROWDOWN_BANELING, queue=True))
 
         # Do burrow roach harass during attack
         roaches = self.bot.units(const.ROACH)
@@ -2603,7 +2646,15 @@ class MicroManager(Manager):
         zerglings = self.bot.units(const.ZERGLING)
 
         attack_priority_types = const2.WORKERS
-        detector_structure_types = {const.MISSILETURRET, const.PHOTONCANNON, const.SPORECRAWLER}
+
+        # Micro zerglings
+        for zergling in zerglings:
+            nearby_enemy_units = self.bot.known_enemy_units.closer_than(7, zergling)
+            if nearby_enemy_units:
+                nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priority_types)
+                if nearby_enemy_priorities:
+                    nearby_enemy_unit = nearby_enemy_priorities.closest_to(zergling)
+                    self.bot.actions.append(zergling.attack(nearby_enemy_unit))
 
         # # Burrow zerglings near enemy townhall
         # # Decided not to use for now
@@ -2903,16 +2954,14 @@ class MicroManager(Manager):
         if attack_priorities is None:
             attack_priorities = set()
 
-        enemy_units =self.bot.known_enemy_units
-        if unit.can_attack_ground:
-            enemy_units = enemy_units.closer_than(unit.ground_range * 1.3, unit).not_flying
-        if unit.can_attack_air:
-            enemy_units = enemy_units.closer_than(unit.air_range * 1.3, unit).flying
-
-        if enemy_units.exists:
-            target = self.bot.closest_and_most_damaged(
-                enemy_units, unit, priorities=attack_priorities)
-            self.bot.actions.append(unit.attack(target))
+        enemy_units = self.bot.known_enemy_units
+        if enemy_units:
+            enemy_units = enemy_units.closer_than(unit.ground_range * 1.3, unit)
+            if enemy_units:
+                target = self.bot.closest_and_most_damaged(
+                    enemy_units, unit, priorities=attack_priorities)
+                if target:
+                    self.bot.actions.append(unit.attack(target))
 
     async def do_combat(self):
         # Units to do default combat micro for
@@ -2942,7 +2991,7 @@ class MicroManager(Manager):
                     army_dps = sum([u.ground_dps for u in nearby_army])
                     enemy_dps = sum([u.ground_dps for u in nearby_enemy])
 
-                    if army_dps > enemy_dps * 1.2:
+                    if army_dps > enemy_dps * 1.1:
                         for unit in nearby_army:
                             if unit.movement_speed > 0 and \
                                     unit.ground_range > 2 and \
@@ -3208,14 +3257,22 @@ class LambdaBot(sc2.BotAI):
 
         return adjacents
 
-    def closest_and_most_damaged(self, unit_group, unit, priorities=None):
+    def closest_and_most_damaged(self, unit_group, unit, priorities=None, can_attack=True):
         """
         Gets the unit from Unitgroup who is the closest to `unit` but also the most damaged.
 
         Formula: ((health + shield) / 2) * distance * (1 if in priorities. 2 if not in priorities)
+
+        :param can_attack: If true, filters `unit_group` for those that `unit` can attack
         """
 
         if priorities is None:
             priorities = set()
+
+        if can_attack:
+            unit_group = unit_group.filter(lambda u: self.can_attack(unit, u))
+
+        if not unit_group:
+            return
 
         return unit_group.sorted(lambda u: ((u.health_percentage + u.shield_percentage) / 2) * u.distance_to(unit) * (int(u not in priorities) + 1))[0]

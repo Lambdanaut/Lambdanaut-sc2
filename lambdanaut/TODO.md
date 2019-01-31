@@ -3,14 +3,25 @@
 
 ## BUGS
 
+  * Couldn't take
+    * 5th expansion on Cerulean Falls LE.
+    * 4th expansion on Stasis LE
+    * Kept getting this error in the log over a hundred times in a row:
+    * `Build Manager: Couldn't build expansion. All spots are taken.`
 
+  * Make sure priority targets are pathable before attacking them with melee (zergling baneling)
+  
 ## HIGH PRIORITY
+
+  * Disable drone(worker) and expansion build targets while defending if we have a spawning pool/gateway/barracks
+
+  * Zergling/banelings target workers from a distance
+
+  * Don't fly first overlord into cannons at natural. Right now against zoctoss we do that. 
 
   * Group army groups together using centroids and k-means
     * With this, we can refine micro by getting closer/further than enemy units based on the centroid's dps
 
-  * Disable drone and expansion build targets while defending
- 
   * Remember friendly units so we can figure out if they're being attacked. Like so:
     * https://github.com/Hannessa/sc2-bots/blob/master/cannon-lover/base_bot.py#L334
     
