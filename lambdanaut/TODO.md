@@ -11,9 +11,6 @@
 
 ## HIGH PRIORITY
 
-  * Group army groups together using centroids and k-means
-    * With this, we can refine micro by getting closer/further than enemy units based on the centroid's dps
-
   * Zergling/banelings target workers from a distance
 
   * Remember friendly units so we can figure out if they're being attacked. Like so:
@@ -157,4 +154,7 @@
   * DEFENDING state doesn't defend with banelings. FIX THIS OMG
 
   * Disable drone(worker) and expansion build targets while defending if we have a spawning pool/gateway/barracks
+
+  * Group army groups together using centroids and k-means
+    * With this, we can refine micro by getting closer/further than enemy units based on the centroid's dps
 

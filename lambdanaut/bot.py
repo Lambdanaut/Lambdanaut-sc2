@@ -2999,7 +2999,7 @@ class MicroManager(Manager):
                     army_dps = sum([u.ground_dps for u in nearby_army])
                     enemy_dps = sum([u.ground_dps for u in nearby_enemy])
 
-                    if army_dps > enemy_dps:
+                    if army_dps > enemy_dps * 1.1:
                         for unit in nearby_army:
                             if unit.movement_speed > 0 and \
                                     unit.ground_range > 2 and \
@@ -3149,12 +3149,12 @@ class LambdaBot(sc2.BotAI):
         Draws debug images on screen during game
         """
 
-        class Green():
+        class Green:
             r = 0
             g = 255
             b = 0
 
-        class Red():
+        class Red:
             r = 255
             g = 0
             b = 0
