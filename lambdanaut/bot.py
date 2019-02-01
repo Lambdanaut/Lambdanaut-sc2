@@ -10,6 +10,7 @@ from sc2.position import Point2
 
 import lambdanaut.builds as builds
 import lambdanaut.const2 as const2
+import lambdanaut.clustering as clustering
 import lambdanaut.utils as utils
 
 from lambdanaut.const2 import \
@@ -800,8 +801,12 @@ class BuildManager(Manager):
 
                     # Skip worker and townhall build targets if these flags are set
                     if self.stop_townhall_production and unit in const2.UNUPGRADED_TOWNHALLS:
+                        first_tier_production_structures = {const.SPAWNINGPOOL, const.GATEWAY, const.BARRACKS}
+                        if not self.bot.units(first_tier_production_structures):
                             continue
-                    if self.stop_worker_production and unit in const2.WORKERS:
+                    elif self.stop_worker_production and unit in const2.WORKERS:
+                        first_tier_production_structures = {const.SPAWNINGPOOL, const.GATEWAY, const.BARRACKS}
+                        if not self.bot.units(first_tier_production_structures):
                             continue
 
                     if (tech_requirement is None or existing_unit_counts[tech_requirement]) > 0 and \
@@ -1846,7 +1851,7 @@ class OverlordManager(StatefulManager):
             if overlord:
                 distance_to_expansion = overlord.distance_to(enemy_natural_expansion)
 
-                if distance_to_expansion < 18:
+                if distance_to_expansion < 23:
                     # Take note of enemy defensive structures sited
                     enemy_defensive_structures_types = {const.PHOTONCANNON, const.SPINECRAWLER}
                     nearby_enemy_defensive_structures = enemy_structures.of_type(
@@ -2713,7 +2718,7 @@ class MicroManager(Manager):
 
         for roach in roaches:
             # Burrow damaged roaches
-            if const.BURROW in self.bot.state.upgrades and const.UpgradeId.TUNNELINGCLAWS in self.bot.state.upgrades:
+            if const.BURROW in self.bot.state.upgrades:
                 if roach.health_percentage < 0.20:
                     # Move away from the direction we're facing
                     target = utils.towards_direction(roach.position, roach.facing, -20)
@@ -3028,6 +3033,8 @@ class MicroManager(Manager):
 
 class LambdaBot(sc2.BotAI):
     def __init__(self):
+        super(LambdaBot, self).__init__()
+
         self.intel_manager = None
         self.build_manager = None
         self.resource_manager = None
@@ -3052,6 +3059,12 @@ class LambdaBot(sc2.BotAI):
         # Set of units currently occupied in some way. Don't order them.
         # This is cleared every time an attack ends
         self.occupied_units = set()
+
+        # Our army clusters
+        self.army_clusters = clustering.get_fresh_clusters([], n=3)
+
+        # Our enemy clusters
+        self.enemy_clusters = clustering.get_fresh_clusters([], n=2)
 
     async def on_step(self, iteration):
         self.iteration = iteration
@@ -3099,6 +3112,10 @@ class LambdaBot(sc2.BotAI):
         if iteration % 15 == 3:
             await self.overlord_manager.run()
 
+        # Update the unit clusters
+        if iteration % 10 == 0:
+            self.update_clusters()
+
         # "Do" actions
         await self.do_actions(self.actions)
 
@@ -3120,6 +3137,20 @@ class LambdaBot(sc2.BotAI):
     @property
     def start_location_to_enemy_start_location_distance(self):
         return self.start_location.distance_to(self.enemy_start_location)
+
+    def update_clusters(self):
+        """
+        Updates the position of k-means clusters we keep of units
+        """
+
+        our_army = self.units(const2.ZERG_ARMY_UNITS)
+        enemy_units = self.known_enemy_units
+
+        if our_army:
+            clustering.k_means_update(self.army_clusters, our_army)
+
+        if enemy_units:
+            clustering.k_means_update(self.enemy_clusters, enemy_units)
 
     def publish(self, manager, message_type: const2.Messages, value: Optional[Any] = None):
         """

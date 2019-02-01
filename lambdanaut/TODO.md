@@ -9,25 +9,37 @@
     * Kept getting this error in the log over a hundred times in a row:
     * `Build Manager: Couldn't build expansion. All spots are taken.`
 
-  * Make sure priority targets are pathable before attacking them with melee (zergling baneling)
-  
 ## HIGH PRIORITY
-
-  * Disable drone(worker) and expansion build targets while defending if we have a spawning pool/gateway/barracks
-
-  * Zergling/banelings target workers from a distance
-
-  * Don't fly first overlord into cannons at natural. Right now against zoctoss we do that. 
 
   * Group army groups together using centroids and k-means
     * With this, we can refine micro by getting closer/further than enemy units based on the centroid's dps
 
+  * Zergling/banelings target workers from a distance
+
   * Remember friendly units so we can figure out if they're being attacked. Like so:
     * https://github.com/Hannessa/sc2-bots/blob/master/cannon-lover/base_bot.py#L334
     
+  * Keep tags of all seen enemy units
+
+  * Enter a state PREPARE_TO_DEFEND when we see an enemy army of > 3 units moving out. 
+    * Remember each enemy unit and their position
+    * If four enemy non-workers/non-overlords take 6 frames of stepping towards our start location, assume an attack and enter PREPARE_TO_DEFEND
+    * Halt worker, upgrade, and townhall production. 
+    * After 30 seconds, return to HOUSEKEEPING
+    * `This would save us from 4:30-6:00 rushes`
+
 ## MEDIUM PRIORITY
 
-  * Keep tags of all seen enemy units
+  * Make sure priority targets are pathable before attacking them with melee (zergling baneling)
+    * If priority target is on the other side of a hard wall, zerglings may not attack wall to get to it. 
+    * Haven't reproduce this yet. Just a theory
+  
+  * Turn back overlords if 3 raxes or over 3 marines are scouted with first scout
+    * Also enter pool defensive build
+  
+  * Enter pool defensive build if 3 gateways are scouted with first scout
+  
+  * Enter pool defensive build if 5 zerglings are scouted with first scout
 
   * Search for further enemy expansions and structures.
     * ForceManager could enter a state of searching for further expansions
@@ -54,6 +66,9 @@
     * If the unsaturated base has nearby enemy army units. Don't saturate it
 
   * Switch from "DEFENDING" state to another where all army is pulled home if it seems necessary. Maybe "ALL_DEFENDING"
+
+  * Don't fly first overlord into cannons at natural. Right now against zoctoss we do that. 
+    * `This might be solved? I'm not sure. The code looks fine`
 
 ## LOWEST PRIORITY
 
@@ -140,4 +155,6 @@
     * Idea: Place at base with least pathing_distance to the enemy start location :D
     
   * DEFENDING state doesn't defend with banelings. FIX THIS OMG
+
+  * Disable drone(worker) and expansion build targets while defending if we have a spawning pool/gateway/barracks
 
