@@ -21,6 +21,7 @@ from lambdanaut.expiringlist import ExpiringList
 
 
 VERSION = '2.5'
+DEBUG = True
 BUILD = Builds.EARLY_GAME_DEFAULT_OPENER
 
 
@@ -2981,12 +2982,14 @@ class MicroManager(Manager):
         units = self.bot.units(micro_combat_unit_types)
         enemy = self.bot.known_enemy_units.filter(lambda u: u.is_visible)
 
-        # Micro closer to enemy army if our dps is higher
-        if units.exists and enemy.exists:
-            army_center = units.center
-            enemy_army_center = enemy.center
+        # Micro closer to nearest enemy army cluster if our dps is higher
+        for army_cluster in self.bot.army_clusters:
+            army_center = army_cluster.position
 
-            if army_center.distance_to(enemy_army_center) < 25:
+            nearest_enemy_cluster = army_center.closest(self.bot.enemy_clusters)
+            enemy_army_center = nearest_enemy_cluster.position
+
+            if army_center.distance_to(enemy_army_center) < 18:
                 types_not_to_move = {const.ZERGLING, const.LURKERMP, const.QUEEN, const.ULTRALISK}
                 nearby_army = units.filter(lambda u: u.distance_to(enemy_army_center) < 17).\
                     exclude_type(types_not_to_move)
@@ -2996,7 +2999,7 @@ class MicroManager(Manager):
                     army_dps = sum([u.ground_dps for u in nearby_army])
                     enemy_dps = sum([u.ground_dps for u in nearby_enemy])
 
-                    if army_dps > enemy_dps * 1.1:
+                    if army_dps > enemy_dps:
                         for unit in nearby_army:
                             if unit.movement_speed > 0 and \
                                     unit.ground_range > 2 and \
@@ -3113,8 +3116,11 @@ class LambdaBot(sc2.BotAI):
             await self.overlord_manager.run()
 
         # Update the unit clusters
-        if iteration % 10 == 0:
+        if iteration % 8 == 0:
             self.update_clusters()
+
+        if DEBUG:
+            await self.draw_debug()
 
         # "Do" actions
         await self.do_actions(self.actions)
@@ -3138,13 +3144,41 @@ class LambdaBot(sc2.BotAI):
     def start_location_to_enemy_start_location_distance(self):
         return self.start_location.distance_to(self.enemy_start_location)
 
+    async def draw_debug(self):
+        """
+        Draws debug images on screen during game
+        """
+
+        class Green():
+            r = 0
+            g = 255
+            b = 0
+
+        class Red():
+            r = 255
+            g = 0
+            b = 0
+
+        # Draw clusters
+        for cluster in self.army_clusters:
+            if cluster:
+                radius = cluster.position.distance_to_furthest(cluster)
+                self._client.debug_sphere_out(cluster.position, radius, color=Green())
+
+        for cluster in self.enemy_clusters:
+            if cluster:
+                radius = cluster.position.distance_to_furthest(cluster)
+                self._client.debug_sphere_out(cluster.position, radius, color=Red())
+
+        await self._client.send_debug()
+
     def update_clusters(self):
         """
         Updates the position of k-means clusters we keep of units
         """
 
         our_army = self.units(const2.ZERG_ARMY_UNITS)
-        enemy_units = self.known_enemy_units
+        enemy_units = self.known_enemy_units.filter(lambda u: u.is_visible)
 
         if our_army:
             clustering.k_means_update(self.army_clusters, our_army)

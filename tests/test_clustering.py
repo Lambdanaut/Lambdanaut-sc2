@@ -53,7 +53,6 @@ class TestClustering(unittest.TestCase):
         clustering.k_means_update(clusters, points)
 
         self.assertEqual(len(clusters), 5)
-        import pdb; pdb.set_trace()
 
 
 if __name__ == '__main__':

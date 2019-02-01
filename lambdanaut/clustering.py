@@ -1,12 +1,18 @@
 from functools import reduce
 import random
-from typing import List
+from typing import List, Union
 
+from sc2.units import Units
 from sc2.position import Point2
 
 
 class Cluster(list):
-    def __init__(self, position: Point2, *args):
+    def __init__(self, position: Point2, *args: Union["Units", List["Point2"]]):
+        """
+
+        :param position:
+        :param args:
+        """
         super(Cluster, self).__init__(*args)
 
         self.position = position
@@ -17,11 +23,14 @@ class Cluster(list):
         :returns A Boolean indicating if the position has changed
         """
 
-        if len(self) == 0:
+        if not len(self):
             return False
 
         prev_position = self.position
-        sum_of_self = reduce(lambda x, y: x+y, self)
+
+        # Iterate over self, adding up all the points in ourself
+        sum_of_self = reduce(lambda p1, p2: p1.position + p2.position, self, Point2((0, 0)))
+
         new_position = sum_of_self / len(self)
 
         position_changed = prev_position != new_position
@@ -48,9 +57,10 @@ def get_fresh_clusters(data, n=4) -> Cluster:
     return [Cluster(centroid, data) for centroid in centroids]
 
 
-def k_means_update(clusters: List[Cluster], data) -> List[Cluster]:
+def k_means_update(clusters: List[Cluster], data):
     """
-    Given clusters and data, update the cluster's positions based on the data positions
+    Given clusters and data, mutably update the cluster's positions based on
+    the data positions
 
     :param clusters: Clusters to update with new data
     :param data: Units or points to cluster on
