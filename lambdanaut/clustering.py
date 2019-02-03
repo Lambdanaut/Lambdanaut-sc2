@@ -1,4 +1,5 @@
 from functools import reduce
+import math
 import random
 from typing import List, Union
 
@@ -40,21 +41,36 @@ class Cluster(list):
 
         return position_changed
 
+    def refresh_cluster(self):
+        """
+        Clears a cluster and sets its center to a random point of its data
 
-def get_fresh_clusters(data, n=4) -> Cluster:
+        """
+        if len(self):
+            # Choose a random data point from self
+            centroid = random.choice(self)
+        else:
+            # If we have no data, set a random point as the centroid
+            centroid = Point2((random.randint(0, 300), random.randint(0, 300)))
+
+        self.clear()
+        self.position = centroid.position
+
+
+def get_fresh_clusters(data, n=4) -> List[Cluster]:
     """
     Returns `n` fresh clusters that have not been calibrated
     """
 
     if len(data) < n:
         # If data is shorter than n, just create a list of linear points
-        centroids = [Point2((i, i)) for i in range(n)]
+        centroids = [Point2((i, i)) for i in range(0, 400, 400 // n)]
 
     else:
         # Otherwise choose n random data points from data to be our centers
         centroids = random.sample(data, n)
 
-    return [Cluster(centroid, data) for centroid in centroids]
+    return [Cluster(centroid.position, data) for centroid in centroids]
 
 
 def k_means_update(clusters: List[Cluster], data):
@@ -65,6 +81,10 @@ def k_means_update(clusters: List[Cluster], data):
     :param clusters: Clusters to update with new data
     :param data: Units or points to cluster on
     """
+
+    for cluster in clusters:
+        cluster.refresh_cluster()
+
     while True:
 
         for cluster in clusters:

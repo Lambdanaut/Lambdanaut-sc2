@@ -73,7 +73,7 @@ if __name__ == '__main__':
 
             # input("Press enter to reload ")
 
-            print("============================ Reloading LambdaBot =================================")
+            print("============================ Reloading Lambdanaut =================================")
 
             importlib.reload(bot)
             player_config[0].ai = bot.LambdaBot()

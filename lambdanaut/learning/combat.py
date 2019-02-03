@@ -1,5 +1,17 @@
-import json
+"""
+For modelling sc2 combat and determining the victor in a fight.
 
+Input = [[1,4], [4,2], [6,3] ...] aka [[player_1_unit_count, player_2_unit_count], [..], [..], ...]
+Output = [0, 1, 0] Where [DRAW, PLAYER1 VICTORY, PLAYER2 VICTORY]
+
+"""
+
+import json
+import os
+from typing import List, Tuple
+
+import sc2
+import sc2.constants as const
 import torch
 import torch.nn as nn
 from torch.optim import Adam
@@ -7,216 +19,121 @@ import numpy as np
 
 
 DATA_DIR = 'data'
-DATA_FILE = os.path.join(DATA_DIR, 'combat.json')
+TRAINING_DATA_FILE = os.path.join(DATA_DIR, 'combat.json')
+TESTING_DATA_FILE = os.path.join(DATA_DIR, 'combat_testing.json')
 
 
-def load_training_json(filepath)
+def load_training_json(filepath):
     with open(filepath, 'r') as f:
-        contents = f.read(json_combat_record)
+        contents = f.read()
         loaded = json.loads(contents)
 
     return loaded
 
 
-class Unit(nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super(Unit, self).__init__()
+def json_to_model_data(data: List[dict]) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Returns the (input data, output data) for training the model
+    """
+    inputs = []
+    outputs = []
+    for training_sample in data:
+        p1_zergling_count = training_sample['1'][str(const.ZERGLING.value)]
+        p2_zergling_count = training_sample['2'][str(const.ZERGLING.value)]
 
-        self.conv = nn.Conv2d(in_channels=in_channels, kernel_size=3, out_channels=out_channels, stride=1, padding=1)
-        self.bn = nn.BatchNorm2d(num_features=out_channels)
-        self.relu = nn.ReLU()
+        inputs.append([
+            p1_zergling_count,
+            p2_zergling_count,
+        ])
 
-    def forward(self, input):
-        output = self.conv(input)
-        output = self.bn(output)
-        output = self.relu(output)
+        # Set the output result equal to 1
+        result = training_sample['result']
 
-        return output
+        output = [0, 0, 0]
+        output[result] = 1
+
+        outputs.append(output)
+
+    inputs = torch.Tensor(inputs)
+    outputs = torch.Tensor(outputs)
+
+    return inputs, outputs
 
 
 class Model(nn.Module):
-    def __init__(self, num_classes=3):
+    def __init__(self, D_in, H, D_out):
         super(Model, self).__init__()
 
-        # Create 14 layers of the unit with max pooling in between
-        self.unit1 = Unit(in_channels=3, out_channels=32)
-        self.unit2 = Unit(in_channels=32, out_channels=32)
-        self.unit3 = Unit(in_channels=32, out_channels=32)
-
-        self.pool1 = nn.MaxPool2d(kernel_size=2)
-
-        self.unit4 = Unit(in_channels=32, out_channels=64)
-        self.unit5 = Unit(in_channels=64, out_channels=64)
-        self.unit6 = Unit(in_channels=64, out_channels=64)
-        self.unit7 = Unit(in_channels=64, out_channels=64)
-
-        self.pool2 = nn.MaxPool2d(kernel_size=2)
-
-        self.unit8 = Unit(in_channels=64, out_channels=128)
-        self.unit9 = Unit(in_channels=128, out_channels=128)
-        self.unit10 = Unit(in_channels=128, out_channels=128)
-        self.unit11 = Unit(in_channels=128, out_channels=128)
-
-        self.pool3 = nn.MaxPool2d(kernel_size=2)
-
-        self.unit12 = Unit(in_channels=128, out_channels=128)
-        self.unit13 = Unit(in_channels=128, out_channels=128)
-        self.unit14 = Unit(in_channels=128, out_channels=128)
-
-        self.avgpool = nn.AvgPool2d(kernel_size=4)
-
-        # Add all the units into the Sequential layer in exact order
-        self.net = nn.Sequential(self.unit1, self.unit2, self.unit3, self.pool1, self.unit4, self.unit5, self.unit6
-                                 , self.unit7, self.pool2, self.unit8, self.unit9, self.unit10, self.unit11, self.pool3,
-                                 self.unit12, self.unit13, self.unit14, self.avgpool)
-
-        self.fc = nn.Linear(in_features=128, out_features=num_classes)
+        self.linear1 = torch.nn.Linear(in_features=D_in, out_features=H)
+        self.linear2 = torch.nn.Linear(in_features=H, out_features=D_out)
+        self.relu = torch.nn.ReLU()
 
     def forward(self, input):
-        output = self.net(input)
-        output = output.view(-1, 128)
-        output = self.fc(output)
+        output = self.linear1(input)
+        output = self.relu(output)
+        output = self.linear2(output)
         return output
 
 
-# Define transformations for the training set, flip the images randomly, crop out and apply mean and std normalization
-train_transformations = transforms.Compose([
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomCrop(32, padding=4),
-    transforms.ToTensor(),
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-])
+def do_testing(model):
+    # List of testing data loaded from JSON
+    testing_list = load_training_json(TESTING_DATA_FILE)
 
-batch_size = 32
+    # Tensor holding testing data
+    testing_input, testing_output = json_to_model_data(testing_list)
 
-# Load the training set
-train_set = CIFAR10(root="./data", train=True, transform=train_transformations, download=True)
+    # Construct our loss function and an Optimizer. The call to model.parameters()
+    # in the SGD constructor will contain the learnable parameters of the two
+    # nn.Linear modules which are members of the model.
+    loss_fn = torch.nn.MSELoss(reduction='sum')
 
-# Create a loder for the training set
-train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=4)
+    output_pred = model(testing_input)
 
-# Define transformations for the test set
-test_transformations = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    # Compute and print loss
+    loss = loss_fn(output_pred, testing_output)
+    print("Loss: {}".format(loss.item()))
+    print(output_pred)
 
-])
-
-# Load the test set, note that train is set to False
-test_set = CIFAR10(root="./data", train=False, transform=test_transformations, download=True)
-
-# Create a loder for the test set, note that both shuffle is set to false for the test loader
-test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=4)
-
-# Check if gpu support is available
-cuda_avail = torch.cuda.is_available()
-
-# Create model, optimizer and loss function
-model = Model(num_classes=3)
-
-if cuda_avail:
-    model.cuda()
-
-optimizer = Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
-loss_fn = nn.CrossEntropyLoss()
+    import pdb; pdb.set_trace()
 
 
-# Create a learning rate adjustment function that divides the learning rate by 10 every 30 epochs
-def adjust_learning_rate(epoch):
-    lr = 0.001
+def main():
+    # List of training data loaded from JSON
+    training_list = load_training_json(TRAINING_DATA_FILE)
 
-    if epoch > 180:
-        lr = lr / 1000000
-    elif epoch > 150:
-        lr = lr / 100000
-    elif epoch > 120:
-        lr = lr / 10000
-    elif epoch > 90:
-        lr = lr / 1000
-    elif epoch > 60:
-        lr = lr / 100
-    elif epoch > 30:
-        lr = lr / 10
+    # Tensor holding training data of form: [[1,4], [4,2], [6,3] ...]
+    training_input, training_output = json_to_model_data(training_list)
 
-    for param_group in optimizer.param_groups:
-        param_group["lr"] = lr
+    # D_in is input dimension;
+    # H is hidden dimension; D_out is output dimension.
+    N, D_in, H, D_out = len(training_list), 2, 100, 3
 
+    # Construct our model by instantiating the class defined above.
+    model = Model(D_in, H, D_out)
 
-def save_models(epoch):
-    torch.save(model.state_dict(), "cifar10model_{}.model".format(epoch))
-    print("Checkpoint saved")
+    # Construct our loss function and an Optimizer. The call to model.parameters()
+    # in the SGD constructor will contain the learnable parameters of the two
+    # nn.Linear modules which are members of the model.
+    loss_fn = torch.nn.MSELoss(reduction='sum')
+    optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
+    for t in range(500):
+        # Forward pass: Compute predicted output by passing input to the model
+        output_pred = model(training_input)
 
+        # Compute and print loss
+        loss = loss_fn(output_pred, training_output)
+        print(t, loss.item())
 
-def test():
-    model.eval()
-    test_acc = 0.0
-    for i, (images, labels) in enumerate(test_loader):
+        # Zero gradients, perform a backward pass, and update the weights.
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-        if cuda_avail:
-            images = Variable(images.cuda())
-            labels = Variable(labels.cuda())
+    print("============TRAINING COMPLETE============")
+    print("Starting testing...")
 
-        # Predict classes using images from the test set
-        outputs = model(images)
-        _, prediction = torch.max(outputs.data, 1)
-        prediction = prediction.cpu().numpy()
-        test_acc += torch.sum(prediction == labels.data)
-
-    # Compute the average acc and loss over all 10000 test images
-    test_acc = test_acc / 10000
-
-    return test_acc
+    do_testing(model)
 
 
-def train(num_epochs):
-    best_acc = 0.0
-
-    for epoch in range(num_epochs):
-        model.train()
-        train_acc = 0.0
-        train_loss = 0.0
-        for i, (images, labels) in enumerate(train_loader):
-            # Move images and labels to gpu if available
-            if cuda_avail:
-                images = Variable(images.cuda())
-                labels = Variable(labels.cuda())
-
-            # Clear all accumulated gradients
-            optimizer.zero_grad()
-            # Predict classes using images from the test set
-            outputs = model(images)
-            # Compute the loss based on the predictions and actual labels
-            loss = loss_fn(outputs, labels)
-            # Backpropagate the loss
-            loss.backward()
-
-            # Adjust parameters according to the computed gradients
-            optimizer.step()
-
-            train_loss += loss.cpu().data[0] * images.size(0)
-            _, prediction = torch.max(outputs.data, 1)
-
-            train_acc += torch.sum(prediction == labels.data)
-
-        # Call the learning rate adjustment function
-        adjust_learning_rate(epoch)
-
-        # Compute the average acc and loss over all 50000 training images
-        train_acc = train_acc / 50000
-        train_loss = train_loss / 50000
-
-        # Evaluate on the test set
-        test_acc = test()
-
-        # Save the model if the test acc is greater than our current best
-        if test_acc > best_acc:
-            save_models(epoch)
-            best_acc = test_acc
-
-        # Print the metrics
-        print("Epoch {}, Train Accuracy: {} , TrainLoss: {} , Test Accuracy: {}".format(epoch, train_acc, train_loss,
-                                                                                        test_acc))
-
-
-if __name__ == "__main__":
-    train(200)
+if __name__ == '__main__':
+    main()

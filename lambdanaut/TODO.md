@@ -11,6 +11,10 @@
 
 ## HIGH PRIORITY
 
+  * Builds a neural net that calculates which of two armies would win in a fight
+    * Input is size 200. First hundred are my units, second hundred are theirs
+    * Output is size three. Win, Lose, or Draw
+
   * Zergling/banelings target workers from a distance
 
   * Remember friendly units so we can figure out if they're being attacked. Like so:
@@ -27,7 +31,7 @@
 
 ## MEDIUM PRIORITY
 
-  * Make sure priority targets are pathable before attacking them with melee (zergling baneling)
+'  * Make sure priority targets are pathable before attacking them with melee (zergling baneling)
     * If priority target is on the other side of a hard wall, zerglings may not attack wall to get to it. 
     * Haven't reproduce this yet. Just a theory
   

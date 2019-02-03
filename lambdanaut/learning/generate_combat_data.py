@@ -16,6 +16,7 @@ DATA_DIR = 'data'
 DATA_FILE = os.path.join(DATA_DIR, 'combat.json')
 
 RACE = sc2.Race.Zerg
+UNIT_COUNT_START = 1
 UNIT_COUNT_EACH = 50
 
 
@@ -29,7 +30,8 @@ class TrainingBot(sc2.BotAI):
         self.training_loop = 0
 
         # Get permutations of unit counts to train against
-        self.training_set_counts = list(itertools.combinations(range(1, UNIT_COUNT_EACH), 2))
+        self.training_set_counts = list(itertools.combinations(
+            range(UNIT_COUNT_START or 1, UNIT_COUNT_EACH), 2))
 
         # Record combat
         self.combat_record = []

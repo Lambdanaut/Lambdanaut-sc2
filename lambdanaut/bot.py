@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import sc2
 import sc2.constants as const
-from sc2.position import Point2
+from sc2.position import Point2, Point3
 
 import lambdanaut.builds as builds
 import lambdanaut.const2 as const2
@@ -445,7 +445,8 @@ class BuildManager(Manager):
                             if nearby_enemy_units or hatchery.build_progress < 0.8:
                                 self.bot.actions.append(hatchery(const.CANCEL))
 
-                # Switch to an defensive build
+                # Switch to a defensive build
+                await self.chat_send("Any more cheese and you're going to get constipated.")
                 self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
 
             # Messages indicating we need to build spore crawlers
@@ -515,7 +516,7 @@ class BuildManager(Manager):
                 if isinstance(unit, builds.SpecialBuildTarget):
                     return self.parse_special_build_target(unit, existing_unit_counts, build_order_counts)
                 else:
-                    build_order_counts[unit] += at_least.n - existing_unit_counts[unit]
+                    build_order_counts[unit] = amount_required
                     return unit
             else:
                 return unit
@@ -1877,6 +1878,8 @@ class OverlordManager(StatefulManager):
                             else:
                                 self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
                         else:
+                            await self.chat_send("No forward expansion taken? You feelin' cheesy son?")
+
                             self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
                         self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_BASE, value=overlord.position)
                         await self.change_state(OverlordStates.INITIAL_BACKOUT)
@@ -2969,18 +2972,9 @@ class MicroManager(Manager):
                 if target:
                     self.bot.actions.append(unit.attack(target))
 
-    async def do_combat(self):
+    async def manage_combat_micro(self):
         # Units to do default combat micro for
-        micro_combat_unit_types = \
-            {const.ZERGLING, const.ROACH, const.HYDRALISK, const.RAVAGER, const.CORRUPTOR, const.BROODLORD,
-             const.LURKERMPBURROWED, const.ULTRALISK, const.SPINECRAWLER, const.SPORECRAWLER}
-
         # Priorities to target above others
-        priorities = const2.WORKERS | {const.SIEGETANK, const.SIEGETANKSIEGED, const.QUEEN, const.COLOSSUS,
-                                       const.MEDIVAC, const.WARPPRISM}
-
-        units = self.bot.units(micro_combat_unit_types)
-        enemy = self.bot.known_enemy_units.filter(lambda u: u.is_visible)
 
         # Micro closer to nearest enemy army cluster if our dps is higher
         for army_cluster in self.bot.army_clusters:
@@ -2991,34 +2985,50 @@ class MicroManager(Manager):
 
             if army_center.distance_to(enemy_army_center) < 18:
                 types_not_to_move = {const.ZERGLING, const.LURKERMP, const.QUEEN, const.ULTRALISK}
-                nearby_army = units.filter(lambda u: u.distance_to(enemy_army_center) < 17).\
-                    exclude_type(types_not_to_move)
-                nearby_enemy = enemy.filter(lambda u: u.distance_to(enemy_army_center) < 16)
+                nearby_army = [u for u in army_cluster if u.type_id not in types_not_to_move]
 
-                if nearby_army.exists and nearby_enemy.exists:
+                if nearby_army and nearest_enemy_cluster:
                     army_dps = sum([u.ground_dps for u in nearby_army])
-                    enemy_dps = sum([u.ground_dps for u in nearby_enemy])
+                    enemy_dps = sum([u.ground_dps for u in nearest_enemy_cluster])
 
-                    if army_dps > enemy_dps * 1.1:
-                        for unit in nearby_army:
-                            if unit.movement_speed > 0 and \
-                                    unit.ground_range > 2 and \
-                                    unit.weapon_cooldown and \
-                                    not unit.is_moving:
-                                nearest_enemy_unit = nearby_enemy.closest_to(unit)
-                                distance_to_enemy_unit = unit.distance_to(nearest_enemy_unit)
-                                if distance_to_enemy_unit > unit.ground_range * 0.5:
-                                    how_far_to_move = distance_to_enemy_unit * 0.6
-                                    towards_enemy = unit.position.towards(
+                    for unit in nearby_army:
+                        if unit.movement_speed > 0 and \
+                                unit.ground_range > 2 and \
+                                unit.weapon_cooldown and \
+                                not unit.is_moving:
+                            nearest_enemy_unit = unit.position.closest(nearest_enemy_cluster)
+                            # Check if nearest enemy unit is melee or ranged
+                            if 0 < nearest_enemy_unit.ground_range < 1.5:
+                                if len(army_cluster) < 8:
+                                    # If nearest enemy unit is melee and our cluster is small, back off
+                                    how_far_to_move = -2
+                                    away_from_enemy = unit.position.towards(
                                         nearest_enemy_unit, how_far_to_move)
-                                    self.bot.actions.append(unit.move(towards_enemy))
+                                    self.bot.actions.append(unit.move(away_from_enemy))
+                                    self.bot.actions.append(unit.attack(unit.position, queue=True))
+                            else:
+                                # If nearest enemy unit is ranged, close the distance
+                                if army_dps > enemy_dps * 1.1:
+                                    distance_to_enemy_unit = unit.distance_to(nearest_enemy_unit)
+                                    if distance_to_enemy_unit > unit.ground_range * 0.5:
+                                        how_far_to_move = distance_to_enemy_unit * 0.6
+                                        towards_enemy = unit.position.towards(
+                                            nearest_enemy_unit, how_far_to_move)
+                                        self.bot.actions.append(unit.move(towards_enemy))
 
+    async def run(self):
         # Do combat priority selection
+        micro_combat_unit_types = \
+            {const.ZERGLING, const.ROACH, const.HYDRALISK, const.RAVAGER, const.CORRUPTOR, const.BROODLORD,
+             const.LURKERMPBURROWED, const.ULTRALISK, const.SPINECRAWLER, const.SPORECRAWLER}
+        units = self.bot.units(micro_combat_unit_types)
+        priorities = const2.WORKERS | {const.SIEGETANK, const.SIEGETANKSIEGED, const.QUEEN, const.COLOSSUS,
+                                       const.MEDIVAC, const.WARPPRISM}
         for unit in units:
             await self.manage_combat(unit, attack_priorities=priorities)
 
-    async def run(self):
-        await self.do_combat()
+        # Do combat micro (moving closer/further away from enemy units
+        await self.manage_combat_micro()
 
         await self.avoid_biles()
         await self.manage_zerglings()
@@ -3149,6 +3159,11 @@ class LambdaBot(sc2.BotAI):
         Draws debug images on screen during game
         """
 
+        # # Print cluster debug info
+        # print ("Army cluster count: {}".format(len([cluster for cluster in self.army_clusters if cluster])))
+        # print ("Army clusters: {}".format([cluster.position for cluster in self.army_clusters]))
+        # print ("Enemy cluster count: {}".format(len([cluster for cluster in self.enemy_clusters if cluster])))
+
         class Green:
             r = 0
             g = 255
@@ -3163,12 +3178,16 @@ class LambdaBot(sc2.BotAI):
         for cluster in self.army_clusters:
             if cluster:
                 radius = cluster.position.distance_to_furthest(cluster)
-                self._client.debug_sphere_out(cluster.position, radius, color=Green())
+                cluster_position = cluster.position.to3
+                cluster_position += Point3((0, 0, 5))
+                self._client.debug_sphere_out(cluster_position, radius, color=Green())
 
         for cluster in self.enemy_clusters:
             if cluster:
                 radius = cluster.position.distance_to_furthest(cluster)
-                self._client.debug_sphere_out(cluster.position, radius, color=Red())
+                cluster_position = cluster.position.to3
+                cluster_position += Point3((0, 0, 5))
+                self._client.debug_sphere_out(cluster_position, radius, color=Red())
 
         await self._client.send_debug()
 
