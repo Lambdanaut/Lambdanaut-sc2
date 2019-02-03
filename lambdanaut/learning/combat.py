@@ -41,14 +41,14 @@ def json_to_model_data(data: List[dict]) -> Tuple[torch.Tensor, torch.Tensor]:
         p1_zergling_count = training_sample['1'][str(const.ZERGLING.value)]
         p2_zergling_count = training_sample['2'][str(const.ZERGLING.value)]
 
+        result = training_sample['result']
+
         inputs.append([
             p1_zergling_count,
             p2_zergling_count,
         ])
 
         # Set the output result equal to 1
-        result = training_sample['result']
-
         output = [0, 0, 0]
         output[result] = 1
 
@@ -85,7 +85,7 @@ def do_testing(model):
     # Construct our loss function and an Optimizer. The call to model.parameters()
     # in the SGD constructor will contain the learnable parameters of the two
     # nn.Linear modules which are members of the model.
-    loss_fn = torch.nn.MSELoss(reduction='sum')
+    loss_fn = torch.nn.MSELoss()
 
     output_pred = model(testing_input)
 
@@ -95,6 +95,7 @@ def do_testing(model):
     print(output_pred)
 
     import pdb; pdb.set_trace()
+
 
 
 def main():
@@ -114,9 +115,9 @@ def main():
     # Construct our loss function and an Optimizer. The call to model.parameters()
     # in the SGD constructor will contain the learnable parameters of the two
     # nn.Linear modules which are members of the model.
-    loss_fn = torch.nn.MSELoss(reduction='sum')
+    loss_fn = torch.nn.MSELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
-    for t in range(500):
+    for t in range(1000):
         # Forward pass: Compute predicted output by passing input to the model
         output_pred = model(training_input)
 

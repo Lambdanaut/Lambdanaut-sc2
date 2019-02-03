@@ -2,10 +2,10 @@ import datetime
 import itertools
 import json
 import os
+import random
 
 import sc2
 import sc2.constants as const
-import torch
 
 datetime_str = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M")
 
@@ -13,11 +13,12 @@ datetime_str = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M")
 MAP_NAME = "training"
 REALTIME = False
 DATA_DIR = 'data'
-DATA_FILE = os.path.join(DATA_DIR, 'combat.json')
+DATA_FILE = os.path.join(DATA_DIR, 'combat_testing.json')
 
 RACE = sc2.Race.Zerg
-UNIT_COUNT_START = 1
-UNIT_COUNT_EACH = 50
+UNIT_COUNT_START = 50
+UNIT_COUNT_EACH = 65
+
 
 
 class TrainingBot(sc2.BotAI):
@@ -60,6 +61,9 @@ class TrainingBot(sc2.BotAI):
 
             # Cleanup remaining units
             await self._client.debug_kill_unit(units | enemy)
+
+            # Randomize training results
+            self.randomize_results()
 
             # Save data
             self.save_training_data(DATA_FILE)
@@ -117,6 +121,22 @@ class TrainingBot(sc2.BotAI):
         result = {1: p1_unit_counts, 2: p2_unit_counts, 'result': winner}
 
         self.combat_record.append(result)
+
+    def randomize_results(self):
+        """Randomize combat results so it doesn't look like the same player won every match. """
+
+        for record in self.combat_record:
+            if random.randint(0, 1):
+                result = record['result']
+
+                if result != 0:
+                    p1 = record[1]
+                    p2 = record[2]
+
+                    record['result'] = 1 if result == 2 else 2
+                    record[1] = p2
+                    record[2] = p1
+
 
     def save_training_data(self, filepath):
         json_combat_record = json.dumps(self.combat_record)
