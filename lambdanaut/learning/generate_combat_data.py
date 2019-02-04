@@ -36,9 +36,10 @@ COMBINE_DATA_FILEPATHS = [
     'combat_zvz.json',
     'combat_zvp.json',
     'combat_zvt.json',
-    'combat_pvp.json',
-    'combat_pvt.json',
-    'combat_tvt.json',
+    'combat_zvz_air.json',
+    'combat_zvp_air.json',
+    'combat_zvt_air.json',
+    'combat_zvt_mmm.json',
 ]
 COMBINE_DATA_FILEPATHS = [os.path.join(DATA_DIR, fp) for fp in COMBINE_DATA_FILEPATHS]
 
@@ -50,7 +51,7 @@ UNIT_COUNT_START = 1
 UNIT_COUNT_STEP = 3
 UNIT_COUNT_EACH = 9
 UNIT_COUNT_EXPLICIT = [1, 4, 15]
-UNIT_TESTING_COUNT_EXPLICIT = [2, 9]
+UNIT_TESTING_COUNT_EXPLICIT = [2, 8]
 
 if not TRAINING_MODE:
     UNIT_COUNT_EXPLICIT = UNIT_TESTING_COUNT_EXPLICIT
@@ -64,12 +65,22 @@ UNIT_TYPES_TERRAN = [const.MARINE, const.MARAUDER, const.REAPER, const.HELLION, 
 UNIT_TYPES_PROTOSS = [const.ZEALOT, const.STALKER, const.ADEPT, const.IMMORTAL, const.ARCHON,
                       const.COLOSSUS]
 
-UNIT_TYPES_AIR_ZERG = [const.HYDRALISK, const.MUTALISK, const.CORRUPTOR, const.BROODLORD]
-UNIT_TYPES_AIR_TERRAN = [const.VIKING, const.MEDIVAC, const.MARINE, const.BANSHEE, const.BATTLECRUISER]
-UNIT_TYPES_AIR_PROTOSS = [const.STALKER, const.PHOENIX, const.VOIDRAY, const.TEMPEST]
+UNIT_TYPES_AIR_ZERG = [const.QUEEN, const.HYDRALISK, const.MUTALISK, const.CORRUPTOR, const.BROODLORD]
+UNIT_TYPES_AIR_TERRAN = [const.MISSILETURRET, const.VIKING, const.MARINE, const.BANSHEE, const.THOR, const.CYCLONE,
+                         const.BATTLECRUISER,]
+UNIT_TYPES_AIR_PROTOSS = [const.STALKER, const.PHOENIX, const.VOIDRAY, const.TEMPEST, const.CARRIER,
+                          const.MOTHERSHIP]
+
+UNIT_TYPES_MMM_ZERG = [const.ZERGLING, const.BANELING, const.HYDRALISK]
+UNIT_TYPES_MMM_TERRAN = [const.MARINE, const.MARAUDER, const.MEDIVAC]
 
 UNIT_TYPES_P1 = UNIT_TYPES_ZERG
-UNIT_TYPES_P2 = UNIT_TYPES_TERRAN
+UNIT_TYPES_P2 = UNIT_TYPES_PROTOSS
+
+
+if not TRAINING_MODE:
+    UNIT_TYPES_P1 = random.sample(UNIT_TYPES_P1, len(UNIT_TYPES_P1) // 2)
+    UNIT_TYPES_P2 = random.sample(UNIT_TYPES_P2, len(UNIT_TYPES_P2) // 2)
 
 
 class TrainingBot(sc2.BotAI):
@@ -122,42 +133,45 @@ class TrainingBot(sc2.BotAI):
 
                 await self.iterate()
 
-            # Test to see if we have a draw condition in which neither player
-            # can attack each other
-            units_can_attack_ground = units.filter(lambda u: u.can_attack_ground)
-            units_can_attack_air = units.filter(lambda u: u.can_attack_air)
-            enemy_can_attack_ground = enemy.filter(lambda u: u.can_attack_ground)
-            enemy_can_attack_air = enemy.filter(lambda u: u.can_attack_air)
+            else:
+                # Test to see if we have a draw condition in which neither player
+                # can attack each other
+                units_can_attack_ground = units.filter(lambda u: u.can_attack_ground)
+                units_can_attack_air = units.filter(lambda u: u.can_attack_air)
+                enemy_can_attack_ground = enemy.filter(lambda u: u.can_attack_ground)
+                enemy_can_attack_air = enemy.filter(lambda u: u.can_attack_air)
 
-            units_air = units.flying
-            units_ground = units.not_flying
-            enemy_air = enemy.flying
-            enemy_ground = enemy.not_flying
+                units_air = units.flying
+                units_ground = units.not_flying
+                enemy_air = enemy.flying
+                enemy_ground = enemy.not_flying
 
-            draw_flag_p1 = False
-            draw_flag_p2 = False
+                draw_flag_p1 = False
+                draw_flag_p2 = False
 
-            if not units_can_attack_ground:
-                if enemy_ground:
-                    draw_flag_p1 = True
-            if not units_can_attack_air:
-                if enemy_air:
-                    draw_flag_p1 = True
-            if not enemy_can_attack_ground:
-                if units_ground:
-                    draw_flag_p2 = True
-            if not enemy_can_attack_air:
-                if units_air:
-                    draw_flag_p2 = True
+                if not units_can_attack_ground:
+                    if enemy_ground:
+                        draw_flag_p1 = True
+                if not units_can_attack_air:
+                    if enemy_air:
+                        draw_flag_p1 = True
+                if not enemy_can_attack_ground:
+                    if units_ground:
+                        draw_flag_p2 = True
+                if not enemy_can_attack_air:
+                    if units_air:
+                        draw_flag_p2 = True
 
-            if draw_flag_p1 and draw_flag_p2:
-                self.record_result()
+                if draw_flag_p1 and draw_flag_p2:
+                    # Don't record this result. Don't want to flood data with too many weird draws
+                    # self.record_result()
+                    print('Draw. Not recording result')
 
-                # Clean up
-                if units | enemy:
-                    await self._client.debug_kill_unit(units | enemy)
+                    # Clean up
+                    if units | enemy:
+                        await self._client.debug_kill_unit(units | enemy)
 
-                await self.iterate()
+                    await self.iterate()
 
         else:
             print("===========TRAINING COMPLETED===========")
