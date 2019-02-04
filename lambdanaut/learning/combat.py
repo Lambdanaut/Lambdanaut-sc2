@@ -39,6 +39,25 @@ UNIT_INDEXES = {
 }
 
 
+class Unit_Dummy:
+    type_id = const.ZERGLING
+
+
+class Unit_Group_Dummy(list):
+    """Dummy class for testing the predict_victor method of the model"""
+
+    def __init__(self, *args):
+        super(Unit_Group_Dummy, self).__init__(*args)
+
+    def of_type(self, unit_type):
+        """Just return all of our units"""
+        return self
+
+
+dummy_unit_group1 = Unit_Group_Dummy([Unit_Dummy(), Unit_Dummy(), Unit_Dummy()])
+dummy_unit_group2 = Unit_Group_Dummy([Unit_Dummy()])
+
+
 def load_training_json(filepath):
     with open(filepath, 'r') as f:
         contents = f.read()
@@ -236,7 +255,7 @@ def train():
     # nn.Linear modules which are members of the model.
     loss_fn = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
-    for t in range(1000):
+    for t in range(500):
         # Forward pass: Compute predicted output by passing input to the model
         output_pred = model(training_input)
 
