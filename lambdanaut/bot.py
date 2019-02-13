@@ -2950,7 +2950,7 @@ class MicroManager(Manager):
 
             if units.exists:
                 for unit in units:
-                    target = position.towards(unit.position, -2) # run away, not towards
+                    target = position.towards(unit.position, 2)
                     self.bot.actions.append(unit.move(target))
 
 
