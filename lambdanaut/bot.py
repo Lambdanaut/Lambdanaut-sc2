@@ -166,6 +166,7 @@ class IntelManager(Manager):
         self.has_scouted_enemy_air_tech = False
         self.has_scouted_enemy_counter_with_roaches = False
         self.has_scouted_enemy_counter_midgame_broodlord_rush = False
+        self.has_scouted_enemy_greater_force = ExpiringList()  # Will contain True or nothing
 
         self.subscribe(Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION)
         self.subscribe(Messages.ARMY_COULDNT_FIND_ENEMY_BASE)
@@ -268,20 +269,24 @@ class IntelManager(Manager):
         return False
 
     def greater_enemy_force_scouted(self):
-        units = self.bot.units(const2.ARMY_UNITS)
-        enemy_units = self.bot.known_enemy_units
+        if not self.has_scouted_enemy_greater_force.contains(
+                True, self.bot.state.game_loop):
+            units = self.bot.units(const2.ARMY_UNITS)
+            enemy_units = self.bot.known_enemy_units
 
-        units_strength = 0
-        for unit in units:
-            units_strength += self.bot.strength_of(unit)
-        enemy_strength = 0
-        for unit in enemy_units:
-            enemy_strength += self.bot.strength_of(unit)
+            units_strength = 0
+            for unit in units:
+                units_strength += self.bot.strength_of(unit)
+            enemy_strength = 0
+            for unit in enemy_units:
+                enemy_strength += self.bot.strength_of(unit)
 
-        if enemy_strength > units_strength * 0.3:
-            return True
+            if enemy_strength > units_strength * 0.3:
+                self.has_scouted_enemy_greater_force.add(
+                    True, self.bot.state.game_loop, expiry=30)
+                return True
 
-        return False
+            return False
 
     async def assess_game(self):
         """
