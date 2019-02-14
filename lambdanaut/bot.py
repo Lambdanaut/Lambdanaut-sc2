@@ -301,7 +301,7 @@ class IntelManager(Manager):
             self.publish(Messages.ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD)
         if self.greater_enemy_force_scouted():
             self.publish(Messages.FOUND_ENEMY_GREATER_FORCE)
-            if len(self.bot.townhalls) < 4:
+            if len(self.bot.townhalls.ready) < 3:
                 self.publish(Messages.FOUND_ENEMY_EARLY_AGGRESSION)
 
     async def run(self):
@@ -370,10 +370,6 @@ class BuildManager(Manager):
         # (like the creation ability for spawning a drone)
         self.unit_type_to_creation_ability_map = {
             unit_id: unit.creation_ability for unit_id, unit in self.bot._game_data.units.items()}
-
-        # Set of all units in our bot's race
-        self.our_unit_types = {unit.id for unit_id, unit in self.bot._game_data.units.items()
-                               if unit.race == self.bot.race if unit_id in [u.value for u in const.UnitTypeId]}
 
     async def init(self):
         self.determine_opening_build()
@@ -731,7 +727,7 @@ class BuildManager(Manager):
         existing_unit_counts = Counter(map(lambda unit: unit.type_id, self.bot.units))
 
         # Count of units being trained or built
-        pending_units = Counter({u: self.bot.already_pending(u, all_units=True) for u in self.our_unit_types})
+        pending_units = Counter({u: self.bot.already_pending(u, all_units=True) for u in const2.ZERG_UNITS})
 
         # Add an extra zergling for each zergling in an egg
         zergling_creation_ability = self.bot._game_data.units[const.ZERGLING.value].creation_ability
@@ -1869,7 +1865,7 @@ class OverlordManager(StatefulManager):
         if overlord:
             # Move in closer towards main
             away_from_enemy_natural_expansion = \
-                enemy_natural_expansion.position.towards(self.bot.start_location, +22)
+                enemy_natural_expansion.position.towards(self.bot.start_location, +28)
             self.bot.actions.append(overlord.move(away_from_enemy_natural_expansion))
 
     async def do_initial_backout(self):
@@ -1878,7 +1874,6 @@ class OverlordManager(StatefulManager):
     async def do_suicide_dive(self):
         overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
         if overlord:
-            enemy_natural_expansion = self.bot.get_enemy_natural_expansion()
             self.bot.actions.append(
                 overlord.move(self.bot.enemy_start_location, queue=True))
 
@@ -1900,9 +1895,9 @@ class OverlordManager(StatefulManager):
             if overlord:
                 distance_to_expansion = overlord.distance_to(enemy_natural_expansion)
 
-                if distance_to_expansion < 23:
+                if distance_to_expansion < 40:
                     # Take note of enemy defensive structures sited
-                    enemy_defensive_structures_types = {const.PHOTONCANNON, const.SPINECRAWLER}
+                    enemy_defensive_structures_types = {const.PHOTONCANNON, const.SPINECRAWLER, const.MISSILETURRET}
                     nearby_enemy_defensive_structures = enemy_structures.of_type(
                         enemy_defensive_structures_types).closer_than(15, overlord)
                     if nearby_enemy_defensive_structures.exists:

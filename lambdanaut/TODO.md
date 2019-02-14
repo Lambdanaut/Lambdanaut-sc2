@@ -25,11 +25,15 @@
     * After 30 seconds, return to HOUSEKEEPING
     * `This would save us from 4:30-6:00 rushes`
 
-  * Enter pool defensive build if 3 gateways are scouted with first scout
+  * Enter pool defensive build if 2 gateways are scouted with first scout
+  
+  * Enter pool defensive build if 2 barracks are scouted with first scout
   
   * Enter pool defensive build if 5 zerglings are scouted with first scout
   
   * Make midgame rush to brood lords not sucky
+  
+  * Make overlord scouts not run into photon canons. Turn around if canons sighted.
 
 ## MEDIUM PRIORITY
 

@@ -25,6 +25,17 @@ ZERG_ARMY_UNITS = \
     {const.ZERGLING, const.BANELING, const.ROACH, const.RAVAGER, const.HYDRALISK, const.MUTALISK, const.OVERSEER,
      const.INFESTOR, const.CORRUPTOR, const.VIPER, const.BROODLORD, const.ULTRALISK,}
 
+# All zerg units including structures (Excludes special forms like DRONEBURROWED)
+ZERG_UNITS = \
+    {const.HYDRALISK, const.NYDUSCANAL, const.LURKERDENMP, const.NYDUSNETWORK, const.VIPER, const.RAVAGER,
+     const.SPAWNINGPOOL, const.DRONE, const.OVERLORD, const.CORRUPTOR, const.HATCHERY, const.MUTALISK, const.LAIR,
+     const.NYDUSCANALCREEPER, const.INFESTOR, const.LURKERMP, const.EXTRACTORRICH, const.OVERSEER, const.EXTRACTOR,
+     const.EVOLUTIONCHAMBER, const.QUEEN, const.BROODLORD, const.ROACHWARREN, const.NYDUSCANALATTACKER,
+     const.ULTRALISKCAVERN, const.BANELING, const.SPORECRAWLER, const.BANELINGNEST, const.GREATERSPIRE, const.HIVE,
+     const.INFESTATIONPIT, const.ZERGLING, const.ULTRALISK, const.ROACH, const.SPIRE, const.OVERLORDTRANSPORT,
+     const.HYDRALISKDEN, const.SPINECRAWLER}
+
+# Placeholder that will hold all army units of all races eventually
 ARMY_UNITS = ZERG_ARMY_UNITS
 
 ZERG_UPGRADES_TO_STRUCTURE = {
