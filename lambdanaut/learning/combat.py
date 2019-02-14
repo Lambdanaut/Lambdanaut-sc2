@@ -18,7 +18,7 @@ import torch.nn as nn
 
 
 DATA_DIR = 'data'
-TRAINING_DATA_FILE = os.path.join(DATA_DIR, 'combat_zerg_v_zerg.json')
+TRAINING_DATA_FILE = os.path.join(DATA_DIR, 'combat.json')
 TESTING_DATA_FILE = os.path.join(DATA_DIR, 'combat_testing.json')
 
 MODEL_FILE = os.path.join(DATA_DIR, 'combat_model.pt')
@@ -38,33 +38,37 @@ UNIT_INDEXES = {
     const.ULTRALISK: 10,
     const.LURKERMP: 11,
     const.LURKERMPBURROWED: 12,
+    const.SPINECRAWLER: 13,
+    const.SPORECRAWLER: 14,
 
-    const.SCV: 13,
-    const.MARINE: 14,
-    const.MARAUDER: 15,
-    const.REAPER: 16,
-    const.MEDIVAC: 17,
-    const.SIEGETANKSIEGED: 18,
-    const.HELLION: 19,
-    const.HELLIONTANK: 20,
-    const.CYCLONE: 21,
-    const.THOR: 22,
-    const.MISSILETURRET: 23,
-    const.VIKING: 24,
-    const.BANSHEE: 25,
-    const.BATTLECRUISER: 26,
+    const.SCV: 15,
+    const.MARINE: 16,
+    const.MARAUDER: 17,
+    const.REAPER: 18,
+    const.MEDIVAC: 19,
+    const.SIEGETANK: 20,
+    const.SIEGETANKSIEGED: 21,
+    const.HELLION: 22,
+    const.HELLIONTANK: 23,
+    const.CYCLONE: 24,
+    const.THOR: 25,
+    const.MISSILETURRET: 26,
+    const.VIKING: 27,
+    const.BANSHEE: 28,
+    const.BATTLECRUISER: 29,
 
-    const.ZEALOT: 27,
-    const.STALKER: 28,
-    const.ADEPT: 29,
-    const.IMMORTAL: 30,
-    const.ARCHON: 31,
-    const.COLOSSUS: 32,
-    const.PHOENIX: 33,
-    const.VOIDRAY: 34,
-    const.TEMPEST: 35,
-    const.CARRIER: 36,
-    const.MOTHERSHIP: 37,
+    const.ZEALOT: 30,
+    const.STALKER: 31,
+    const.ADEPT: 32,
+    const.IMMORTAL: 33,
+    const.ARCHON: 34,
+    const.COLOSSUS: 35,
+    const.PHOENIX: 36,
+    const.VOIDRAY: 37,
+    const.TEMPEST: 38,
+    const.CARRIER: 39,
+    const.MOTHERSHIP: 40,
+    const.PHOTONCANNON: 41,
 }
 
 
@@ -118,15 +122,17 @@ def json_to_model_data(data: List[dict]) -> Tuple[torch.Tensor, torch.Tensor]:
                 input[UNIT_INDEXES[unit_type_id] + player_offset] = unit_count
 
         result = training_sample['result']
+        win_ratio = training_sample['win_ratio']
+
+        # Set the output result equal to win ratio
+        output = [0, 0, 0]
+        output[result] = win_ratio
 
         # Add input to inputs list
+        # Add output to outputs list
+        outputs.append(output)
         inputs.append(input)
 
-        # Set the output result equal to 1
-        output = [0, 0, 0]
-        output[result] = 1
-
-        outputs.append(output)
 
     inputs = torch.Tensor(inputs)
     outputs = torch.Tensor(outputs)
@@ -165,6 +171,10 @@ class Model(nn.Module):
     def __init__(self, D_in, H=150, D_out=3):
         super(Model, self).__init__()
 
+        self.D_in = D_in
+        self.H = H
+        self.D_out = D_out
+
         self.linear1 = torch.nn.Linear(in_features=D_in, out_features=H)
         self.relu1 = torch.nn.ReLU()
         self.linear2 = torch.nn.Linear(in_features=H, out_features=H)
@@ -177,6 +187,7 @@ class Model(nn.Module):
         output = self.linear2(output)
         output = self.relu2(output)
         output = self.linear3(output)
+        output = torch.nn.functional.softmax(output)
         return output
 
     def predict_victor(self, units1, units2) -> bool:
@@ -185,6 +196,7 @@ class Model(nn.Module):
         Returns false otherwise, including if a draw is predicted.
         """
 
+        import pdb; pdb.set_trace()
         # Convert units1 and units2 to a tensor
         units_tensor = units_to_model_data(units1, units2)
 
@@ -192,7 +204,7 @@ class Model(nn.Module):
         victor_prediction = self(units_tensor)
 
         # Get the index of the predicted victor from the output tensor
-        victor_prediction = (output_pred[0] == output_pred[0].max()).nonzero().item()
+        victor_prediction = (victor_prediction[0] == victor_prediction[0].max()).nonzero().item()
 
         # Only return true if we predict player 1 wins
         victor_prediction = {0: False, 1: True, 2: False}[victor_prediction]
@@ -284,7 +296,8 @@ def train():
     # nn.Linear modules which are members of the model.
     loss_fn = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
-    for t in range(500):
+    for t in range(1000):
+
         # Forward pass: Compute predicted output by passing input to the model
         output_pred = model(training_input)
 

@@ -15,6 +15,10 @@
     * Input is size 200. First hundred are my units, second hundred are theirs
     * Output is size three. Win, Lose, or Draw
 
+  * Build a recurrent neural net that learns to micro Mutalisks
+    * Goal: Kill as many enemy units as possible before losing all mutalisks
+    
+
   * Zergling/banelings target workers from a distance
 
   * Remember friendly units so we can figure out if they're being attacked. Like so:

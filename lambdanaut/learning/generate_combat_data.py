@@ -47,63 +47,66 @@ COMBINE_DATA_FILEOUT = 'combat_combined.json'
 
 
 RACE = sc2.Race.Zerg
-UNIT_COUNT_START = 1
-UNIT_COUNT_STEP = 3
-UNIT_COUNT_EACH = 9
-UNIT_COUNT_EXPLICIT = [1, 4, 15]
-UNIT_TESTING_COUNT_EXPLICIT = [2, 8]
+
+# Values to use in random.expovariate(value) to generate random unit counts
+UNIT_COUNT_EXPLICIT = [0.2, 0.05]
+UNIT_TESTING_COUNT_EXPLICIT = [0.02]
 
 if not TRAINING_MODE:
     UNIT_COUNT_EXPLICIT = UNIT_TESTING_COUNT_EXPLICIT
 
 
-UNIT_TYPES_ZERG = [const.ZERGLING, const.BANELING, const.ROACH, const.RAVAGER, const.HYDRALISK,
-                   const.ULTRALISK]
-UNIT_TYPES_TERRAN = [const.MARINE, const.MARAUDER, const.REAPER, const.HELLION, const.HELLIONTANK,
-                     const.SIEGETANKSIEGED, const.CYCLONE, const.THOR]
+UNIT_TYPES_ZERG = [const.SPINECRAWLER, const.HYDRALISK, const.QUEEN, const.RAVAGER, const.ROACH, const.ULTRALISK, const.ZERGLING,
+                   const.BANELING]
+UNIT_TYPES_TERRAN = [const.SIEGETANKSIEGED, const.THOR, const.SIEGETANK, const.CYCLONE, const.MARINE, const.MARAUDER, const.REAPER,
+                     const.HELLION, const.HELLIONTANK]
 
-UNIT_TYPES_PROTOSS = [const.ZEALOT, const.STALKER, const.ADEPT, const.IMMORTAL, const.ARCHON,
-                      const.COLOSSUS]
+UNIT_TYPES_PROTOSS = [const.COLOSSUS, const.IMMORTAL, const.STALKER, const.ADEPT, const.ARCHON,
+                      const.ZEALOT]
 
-UNIT_TYPES_AIR_ZERG = [const.QUEEN, const.HYDRALISK, const.MUTALISK, const.CORRUPTOR, const.BROODLORD]
-UNIT_TYPES_AIR_TERRAN = [const.MISSILETURRET, const.VIKING, const.MARINE, const.BANSHEE, const.THOR, const.CYCLONE,
+UNIT_TYPES_AIR_ZERG = [const.SPORECRAWLER, const.QUEEN, const.HYDRALISK, const.MUTALISK, const.CORRUPTOR, const.BROODLORD]
+UNIT_TYPES_AIR_TERRAN = [const.VIKING, const.MARINE, const.BANSHEE, const.THOR, const.CYCLONE,
                          const.BATTLECRUISER,]
 UNIT_TYPES_AIR_PROTOSS = [const.STALKER, const.PHOENIX, const.VOIDRAY, const.TEMPEST, const.CARRIER,
                           const.MOTHERSHIP]
 
-UNIT_TYPES_MMM_ZERG = [const.ZERGLING, const.BANELING, const.HYDRALISK]
 UNIT_TYPES_MMM_TERRAN = [const.MARINE, const.MARAUDER, const.MEDIVAC]
 
-UNIT_TYPES_P1 = UNIT_TYPES_ZERG
-UNIT_TYPES_P2 = UNIT_TYPES_PROTOSS
+UNIT_TYPES_P1 = None
+UNIT_TYPES_P2 = None
 
 
-if not TRAINING_MODE:
-    UNIT_TYPES_P1 = random.sample(UNIT_TYPES_P1, len(UNIT_TYPES_P1) // 2)
-    UNIT_TYPES_P2 = random.sample(UNIT_TYPES_P2, len(UNIT_TYPES_P2) // 2)
+if not UNIT_TYPES_P1 and not UNIT_TYPES_P2:
+    BUILDS_TO_GENERATE = [
+        (UNIT_TYPES_ZERG, UNIT_TYPES_ZERG),
+        (UNIT_TYPES_ZERG, UNIT_TYPES_TERRAN),
+        (UNIT_TYPES_ZERG, UNIT_TYPES_PROTOSS),
+        (UNIT_TYPES_AIR_ZERG, UNIT_TYPES_AIR_ZERG),
+        (UNIT_TYPES_AIR_ZERG, UNIT_TYPES_AIR_TERRAN),
+        (UNIT_TYPES_AIR_ZERG, UNIT_TYPES_AIR_PROTOSS),
+        (UNIT_TYPES_ZERG, UNIT_TYPES_MMM_TERRAN),
+    ]
+else:
+    BUILDS_TO_GENERATE = [(UNIT_TYPES_P1, UNIT_TYPES_P2)]
 
 
 class TrainingBot(sc2.BotAI):
     def __init__(self):
         super(TrainingBot, self).__init__()
 
-        # List of actions to perform each step
-        self.actions = []
-
         self.training_loop = 0
 
         # Get permutations of unit counts to train against
         # Data should be in format:
-        #   [( ( (Z, 3), (B, 1)... ), ( (Z, 10), (B, 0) ) ), ...]
+        #  [ [( ( (Z, 3), (B, 1)... ), ( (Z, 10), (B, 0) ) ), ...] ]
         # The above example represents:
         #   3 zerglings 1 baneling vs 10 zerglings 0 banelings
         #
-        self.training_set = self.create_training_set(UNIT_TYPES_P1, UNIT_TYPES_P2)
+        self.training_sets = [self.create_training_set(set_1, set_2)
+                              for set_1, set_2 in BUILDS_TO_GENERATE]
+        self.training_set = self.training_sets[0]
 
-        # Keep track of the percentage of units life so we can end in a draw
-        # if the life doesn't change.
-        self.life_percentage = 1.0
-        self.last_life_percentage = self.life_percentage
+        self.build_i = 0
 
         # Record combat
         self.combat_record = []
@@ -115,10 +118,6 @@ class TrainingBot(sc2.BotAI):
                 self.load_save_file(SAVE_FILE, DATA_FILE)
                 print("Continuing from save file starting at iteration: `{}`".
                       format(self.training_loop))
-        # Save the ongoing combat record
-        if iteration % 10 == 1:
-            self.save_save_file(SAVE_FILE)
-            self.save_training_data(DATA_FILE)
 
         units = self.units()
         enemy = self.known_enemy_units()
@@ -131,7 +130,8 @@ class TrainingBot(sc2.BotAI):
                 if units | enemy:
                     await self._client.debug_kill_unit(units | enemy)
 
-                await self.iterate()
+                await self.spawn_iteration_units()
+                self.iterate()
 
             else:
                 # Test to see if we have a draw condition in which neither player
@@ -162,7 +162,7 @@ class TrainingBot(sc2.BotAI):
                     if units_air:
                         draw_flag_p2 = True
 
-                if draw_flag_p1 and draw_flag_p2:
+                if draw_flag_p1 or draw_flag_p2:
                     # Don't record this result. Don't want to flood data with too many weird draws
                     # self.record_result()
                     print('Draw. Not recording result')
@@ -171,37 +171,46 @@ class TrainingBot(sc2.BotAI):
                     if units | enemy:
                         await self._client.debug_kill_unit(units | enemy)
 
-                    await self.iterate()
+                    await self.spawn_iteration_units()
+                    self.iterate()
 
         else:
-            print("===========TRAINING COMPLETED===========")
-            print("Saving training data to `{}`".format(DATA_FILE))
 
-            if units | enemy:
-                # Cleanup remaining units
-                await self._client.debug_kill_unit(units | enemy)
+            if self.build_i == len(self.training_sets) - 1:
+                print("===========TRAINING COMPLETED===========")
+                print("Saving training data to `{}`".format(DATA_FILE))
 
-            # Save data
+                if units | enemy:
+                    # Cleanup remaining units
+                    await self._client.debug_kill_unit(units | enemy)
+
+                # Save data
+                self.save_training_data(DATA_FILE)
+
+                # Reset save file
+                self.save_save_file(SAVE_FILE, training_loop=0, build_i=0)
+
+                sys.exit()
+
+            else:
+                # Next training set
+                self.build_i += 1
+                self.training_loop = 0
+                self.training_set = self.training_sets[self.build_i]
+
+    def iterate(self):
+        print("TRAINING ITERATION: {} / {} of build {}".format(
+            self.training_loop, len(self.training_set), self.build_i))
+
+        # Save the ongoing combat record
+        if self.training_loop % 5 == 1:
+            self.save_save_file(SAVE_FILE)
             self.save_training_data(DATA_FILE)
 
-            # Reset save file
-            self.save_save_file(SAVE_FILE, training_loop=0)
-
-            sys.exit()
-
-        # Do these actions each step
-        await self.do_actions(self.actions)
-        self.actions = []
-
-    async def iterate(self):
-        print("TRAINING ITERATION: {} / {}".format(self.training_loop, len(self.training_set)))
-
-        training_set = self.get_training_set()
         self.training_loop += 1
 
-        # Refresh life percentage tracker
-        self.life_percentage = 1.0
-        self.last_life_percentage = 1.0
+    async def spawn_iteration_units(self):
+        training_set = self.get_training_set()
 
         p1_units = training_set[0]
         p2_units = training_set[1]
@@ -231,15 +240,14 @@ class TrainingBot(sc2.BotAI):
 
     def create_training_set(self, unit_types1, unit_types2) -> List[Tuple[Tuple[Tuple[Unit, int]]]]:
         # Get unit counts
-        if UNIT_COUNT_EXPLICIT:
-            unit_counts = UNIT_COUNT_EXPLICIT
-        else:
-            unit_counts = list(range(UNIT_COUNT_START, UNIT_COUNT_EACH, UNIT_COUNT_STEP))
+        unit_counts = UNIT_COUNT_EXPLICIT
 
         # 2D Lists of Unit types combined with count
         # [[(Z, 0), (Z, 1), (Z, 2)], [(B, 0), (B, 1)..]]
-        training_set_counts1: List[List[Tuple[Unit, int]]] = [[(unit, i) for i in unit_counts] for unit in unit_types1]
-        training_set_counts2: List[List[Tuple[Unit, int]]] = [[(unit, i) for i in unit_counts] for unit in unit_types2]
+        training_set_counts1: List[List[Tuple[Unit, int]]] = \
+            [[(unit, i) for i in unit_counts] for unit in unit_types1]
+        training_set_counts2: List[List[Tuple[Unit, int]]] = \
+            [[(unit, i) for i in unit_counts] for unit in unit_types2]
 
         # Permute the lists of units together and flatten it
         # [ ( (Z, 0), (B, 0), ), ( (Z, 1), (B, 0 ) )... ( (Z, 10), (B, 10) ) ... ]
@@ -286,6 +294,11 @@ class TrainingBot(sc2.BotAI):
                all([p2[unit_i][0] not in [u[0] for u in p2[unit_i + 1:] ] for unit_i in range(len(p2)) ])
         ]
 
+        # Mutate the unit counts to be exponential variants
+        training_set = [tuple(tuple((u, max(1, round(random.expovariate(count)))) for u, count in build)
+                              for build in matchup)
+                        for matchup in training_set]
+
         return training_set
 
     def to_training_set_builds(self, training_set_counts: List[List[Tuple[Unit, int]]])\
@@ -309,14 +322,30 @@ class TrainingBot(sc2.BotAI):
     def record_result(self):
         units = self.units()
         enemy = self.known_enemy_units()
+        training_set = self.get_training_set()
 
         winner = 0  # Draw condition
+        win_ratio = 1.0
         if units and not enemy:
             winner = 1  # Player 1
+            training_build = training_set[0]
+            unit_count = sum([unit[1] for unit in training_build])
+            win_ratio = len(units.of_type([unit[0] for unit in training_build])) / unit_count
         if enemy and not units:
             winner = 2  # Player 2
+            training_build = training_set[1]
+            unit_count = sum([unit[1] for unit in training_build])
+            win_ratio = len(enemy.of_type([unit[0] for unit in training_build])) / unit_count
+
+        win_ratio = min(1.0, win_ratio)
 
         print('WINNER: p{}'.format(winner))
+        print('WIN RATIO: {}'.format(win_ratio))
+
+        if win_ratio < 0.00001:
+            # Weird case. Return without recording result
+            print('Low win ratio. Not recording result. ')
+            return
 
         training_set = self.get_training_set()
         p1_units = training_set[0]
@@ -331,7 +360,7 @@ class TrainingBot(sc2.BotAI):
         for unit, unit_count in p2_units:
             p2_units_dict[unit.value] += unit_count
 
-        result = {'1': p1_units_dict, '2': p2_units_dict, 'result': winner}
+        result = {'1': p1_units_dict, '2': p2_units_dict, 'result': winner, 'win_ratio': win_ratio}
 
         self.combat_record.append(result)
 
@@ -360,9 +389,13 @@ class TrainingBot(sc2.BotAI):
             with open(filepath, 'w') as f:
                 f.write(json_combat_record)
 
-    def save_save_file(self, filepath, training_loop=None):
+    def save_save_file(self, filepath, training_loop=None, build_i=None):
         training_loop = self.training_loop if training_loop is None else training_loop
-        json_save_loop = json.dumps(training_loop)
+        build_i = self.build_i if build_i is None else build_i
+
+        save_data = [training_loop, build_i]
+
+        json_save_loop = json.dumps(save_data)
 
         with open(filepath, 'w') as f:
             f.write(json_save_loop)
@@ -372,7 +405,8 @@ class TrainingBot(sc2.BotAI):
             contents = f.read()
             loaded = json.loads(contents)
 
-        self.training_loop = loaded
+        self.training_loop, self.build_i = loaded
+        self.training_set = self.training_sets[self.build_i]
 
         if training_data_filepath:
             with open(training_data_filepath, 'r') as f:
@@ -382,22 +416,6 @@ class TrainingBot(sc2.BotAI):
                     self.training_loop = 0
                     return
                 loaded = json.loads(contents)
-
-            # Load sc2 constants from unit vals
-            # combat_record = []
-            # for record in loaded:
-            #     new_record = {}
-            #     new_record['result'] = record['result']
-            #     new_record[1] = {}
-            #     new_record[2] = {}
-            #
-            #     # Convert unit vals to sc2 constants
-            #     for player in ['1', '2']:
-            #         for unit_val, count in record[player].items():
-            #             unit_const = sc2.UnitTypeId(int(unit_val))
-            #             new_record[int(player)][unit_const] = count
-            #
-            #     combat_record.append(new_record)
 
             self.combat_record = loaded
 
