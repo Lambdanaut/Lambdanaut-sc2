@@ -267,6 +267,22 @@ class IntelManager(Manager):
 
         return False
 
+    def greater_enemy_force_scouted(self):
+        units = self.bot.units(const2.ARMY_UNITS)
+        enemy_units = self.bot.known_enemy_units
+
+        units_strength = 0
+        for unit in units:
+            units_strength += self.bot.strength_of(unit)
+        enemy_strength = 0
+        for unit in enemy_units:
+            enemy_strength += self.bot.strength_of(unit)
+
+        if enemy_strength > units_strength * 0.3:
+            return True
+
+        return False
+
     async def assess_game(self):
         """
         Assess the game's state and send out applicable messages
@@ -278,6 +294,10 @@ class IntelManager(Manager):
             self.publish(Messages.ENEMY_COUNTER_WITH_ROACHES_SCOUTED)
         if self.enemy_counter_with_midgame_broodlord_rush():
             self.publish(Messages.ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD)
+        if self.greater_enemy_force_scouted():
+            self.publish(Messages.FOUND_ENEMY_GREATER_FORCE)
+            if len(self.bot.townhalls) < 4:
+                self.publish(Messages.FOUND_ENEMY_EARLY_AGGRESSION)
 
     async def run(self):
         await self.read_messages()
@@ -313,6 +333,10 @@ class BuildManager(Manager):
         self.stop_worker_production = False
         self.stop_townhall_production = False
 
+        # If True is in this list, it's equivalent to having stop_worker_production
+        # and stop_townhall_production set
+        self._stop_nonarmy_production = ExpiringList()
+
         # Message subscriptions
         self.subscribe(Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN)
         self.subscribe(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
@@ -320,6 +344,8 @@ class BuildManager(Manager):
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY)
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH)
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH)
+        self.subscribe(Messages.FOUND_ENEMY_GREATER_FORCE)
+        self.subscribe(Messages.FOUND_ENEMY_EARLY_AGGRESSION)
         self.subscribe(Messages.ENEMY_AIR_TECH_SCOUTED)
         self.subscribe(Messages.ENEMY_COUNTER_WITH_ROACHES_SCOUTED)
         self.subscribe(Messages.ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD)
@@ -431,7 +457,8 @@ class BuildManager(Manager):
             defensive_early_game = {
                 Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY,
                 Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH,
-                Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH,}
+                Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH,
+                Messages.FOUND_ENEMY_EARLY_AGGRESSION,}
             if message in defensive_early_game:
                 self.ack(message)
 
@@ -442,12 +469,11 @@ class BuildManager(Manager):
                     for hatchery in constructing_hatcheries:
                         enemy_units = self.bot.known_enemy_units
                         if enemy_units.exists:
-                            nearby_enemy_units = enemy_units.closer_than(20, hatchery)
+                            nearby_enemy_units = enemy_units.closer_than(18, hatchery)
                             if nearby_enemy_units or hatchery.build_progress < 0.8:
                                 self.bot.actions.append(hatchery(const.CANCEL))
 
                 # Switch to a defensive build
-                await self.bot.chat_send("Any more cheese and you're going to get constipated.")
                 self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
 
             # Messages indicating we need to build spore crawlers
@@ -477,11 +503,21 @@ class BuildManager(Manager):
                     self.add_build(Builds.MID_GAME_CORRUPTOR_BROOD_LORD_RUSH)
 
             # Stop townhall and worker production during defending
-            large_defense = {Messages.DEFENDING_AGAINST_MULTIPLE_ENEMIES,}
+            large_defense = {
+                Messages.DEFENDING_AGAINST_MULTIPLE_ENEMIES,}
             if message in large_defense:
                 self.ack(message)
                 self.stop_townhall_production = True
                 self.stop_worker_production = True
+
+            # Stop townhall and worker production for a short duration
+            stop_non_army_production_for_50_seconds = {
+                Messages.FOUND_ENEMY_GREATER_FORCE,}
+            if message in stop_non_army_production_for_50_seconds:
+                self.ack(message)
+
+                self._stop_nonarmy_production.add(
+                    True, self.bot.state.game_loop, expiry=50)
 
             # Restart townhall and worker production when defending stops
             exit_state = {Messages.STATE_EXITED,}
@@ -803,11 +839,15 @@ class BuildManager(Manager):
                         idle_building_structure = self.bot.units(const2.ZERG_UPGRADES_TO_STRUCTURE[unit]).ready.idle
 
                     # Skip worker and townhall build targets if these flags are set
-                    if self.stop_townhall_production and unit in const2.UNUPGRADED_TOWNHALLS:
+                    if (self.stop_townhall_production or
+                            self._stop_nonarmy_production.contains(True, self.bot.state.game_loop)) and \
+                            unit in const2.UNUPGRADED_TOWNHALLS:
                         first_tier_production_structures = {const.SPAWNINGPOOL, const.GATEWAY, const.BARRACKS}
                         if not self.bot.units(first_tier_production_structures):
                             continue
-                    elif self.stop_worker_production and unit in const2.WORKERS:
+                    elif (self.stop_worker_production or
+                            self._stop_nonarmy_production.contains(True, self.bot.state.game_loop)) and \
+                            unit in const2.WORKERS:
                         first_tier_production_structures = {const.SPAWNINGPOOL, const.GATEWAY, const.BARRACKS}
                         if not self.bot.units(first_tier_production_structures):
                             continue
@@ -1880,8 +1920,6 @@ class OverlordManager(StatefulManager):
                             else:
                                 self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
                         else:
-                            await self.bot.chat_send("No forward expansion taken? You feelin' cheesy son?")
-
                             self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
                         self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_BASE, value=overlord.position)
                         await self.change_state(OverlordStates.INITIAL_BACKOUT)
@@ -3132,6 +3170,10 @@ class LambdaBot(sc2.BotAI):
         # properties (Last health, shields, location, etc)
         self.unit_cache = {}
 
+        # Map of all our unit's tags to UnitCached objects with their remembered
+        # properties (Last health, shields, location, etc)
+        self.enemy_cache = {}
+
         # Our army clusters
         self.army_clusters = clustering.get_fresh_clusters([], n=3)
 
@@ -3173,8 +3215,8 @@ class LambdaBot(sc2.BotAI):
 
             await self.chat_send("λ LΛMBDANAUT λ - {}".format(VERSION))
 
-        # Update the unit cache with remembered friendly units stats
-        self.update_unit_cache()
+        # Update the unit cache with remembered friendly and enemy units
+        self.update_unit_caches()
 
         await self.intel_manager.run()  # Run before all other managers
 
@@ -3207,6 +3249,11 @@ class LambdaBot(sc2.BotAI):
         if unit.type_id == const.BANELING:
             self.actions.append(unit(const.BEHAVIOR_BUILDINGATTACKON))
 
+    async def on_unit_destroyed(self, unit_tag):
+        # Remove destroyed enemy units from enemy cache
+        if unit_tag in self.enemy_cache:
+            del self.enemy_cache[unit_tag]
+
     @property
     def pathable_start_location(self):
         """Pathable point near start location"""
@@ -3237,11 +3284,11 @@ class LambdaBot(sc2.BotAI):
         #       await self._client.debug_create_unit([[const.ZERGLING, 15, drones.random.position, 2]])
 
         # Create banelings and zerglings every 15 steps
-        if self.iteration % 15 == 0:
-              hatch = self.units(const.HATCHERY)
-              await self._client.debug_create_unit([[const.ZERGLING, 4, hatch.random.position + Point2((11, 0)), 1]])
-              await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
-              # await self._client.debug_create_unit([[const.ZERGLING, 2, hatch.random.position + Point2((6, 0)), 2]])
+        # if self.iteration % 15 == 0:
+        #       hatch = self.units(const.HATCHERY)
+        #       await self._client.debug_create_unit([[const.ZERGLING, 4, hatch.random.position + Point2((11, 0)), 1]])
+        #       await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
+        #       # await self._client.debug_create_unit([[const.ZERGLING, 2, hatch.random.position + Point2((6, 0)), 2]])
 
         class Green:
             r = 0
@@ -3284,26 +3331,33 @@ class LambdaBot(sc2.BotAI):
         if enemy_units:
             clustering.k_means_update(self.enemy_clusters, enemy_units)
 
-    def update_unit_cache(self):
-        for unit in self.units:
-            # If we already remember this friendly unit
-            cached_unit = self.unit_cache.get(unit.tag)
-            if cached_unit:
+    def update_unit_caches(self):
+        """
+        Updates the friendly units and enemy units caches
+        """
+        for units, cache in zip((self.units, self.known_enemy_units),
+                               (self.unit_cache, self.enemy_cache)):
+            for unit in units:
+                # If we already remember this unit
+                cached_unit = cache.get(unit.tag)
+                if cached_unit:
 
-                # Compare its health/shield since last step, to find out if it has taken any damage
-                if unit.health_percentage < cached_unit.health_percentage or \
-                        unit.shield_percentage < cached_unit.shield_percentage:
-                    cached_unit.is_taking_damage = True
+                    # Compare its health/shield since last step, to find out if it has taken any damage
+                    if unit.health_percentage < cached_unit.health_percentage or \
+                            unit.shield_percentage < cached_unit.shield_percentage:
+                        cached_unit.is_taking_damage = True
+                    else:
+                        cached_unit.is_taking_damage = False
+
+                    # Update cached unit health and shield
+                    cached_unit.health_percentage = unit.health_percentage
+                    cached_unit.shield_percentage = unit.shield_percentage
+                    cached_unit.last_positions.append(unit.position)
+
                 else:
-                    cached_unit.is_taking_damage = False
-
-                # Update cached unit health and shield
-                cached_unit.health_percentage = unit.health_percentage
-                cached_unit.shield_percentage = unit.shield_percentage
-
-            else:
-                new_cached_unit = unit_cache.UnitCached()
-                self.unit_cache[unit.tag] = new_cached_unit
+                    new_cached_unit = unit_cache.UnitCached()
+                    new_cached_unit.last_positions.append(unit.position)
+                    cache[unit.tag] = new_cached_unit
 
     def publish(self, manager, message_type: const2.Messages, value: Optional[Any] = None):
         """
@@ -3460,3 +3514,23 @@ class LambdaBot(sc2.BotAI):
             return
 
         return unit_group.sorted(lambda u: ((u.health_percentage + u.shield_percentage) / 2) * u.distance_to(unit) * (int(u not in priorities) + 1))[0]
+
+    def strength_of(self, unit):
+        """
+        Returns the calculated standalone estimated strength of a unit
+        """
+        strength = 0
+
+        if unit.ground_dps > 0 and unit.air_dps <= 0:
+            strength = unit.ground_dps
+        elif unit.air_dps > 0 and unit.ground_dps <= 0:
+            strength = unit.air_dps
+        else:
+            strength = (unit.ground_dps + unit.air_dps) / 2
+
+        # Arbitrarily multiply strength by 2 if they are ranged
+        # TODO: Make this better
+        if unit.ground_range > 1 or unit.air_range > 1:
+            strength *= 2
+
+        return strength

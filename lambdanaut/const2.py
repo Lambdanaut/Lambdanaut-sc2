@@ -25,6 +25,8 @@ ZERG_ARMY_UNITS = \
     {const.ZERGLING, const.BANELING, const.ROACH, const.RAVAGER, const.HYDRALISK, const.MUTALISK, const.OVERSEER,
      const.INFESTOR, const.CORRUPTOR, const.VIPER, const.BROODLORD, const.ULTRALISK,}
 
+ARMY_UNITS = ZERG_ARMY_UNITS
+
 ZERG_UPGRADES_TO_STRUCTURE = {
     const.ZERGMELEEWEAPONSLEVEL1: const.EVOLUTIONCHAMBER,
     const.ZERGMELEEWEAPONSLEVEL2: const.EVOLUTIONCHAMBER,
@@ -92,7 +94,7 @@ VESPENE_REFINERIES = {const.EXTRACTOR, const.REFINERY, const.ASSIMILATOR}
 # Value of army units
 # Used when determing whether to attack or not
 ZERG_ARMY_VALUE = \
-    {const.ZERGLING: 0.5, const.BANELING: 1.5, const.ROACH: 1.5, const.RAVAGER: 2.5, const.HYDRALISK: 2,
+    {const.ZERGLING: 0.4, const.BANELING: 1.25, const.ROACH: 1.5, const.RAVAGER: 2.5, const.HYDRALISK: 2,
      const.MUTALISK: 2, const.OVERSEER: 1, const.INFESTOR: 2, const.CORRUPTOR: 2, const.VIPER: 3,
      const.BROODLORD: 4, const.ULTRALISK: 5}
 
@@ -121,29 +123,31 @@ class Messages(enum.Enum):
     OVERLORD_SCOUT_FOUND_ENEMY_RUSH = 6
     OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH = 7
     OVERLORD_SCOUT_FOUND_NO_RUSH = 8
-    ENEMY_AIR_TECH_SCOUTED = 9
-    ENEMY_COUNTER_WITH_ROACHES_SCOUTED = 10
-    ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD = 11
-    DEFENDING_AGAINST_MULTIPLE_ENEMIES = 12
+    FOUND_ENEMY_EARLY_AGGRESSION = 9
+    FOUND_ENEMY_GREATER_FORCE = 10
+    ENEMY_AIR_TECH_SCOUTED = 11
+    ENEMY_COUNTER_WITH_ROACHES_SCOUTED = 12
+    ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD = 13
+    DEFENDING_AGAINST_MULTIPLE_ENEMIES = 14
 
     # STRATEGIC NOTES MESSAGES
-    ENEMY_EARLY_NATURAL_EXPAND_TAKEN = 13
-    ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN = 14
-    NEW_BUILD = 15  # New build added
-    NEW_BUILD_STAGE = 16  # New build stage entered
+    ENEMY_EARLY_NATURAL_EXPAND_TAKEN = 15
+    ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN = 16
+    NEW_BUILD = 17  # New build added
+    NEW_BUILD_STAGE = 18  # New build stage entered
 
     # UNITS TRAINED MESSAGES
-    UNIT_CREATED = 17
-    UPGRADE_STARTED = 18
+    UNIT_CREATED = 19
+    UPGRADE_STARTED = 20
 
     # UNIT ORDER MESSAGES
-    DRONE_LEAVING_TO_CREATE_HATCHERY = 19  # Value is Drone's tag
-    OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 20  # Move the second overlord scout to the enemy's main ramp
-    PULL_WORKERS_OFF_VESPENE = 21  # Value is int of workers to mine vespene. None if return to default.
+    DRONE_LEAVING_TO_CREATE_HATCHERY = 21  # Value is Drone's tag
+    OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 22  # Move the second overlord scout to the enemy's main ramp
+    PULL_WORKERS_OFF_VESPENE = 23  # Value is int of workers to mine vespene. None if return to default.
 
     # STATE MACHINE CHANGE MESSAGES
-    STATE_ENTERED = 22  # Value is State being left
-    STATE_EXITED = 23  # Value is State entered
+    STATE_ENTERED = 24  # Value is State being left
+    STATE_EXITED = 25  # Value is State entered
 
 
 # Build Manager Commands

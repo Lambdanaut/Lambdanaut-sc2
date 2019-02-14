@@ -14,7 +14,6 @@
   * Test micro on a test map. Get better micro through this.
 
   * Make get_current_target more efficient
-    * Skip calling the function if we have less than 25 minerals. Nothing can be built
     * Only call the is_pending function on units we know we'll build. Don't include campaign zerg units
 
   * Keep tags of all seen enemy units
@@ -25,6 +24,12 @@
     * Halt worker, upgrade, and townhall production. 
     * After 30 seconds, return to HOUSEKEEPING
     * `This would save us from 4:30-6:00 rushes`
+
+  * Enter pool defensive build if 3 gateways are scouted with first scout
+  
+  * Enter pool defensive build if 5 zerglings are scouted with first scout
+  
+  * Make midgame rush to brood lords not sucky
 
 ## MEDIUM PRIORITY
 
@@ -38,10 +43,6 @@
   * Turn back overlords if 3 raxes or over 3 marines are scouted with first scout
     * Also enter pool defensive build
   
-  * Enter pool defensive build if 3 gateways are scouted with first scout
-  
-  * Enter pool defensive build if 5 zerglings are scouted with first scout
-
   * Search for further enemy expansions and structures.
     * ForceManager could enter a state of searching for further expansions
 
@@ -171,3 +172,5 @@
   * Remember friendly units so we can figure out if they're being attacked. Like so:
     * https://github.com/Hannessa/sc2-bots/blob/master/cannon-lover/base_bot.py#L334
     
+  * Make get_current_target more efficient
+    * Skip calling the function if we have less than 25 minerals. Nothing can be built

@@ -26,7 +26,7 @@ MAPS = [
     'StasisLE']
 
 MAP_NAME = "KairosJunctionLE"
-REALTIME = True
+REALTIME = False
 DIFFICULTY = sc2.Difficulty.CheatInsane
 # DIFFICULTY = sc2.Difficulty.CheatMoney
 # DIFFICULTY = sc2.Difficulty.CheatVision
