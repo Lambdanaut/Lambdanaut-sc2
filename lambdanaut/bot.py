@@ -11,6 +11,7 @@ from sc2.position import Point2, Point3
 import lambdanaut.builds as builds
 import lambdanaut.const2 as const2
 import lambdanaut.clustering as clustering
+import lambdanaut.unit_cache as unit_cache
 import lambdanaut.utils as utils
 
 from lambdanaut.const2 import \
@@ -446,7 +447,7 @@ class BuildManager(Manager):
                                 self.bot.actions.append(hatchery(const.CANCEL))
 
                 # Switch to a defensive build
-                await self.chat_send("Any more cheese and you're going to get constipated.")
+                await self.bot.chat_send("Any more cheese and you're going to get constipated.")
                 self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
 
             # Messages indicating we need to build spore crawlers
@@ -1878,7 +1879,7 @@ class OverlordManager(StatefulManager):
                             else:
                                 self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
                         else:
-                            await self.chat_send("No forward expansion taken? You feelin' cheesy son?")
+                            await self.bot.chat_send("No forward expansion taken? You feelin' cheesy son?")
 
                             self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
                         self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_BASE, value=overlord.position)
@@ -2180,13 +2181,21 @@ class ForceManager(StatefulManager):
                 if workers.exists and ground_enemies.exists and \
                         len(workers) > len(ground_enemies):
                     for worker in workers:
-                        if len(self.workers_defending) <= len(ground_enemies):
-                            if worker.tag not in self.workers_defending:
+                        if worker.tag in self.workers_defending:
+                            # Defending workers gone idle, attack enemy
+                            if worker.is_idle:
+                                target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
+                                self.bot.actions.append(worker.attack(target.position))
+
+                        else:
+                            # Add workers to defending workers and attack nearby enemy
+                            if len(self.workers_defending) <= len(ground_enemies):
                                 target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
                                 if target:
                                     if target.type_id != const.BANELING:
                                         self.bot.actions.append(worker.attack(target.position))
                                         self.workers_defending.add(worker.tag)
+
 
                 # Have queens defend
                 queens = self.bot.units(const.QUEEN)
@@ -2651,6 +2660,34 @@ class MicroManager(Manager):
         # Tag the biled ones.
         self.biled_forcefields = set()
 
+    async def micro_back_melee(self, unit) -> bool:
+        """
+        Micros back damaged melee units
+        Returns a boolean indicating whether they were micro'd back
+
+        """
+
+        if unit.health_percentage < 0.2:
+            cached_unit = self.bot.unit_cache.get(unit.tag)
+            if cached_unit and cached_unit.is_taking_damage:
+                if self.bot.known_enemy_units:
+                    nearest_enemy = self.bot.known_enemy_units.closest_to(unit)
+                    nearby_friendly_units = self.bot.units.closer_than(8, nearest_enemy)
+                    if len(nearby_friendly_units) > 2 and \
+                            nearest_enemy.distance_to(unit) < 6 and \
+                            nearest_enemy.can_attack_ground and \
+                            nearest_enemy.ground_range < 1:
+                        away_from_enemy = unit.position.towards(nearest_enemy, -3)
+                        self.bot.actions.append(unit.move(away_from_enemy))
+                        return True
+        return False
+
+    async def manage_workers(self):
+        workers = self.bot.units(const2.WORKERS)
+
+        for worker in workers:
+            await self.micro_back_melee(worker)
+
     async def manage_zerglings(self):
         zerglings = self.bot.units(const.ZERGLING)
 
@@ -2658,12 +2695,28 @@ class MicroManager(Manager):
 
         # Micro zerglings
         for zergling in zerglings:
-            nearby_enemy_units = self.bot.known_enemy_units.closer_than(7, zergling)
+            await self.micro_back_melee(zergling)
+
+            nearby_enemy_units = self.bot.known_enemy_units.closer_than(8, zergling)
             if nearby_enemy_units:
+                # Focus down priorities
                 nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priority_types)
                 if nearby_enemy_priorities:
                     nearby_enemy_unit = nearby_enemy_priorities.closest_to(zergling)
                     self.bot.actions.append(zergling.attack(nearby_enemy_unit))
+
+                for enemy_unit in nearby_enemy_units:
+                    # Micro away from banelings
+                    if enemy_unit.type_id == const.BANELING:
+                        nearby_friendly_units = self.bot.units.closer_than(3, enemy_unit)
+                        distance_to_enemy = zergling.distance_to(enemy_unit)
+                        if nearby_friendly_units:
+                            closest_friendly_unit_to_enemy = nearby_friendly_units.closest_to(enemy_unit)
+                            if len(nearby_friendly_units) >= 1 and \
+                                    distance_to_enemy < 6 and \
+                                    closest_friendly_unit_to_enemy.tag != zergling.tag:
+                                away_from_enemy = zergling.position.towards(enemy_unit, -3)
+                                self.bot.actions.append(zergling.move(away_from_enemy))
 
         # # Burrow zerglings near enemy townhall
         # # Decided not to use for now
@@ -2804,7 +2857,6 @@ class MicroManager(Manager):
                         distance = await self.bot._client.query_pathing(ravager, away_from_enemy)
                         if distance and distance < 5:
                             self.bot.actions.append(ravager.move(away_from_enemy))
-
 
     async def manage_mutalisks(self):
         mutalisks = self.bot.units(const.MUTALISK)
@@ -3032,6 +3084,7 @@ class MicroManager(Manager):
         await self.manage_combat_micro()
 
         await self.avoid_biles()
+        await self.manage_workers()
         await self.manage_zerglings()
         await self.manage_banelings()
         await self.manage_roaches()
@@ -3070,9 +3123,13 @@ class LambdaBot(sc2.BotAI):
         self.enemy_start_location = None
         self.not_enemy_start_locations = None
 
-        # Set of units currently occupied in some way. Don't order them.
+        # Set of tags of units currently occupied in some way. Don't order them.
         # This is cleared every time an attack ends
         self.occupied_units = set()
+
+        # Map of all our unit's tags to UnitCached objects with their remembered
+        # properties (Last health, shields, location, etc)
+        self.unit_cache = {}
 
         # Our army clusters
         self.army_clusters = clustering.get_fresh_clusters([], n=3)
@@ -3114,6 +3171,9 @@ class LambdaBot(sc2.BotAI):
                 await manager.init()
 
             await self.chat_send("λ LΛMBDANAUT λ - {}".format(VERSION))
+
+        # Update the unit cache with remembered friendly units stats
+        self.update_unit_cache()
 
         await self.intel_manager.run()  # Run before all other managers
 
@@ -3165,6 +3225,22 @@ class LambdaBot(sc2.BotAI):
         # print ("Army clusters: {}".format([cluster.position for cluster in self.army_clusters]))
         # print ("Enemy cluster count: {}".format(len([cluster for cluster in self.enemy_clusters if cluster])))
 
+        # Create units on condition
+        # zerglings = self.units(const.ZERGLING)
+        # if len(zerglings) > 10:
+        #     await self._client.debug_create_unit([[const.ZERGLING, 15, zerglings.random.position, 2]])
+        #
+        # if self.iteration == 25:
+        #       drones = self.units(const2.WORKERS)
+        #       await self._client.debug_create_unit([[const.ZERGLING, 11, drones.random.position, 1]])
+        #       await self._client.debug_create_unit([[const.ZERGLING, 15, drones.random.position, 2]])
+
+        # Create banelings and zerglings every 15 steps
+        if self.iteration % 15 == 0:
+              hatch = self.units(const.HATCHERY)
+              await self._client.debug_create_unit([[const.ZERGLING, 4, hatch.random.position + Point2((11, 0)), 1]])
+              await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
+
         class Green:
             r = 0
             g = 255
@@ -3205,6 +3281,27 @@ class LambdaBot(sc2.BotAI):
 
         if enemy_units:
             clustering.k_means_update(self.enemy_clusters, enemy_units)
+
+    def update_unit_cache(self):
+        for unit in self.units:
+            # If we already remember this friendly unit
+            cached_unit = self.unit_cache.get(unit.tag)
+            if cached_unit:
+
+                # Compare its health/shield since last step, to find out if it has taken any damage
+                if unit.health_percentage < cached_unit.health_percentage or \
+                        unit.shield_percentage < cached_unit.shield_percentage:
+                    cached_unit.is_taking_damage = True
+                else:
+                    cached_unit.is_taking_damage = False
+
+                # Update cached unit health and shield
+                cached_unit.health_percentage = unit.health_percentage
+                cached_unit.shield_percentage = unit.shield_percentage
+
+            else:
+                new_cached_unit = unit_cache.UnitCached()
+                self.unit_cache[unit.tag] = new_cached_unit
 
     def publish(self, manager, message_type: const2.Messages, value: Optional[Any] = None):
         """

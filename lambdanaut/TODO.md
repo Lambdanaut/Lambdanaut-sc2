@@ -11,13 +11,11 @@
 
 ## HIGH PRIORITY
 
-  * Builds a neural net that calculates which of two armies would win in a fight
-    * Input is size 200. First hundred are my units, second hundred are theirs
-    * Output is size three. Win, Lose, or Draw
+  * Test micro on a test map. Get better micro through this.
 
-  * Build a recurrent neural net that learns to micro Mutalisks
-    * Goal: Kill as many enemy units as possible before losing all mutalisks
-    
+  * Make get_current_target more efficient
+    * Skip calling the function if we have less than 25 minerals. Nothing can be built
+    * Only call the is_pending function on units we know we'll build. Don't include campaign zerg units
 
   * Zergling/banelings target workers from a distance
 
@@ -34,6 +32,9 @@
     * `This would save us from 4:30-6:00 rushes`
 
 ## MEDIUM PRIORITY
+
+  * Build a recurrent neural net that learns to micro Mutalisks
+    * Goal: Kill as many enemy units as possible before losing all mutalisks
 
 '  * Make sure priority targets are pathable before attacking them with melee (zergling baneling)
     * If priority target is on the other side of a hard wall, zerglings may not attack wall to get to it. 
@@ -165,4 +166,8 @@
 
   * Group army groups together using centroids and k-means
     * With this, we can refine micro by getting closer/further than enemy units based on the centroid's dps
+
+  * Builds a neural net that calculates which of two armies would win in a fight
+    * Input is size 200. First hundred are my units, second hundred are theirs
+    * Output is size three. Win, Lose, or Draw
 
