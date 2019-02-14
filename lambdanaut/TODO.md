@@ -17,11 +17,6 @@
     * Skip calling the function if we have less than 25 minerals. Nothing can be built
     * Only call the is_pending function on units we know we'll build. Don't include campaign zerg units
 
-  * Zergling/banelings target workers from a distance
-
-  * Remember friendly units so we can figure out if they're being attacked. Like so:
-    * https://github.com/Hannessa/sc2-bots/blob/master/cannon-lover/base_bot.py#L334
-    
   * Keep tags of all seen enemy units
 
   * Enter a state PREPARE_TO_DEFEND when we see an enemy army of > 3 units moving out. 
@@ -171,3 +166,8 @@
     * Input is size 200. First hundred are my units, second hundred are theirs
     * Output is size three. Win, Lose, or Draw
 
+  * Zergling/banelings target workers from a distance
+  
+  * Remember friendly units so we can figure out if they're being attacked. Like so:
+    * https://github.com/Hannessa/sc2-bots/blob/master/cannon-lover/base_bot.py#L334
+    

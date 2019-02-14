@@ -1167,15 +1167,16 @@ class BuildManager(Manager):
         # Read messages and act on them
         await self.read_messages()
 
-        # Get the current build target
-        current_build_targets = self.current_build_targets()
+        if self.bot.minerals > 24:
+            # Get the current build target
+            current_build_targets = self.current_build_targets()
 
-        if not current_build_targets:
-            # If we are at the end of the build queue, then add a default build
-            self.add_next_default_build()
-        else:
-            # Build the current build targets
-            await self.create_build_targets(current_build_targets)
+            if not current_build_targets:
+                # If we are at the end of the build queue, then add a default build
+                self.add_next_default_build()
+            else:
+                # Build the current build targets
+                await self.create_build_targets(current_build_targets)
 
 
 class ResourceManager(Manager):
@@ -2705,18 +2706,18 @@ class MicroManager(Manager):
                     nearby_enemy_unit = nearby_enemy_priorities.closest_to(zergling)
                     self.bot.actions.append(zergling.attack(nearby_enemy_unit))
 
-                for enemy_unit in nearby_enemy_units:
-                    # Micro away from banelings
-                    if enemy_unit.type_id == const.BANELING:
-                        nearby_friendly_units = self.bot.units.closer_than(3, enemy_unit)
-                        distance_to_enemy = zergling.distance_to(enemy_unit)
-                        if nearby_friendly_units:
-                            closest_friendly_unit_to_enemy = nearby_friendly_units.closest_to(enemy_unit)
-                            if len(nearby_friendly_units) >= 1 and \
-                                    distance_to_enemy < 6 and \
-                                    closest_friendly_unit_to_enemy.tag != zergling.tag:
-                                away_from_enemy = zergling.position.towards(enemy_unit, -3)
-                                self.bot.actions.append(zergling.move(away_from_enemy))
+                closest_enemy_unit = nearby_enemy_units.closest_to(zergling)
+                # Micro away from banelings
+                if closest_enemy_unit.type_id == const.BANELING:
+                    nearby_friendly_units = self.bot.units.closer_than(3, closest_enemy_unit)
+                    distance_to_enemy = zergling.distance_to(closest_enemy_unit)
+                    if nearby_friendly_units:
+                        closest_friendly_unit_to_enemy = nearby_friendly_units.closest_to(closest_enemy_unit)
+                        if len(nearby_friendly_units) >= 1 and \
+                                distance_to_enemy < 4.5 and \
+                                closest_friendly_unit_to_enemy.tag != zergling.tag:
+                            away_from_enemy = zergling.position.towards(closest_enemy_unit, -1)
+                            self.bot.actions.append(zergling.move(away_from_enemy))
 
         # # Burrow zerglings near enemy townhall
         # # Decided not to use for now
@@ -3240,6 +3241,7 @@ class LambdaBot(sc2.BotAI):
               hatch = self.units(const.HATCHERY)
               await self._client.debug_create_unit([[const.ZERGLING, 4, hatch.random.position + Point2((11, 0)), 1]])
               await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
+              # await self._client.debug_create_unit([[const.ZERGLING, 2, hatch.random.position + Point2((6, 0)), 2]])
 
         class Green:
             r = 0
