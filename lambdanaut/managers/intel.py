@@ -138,7 +138,7 @@ class IntelManager(Manager):
             for unit in enemy_units:
                 enemy_strength += self.bot.strength_of(unit)
 
-            if enemy_strength > units_strength * 0.3:
+            if enemy_strength > units_strength * 1.3:
                 self.has_scouted_enemy_greater_force.add(
                     True, self.bot.state.game_loop, expiry=30)
                 return True

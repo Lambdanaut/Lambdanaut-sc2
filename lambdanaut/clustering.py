@@ -1,5 +1,4 @@
 from functools import reduce
-import math
 import random
 from typing import List, Union
 
@@ -17,6 +16,17 @@ class Cluster(list):
         super(Cluster, self).__init__(*args)
 
         self.position = position
+
+    @property
+    def radius(self):
+        """
+        Returns the distance to the furthest unit within the cluster from
+        the cluster's center
+        """
+        if self:
+            return self.position.distance_to_furthest(self)
+        else:
+            return 0
 
     def update_position(self) -> bool:
         """Updates the position by averaging the data in this cluster

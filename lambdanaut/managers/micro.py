@@ -371,7 +371,7 @@ class MicroManager(Manager):
     async def manage_combat(self, unit, attack_priorities=None):
         """Handles combat micro for the given unit"""
 
-        if unit.weapon_cooldown or unit.is_moving:
+        if unit.weapon_cooldown:
             # Don't manage combat if we have a weapon cooldown
             return
 
@@ -398,10 +398,10 @@ class MicroManager(Manager):
             nearest_enemy_cluster = army_center.closest(self.bot.enemy_clusters)
             enemy_army_center = nearest_enemy_cluster.position
 
+            types_not_to_move = {const.LURKERMP, const.QUEEN}
+            nearby_army = [u for u in army_cluster if u.type_id not in types_not_to_move]
             if army_center.distance_to(enemy_army_center) < 18:
-                types_not_to_move = {const.LURKERMP, const.QUEEN}
-                nearby_army = [u for u in army_cluster if u.type_id not in types_not_to_move]
-
+                # Micro against enemy clusters
                 if nearby_army and nearest_enemy_cluster:
                     army_strength = sum(self.bot.strength_of(u) for u in nearby_army)
                     enemy_strength = sum(self.bot.strength_of(u) for u in nearest_enemy_cluster)
@@ -415,7 +415,7 @@ class MicroManager(Manager):
 
                             if army_strength < enemy_strength * 0.9:
                                 # Back off from enemy if our cluster is weaker
-                                how_far_to_move = -6
+                                how_far_to_move = -3
                                 away_from_enemy = unit.position.towards(
                                     nearest_enemy_unit, how_far_to_move)
                                 self.bot.actions.append(unit.move(away_from_enemy))
@@ -440,6 +440,12 @@ class MicroManager(Manager):
                                         towards_enemy = unit.position.towards(
                                             nearest_enemy_unit, how_far_to_move)
                                         self.bot.actions.append(unit.move(towards_enemy))
+            else:
+                # Keep units near center of cluster
+                if army_cluster.radius > 25:
+                    for unit in nearby_army:
+                        if unit.is_idle:
+                            self.bot.actions.append(unit.attack(army_cluster.position))
 
     async def run(self):
         # Do combat priority selection

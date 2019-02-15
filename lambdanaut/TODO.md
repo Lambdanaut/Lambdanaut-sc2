@@ -21,8 +21,6 @@
   
 ## MEDIUM PRIORITY
 
-  * Clean up code. Separate managers into their own files. :o
-
   * Build a recurrent neural net that learns to micro Mutalisks
     * Goal: Kill as many enemy units as possible before losing all mutalisks
 
@@ -182,3 +180,5 @@
 
   * Don't fly first overlord into cannons at natural. Right now against zoctoss we do that. 
     * `This might be solved? I'm not sure. The code looks fine`
+
+  * Clean up code. Separate managers into their own files. :o

@@ -307,6 +307,42 @@ class ForceManager(StatefulManager):
                     if target and unit.weapon_cooldown <= 0:
                         self.bot.actions.append(unit.attack(target.position))
 
+
+                #### COMMENTED OUT FOR NOW. The hope is that we can be more picky about how we defend,
+                # # Have army defend
+                # army_clusters = self.bot.army_clusters
+                #
+                # # The harder we're attacked, the further-out army to pull back
+                # if len(enemies_nearby) < 5:
+                #     army_clusters = [self.bot.start_location.closest(army_clusters)]
+                #
+                # nearest_enemy_cluster = self.bot.start_location.closest(self.bot.enemy_clusters)
+                # for army_cluster in army_clusters:
+                #     nearby_army = [u for u in army_cluster]
+                #
+                #     if nearby_army and nearest_enemy_cluster:
+                #         army_strength = sum(self.bot.strength_of(u) for u in nearby_army)
+                #         enemy_strength = sum(self.bot.strength_of(u) for u in nearest_enemy_cluster)
+                #
+                #         if army_strength >= enemy_strength * 0.7:
+                #             # Attack enemy if we stand a chance
+                #             for unit in nearby_army:
+                #                 target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
+                #
+                #                 if target and unit.weapon_cooldown <= 0:
+                #                     self.bot.actions.append(unit.attack(target.position))
+                #
+                #         else:
+                #             # Regroup to center of cluster if enemy is greater
+                #             for unit in nearby_army:
+                #                 closest_enemy = enemies_nearby.closest_to(unit)
+                #                 if closest_enemy.distance_to(unit) < 8:
+                #                     target = army_cluster.position
+                #                     self.bot.actions.append(unit.attack(target))
+
+
+
+
             # Bring back defending workers that have drifted too far from town halls
             workers_defending_to_remove = set()
             for worker_id in self.workers_defending:

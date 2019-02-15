@@ -231,6 +231,7 @@ EARLY_GAME_POOL_FIRST_CAUTIOUS = [
 EARLY_GAME_POOL_FIRST_DEFENSIVE = [
     SPAWNINGPOOL,
     OVERLORD,  # 3
+    EXTRACTOR,
     ZERGLING, ZERGLING,
     ZERGLING, ZERGLING,
     CanAfford(SPINECRAWLER),
@@ -238,13 +239,12 @@ EARLY_GAME_POOL_FIRST_DEFENSIVE = [
     CanAfford(SPINECRAWLER),
     QUEEN,
     BANELINGNEST,
-    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 10),  # Build 6 zerglings until we get a roach warren
+    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 15),  # Build 6 zerglings until we get a roach warren
     CanAfford(BANELING), CanAfford(BANELING), CanAfford(BANELING), CanAfford(BANELING),
     CanAfford(SPINECRAWLER),
     QUEEN,
+    IfHasThenDontBuild(ROACHWARREN, BANELING, 8),  # Build 6 banelings until we get a roach warren
     CanAfford(ZERGLINGMOVEMENTSPEED),
-    IfHasThenDontBuild(ROACHWARREN, BANELING, 6),  # Build 6 banelings until we get a roach warren
-    EXTRACTOR,
     HATCHERY,
 ]
 

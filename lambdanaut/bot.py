@@ -215,7 +215,9 @@ class LambdaBot(sc2.BotAI):
         Updates the position of k-means clusters we keep of units
         """
 
-        our_army = self.units(const2.ZERG_ARMY_UNITS)
+        our_army_types = const2.ZERG_ARMY_UNITS | {const.SPINECRAWLER}
+
+        our_army = self.units(our_army_types)
         enemy_units = self.known_enemy_units.filter(lambda u: u.is_visible)
 
         if our_army:
