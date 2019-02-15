@@ -15,15 +15,15 @@ FPS = 22
 ZERG_STRUCTURES_FROM_DRONES = \
     {const.HATCHERY, const.SPAWNINGPOOL, const.EXTRACTOR, const.EVOLUTIONCHAMBER, const.SPORECRAWLER,
      const.BANELINGNEST, const.ROACHWARREN, const.SPINECRAWLER, const.SPIRE, const.NYDUSNETWORK,
-     const.INFESTATIONPIT, const.HYDRALISKDEN, const.LURKERDENMP, const.ULTRALISKCAVERN,}
+     const.INFESTATIONPIT, const.HYDRALISKDEN, const.LURKERDENMP, const.ULTRALISKCAVERN, }
 
 ZERG_UNITS_FROM_LARVAE = \
     {const.DRONE, const.OVERLORD, const.ZERGLING, const.ROACH, const.HYDRALISK,
-     const.MUTALISK, const.CORRUPTOR, const.ULTRALISK,}
+     const.MUTALISK, const.CORRUPTOR, const.ULTRALISK, }
 
 ZERG_ARMY_UNITS = \
     {const.ZERGLING, const.BANELING, const.ROACH, const.RAVAGER, const.HYDRALISK, const.MUTALISK, const.OVERSEER,
-     const.INFESTOR, const.CORRUPTOR, const.VIPER, const.BROODLORD, const.ULTRALISK,}
+     const.INFESTOR, const.CORRUPTOR, const.VIPER, const.BROODLORD, const.ULTRALISK, }
 
 # All zerg units including structures (Excludes special forms like DRONEBURROWED)
 ZERG_UNITS = \
@@ -94,13 +94,11 @@ ZERG_UPGRADES_TO_TECH_REQUIREMENT = {
 
 ZERG_UPGRADES = ZERG_UPGRADES_TO_STRUCTURE.keys()
 
-
 ENEMY_NON_ARMY = \
     {const.OVERLORD, const.OVERSEER}
 
 WORKERS = {const.PROBE, const.DRONE, const.SCV}
 VESPENE_REFINERIES = {const.EXTRACTOR, const.REFINERY, const.ASSIMILATOR}
-
 
 # Value of army units
 # Used when determing whether to attack or not
@@ -108,7 +106,6 @@ ZERG_ARMY_VALUE = \
     {const.ZERGLING: 0.4, const.BANELING: 1.25, const.ROACH: 1.5, const.RAVAGER: 2.5, const.HYDRALISK: 2,
      const.MUTALISK: 2, const.OVERSEER: 1, const.INFESTOR: 2, const.CORRUPTOR: 2, const.VIPER: 3,
      const.BROODLORD: 4, const.ULTRALISK: 5}
-
 
 TOWNHALLS = {townhall for subset in sc2.data.race_townhalls.values() for townhall in subset}
 UNUPGRADED_TOWNHALLS = {const.HATCHERY, const.NEXUS, const.COMMANDCENTER}
@@ -140,25 +137,26 @@ class Messages(enum.Enum):
     ENEMY_COUNTER_WITH_ROACHES_SCOUTED = 12
     ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD = 13
     DEFENDING_AGAINST_MULTIPLE_ENEMIES = 14
+    ENEMY_MOVING_OUT_SCOUTED = 15
 
     # STRATEGIC NOTES MESSAGES
-    ENEMY_EARLY_NATURAL_EXPAND_TAKEN = 15
-    ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN = 16
-    NEW_BUILD = 17  # New build added
-    NEW_BUILD_STAGE = 18  # New build stage entered
+    ENEMY_EARLY_NATURAL_EXPAND_TAKEN = 16
+    ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN = 17
+    NEW_BUILD = 18  # New build added
+    NEW_BUILD_STAGE = 19  # New build stage entered
 
     # UNITS TRAINED MESSAGES
-    UNIT_CREATED = 19
-    UPGRADE_STARTED = 20
+    UNIT_CREATED = 20
+    UPGRADE_STARTED = 21
 
     # UNIT ORDER MESSAGES
-    DRONE_LEAVING_TO_CREATE_HATCHERY = 21  # Value is Drone's tag
-    OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 22  # Move the second overlord scout to the enemy's main ramp
-    PULL_WORKERS_OFF_VESPENE = 23  # Value is int of workers to mine vespene. None if return to default.
+    DRONE_LEAVING_TO_CREATE_HATCHERY = 22  # Value is Drone's tag
+    OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 23  # Move the second overlord scout to the enemy's main ramp
+    PULL_WORKERS_OFF_VESPENE = 24  # Value is int of workers to mine vespene. None if return to default.
 
     # STATE MACHINE CHANGE MESSAGES
-    STATE_ENTERED = 24  # Value is State being left
-    STATE_EXITED = 25  # Value is State entered
+    STATE_ENTERED = 25  # Value is State being left
+    STATE_EXITED = 26  # Value is State entered
 
 
 # Build Manager Commands

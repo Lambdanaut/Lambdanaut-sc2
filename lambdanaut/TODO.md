@@ -11,31 +11,17 @@
 
 ## HIGH PRIORITY
 
+  * Retreat from battles when our cluster is weaker than their cluster
+
+  * Write a better heuristic for determining stronger army compositions
+ 
   * Test micro on a test map. Get better micro through this.
 
-  * Make get_current_target more efficient
-    * Only call the is_pending function on units we know we'll build. Don't include campaign zerg units
-
-  * Keep tags of all seen enemy units
-
-  * Enter a state PREPARE_TO_DEFEND when we see an enemy army of > 3 units moving out. 
-    * Remember each enemy unit and their position
-    * If four enemy non-workers/non-overlords take 6 frames of stepping towards our start location, assume an attack and enter PREPARE_TO_DEFEND
-    * Halt worker, upgrade, and townhall production. 
-    * After 30 seconds, return to HOUSEKEEPING
-    * `This would save us from 4:30-6:00 rushes`
-
-  * Enter pool defensive build if 2 gateways are scouted with first scout
-  
-  * Enter pool defensive build if 2 barracks are scouted with first scout
-  
-  * Enter pool defensive build if 5 zerglings are scouted with first scout
-  
   * Make midgame rush to brood lords not sucky
   
-  * Make overlord scouts not run into photon canons. Turn around if canons sighted.
-
 ## MEDIUM PRIORITY
+
+  * Clean up code. Separate managers into their own files. :o
 
   * Build a recurrent neural net that learns to micro Mutalisks
     * Goal: Kill as many enemy units as possible before losing all mutalisks
@@ -70,11 +56,6 @@
 
   * Sending drones to saturate another base when that base is under fire will result in dead drones
     * If the unsaturated base has nearby enemy army units. Don't saturate it
-
-  * Switch from "DEFENDING" state to another where all army is pulled home if it seems necessary. Maybe "ALL_DEFENDING"
-
-  * Don't fly first overlord into cannons at natural. Right now against zoctoss we do that. 
-    * `This might be solved? I'm not sure. The code looks fine`
 
 ## LOWEST PRIORITY
 
@@ -178,3 +159,26 @@
     
   * Make get_current_target more efficient
     * Skip calling the function if we have less than 25 minerals. Nothing can be built
+
+  * Make overlord scouts not run into photon canons. Turn around if canons sighted.
+
+  * Enter pool defensive build if 2 gateways are scouted with first scout
+  
+  * Enter pool defensive build if 2 barracks are scouted with first scout
+  
+  * Enter pool defensive build if 5 zerglings are scouted with first scout
+  
+  * Make get_current_target more efficient
+    * Only call the is_pending function on units we know we'll build. Don't include campaign zerg units
+
+  * Keep tags of all seen enemy units
+
+  * Enter a state PREPARE_TO_DEFEND when we see an enemy army of > 3 units moving out. 
+    * Remember each enemy unit and their position
+    * If four enemy non-workers/non-overlords take 6 frames of stepping towards our start location, assume an attack and enter PREPARE_TO_DEFEND
+    * Halt worker, upgrade, and townhall production. 
+    * After 30 seconds, return to HOUSEKEEPING
+    * `This would save us from 4:30-6:00 rushes`
+
+  * Don't fly first overlord into cannons at natural. Right now against zoctoss we do that. 
+    * `This might be solved? I'm not sure. The code looks fine`

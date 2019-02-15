@@ -21,132 +21,9 @@ from lambdanaut.builds import Builds, BuildStages, BUILD_MAPPING, DEFAULT_NEXT_B
 from lambdanaut.expiringlist import ExpiringList
 
 
-VERSION = '2.5'
+VERSION = '2.6'
 DEBUG = True
 BUILD = Builds.EARLY_GAME_DEFAULT_OPENER
-
-
-class Manager(object):
-    """
-    Base class for all AI managers
-    """
-
-    name = 'Manager'
-
-    # Managers can receive messages by subscribing to certain events
-    # with self.subscribe(EVENT_NAME)
-
-    def __init__(self, bot):
-        self.bot: LambdaBot = bot
-
-        self._messages = {}
-
-    async def init(self):
-        """
-        To be called after init in order to publish messages and do setup
-        that touches other Managers
-        """
-        pass
-
-    def inbox(self, message_type: const2.Messages, value: Optional[Any] = None):
-        """
-        Send a message of message_type to this manager
-        """
-        self._messages[message_type] = value
-
-    @property
-    def messages(self):
-        return self._messages.copy()
-
-    def ack(self, message_type):
-        """
-        Messages must be acknowledged to remove them from the inbox
-        """
-        self.print('Message acked: {}'.format(message_type.name))
-        self._messages.pop(message_type)
-
-    def subscribe(self, message_type: const2.Messages):
-        """
-        Subscribe to a message of message_type
-        """
-        return self.bot.subscribe(self, message_type)
-
-    def publish(self, message_type: const2.Messages, value: Optional[Any] = None):
-        """
-        Publish a message to all subscribers of it's type
-        """
-        self.print('Message published: {} - {}'.format(message_type.name, value))
-        return self.bot.publish(self, message_type, value)
-
-    async def read_messages(self):
-        """
-        Overwrite this function to read all incoming messages
-        """
-        pass
-
-    def print(self, msg):
-        print('{}: {}'.format(self.name, msg))
-
-    async def run(self):
-        pass
-
-
-class StatefulManager(Manager):
-    """
-    Base class for all state-machine AI managers
-    """
-
-    # Default starting state to set in Manager
-    state = None
-    # The previous state
-    previous_state = None
-
-    # Maps to overwrite with state-machine functions
-    state_map = {}
-    # Map of functions to do when entering the state
-    state_start_map = {}
-    # Map of functions to do when leaving the state
-    state_stop_map = {}
-
-    async def determine_state_change(self):
-        raise NotImplementedError
-
-    async def change_state(self, new_state):
-        """
-        Changes the state and runs a start and stop function if specified
-        in self.state_start_map or self.state_stop_map"""
-
-        self.print('State changed to: {}'.format(new_state.name))
-
-        # Run a start function for the new state if it's specified
-        start_function = self.state_start_map.get(new_state)
-        if start_function:
-            await start_function()
-
-        # Run a stop function for the current state if it's specified
-        stop_function = self.state_stop_map.get(self.state)
-        if stop_function:
-            await stop_function()
-
-        # Set the previous state to the current state
-        self.previous_state = self.state
-
-        # Set the new state
-        self.state = new_state
-
-        # Publish message about state change
-        self.publish(Messages.STATE_ENTERED, self.state)
-        self.publish(Messages.STATE_EXITED, self.previous_state)
-
-    async def run_state(self):
-        # Run function for current state
-        state_f = self.state_map.get(self.state)
-        if state_f is not None:
-            return await state_f()
-
-    async def run(self):
-        await self.determine_state_change()
-        await self.run_state()
 
 
 class IntelManager(Manager):
@@ -288,6 +165,32 @@ class IntelManager(Manager):
 
             return False
 
+    def enemy_moving_out_scouted(self):
+        """
+        Checks to see if enemy units are moving out towards us
+        """
+        enemy_units = self.bot.known_enemy_units
+        exclude_nonarmy_types = const2.WORKERS | {const.OVERLORD, const.OVERSEER}
+        enemy_units = enemy_units.exclude_type(exclude_nonarmy_types).not_structure.\
+            closer_than(80, self.bot.enemy_start_location)
+
+        closer_enemy_counts = 0
+        if len(enemy_units) > 3:
+            for enemy_unit in enemy_units:
+                if self.bot.moving_closer_to(
+                        unit=enemy_unit,
+                        cache=self.bot.enemy_cache,
+                        point=self.bot.start_location):
+                    closer_enemy_counts += 1
+
+            # At least 6 enemy units were spotted moving closer to us for 10 iterations
+            # Also the force manager is not currently attacking or moving to attack
+            if self.bot.force_manager.state not in {ForcesStates.ATTACKING, ForcesStates.MOVING_TO_ATTACK} and \
+                    closer_enemy_counts > 5:
+                return True
+
+        return False
+
     async def assess_game(self):
         """
         Assess the game's state and send out applicable messages
@@ -303,6 +206,8 @@ class IntelManager(Manager):
             self.publish(Messages.FOUND_ENEMY_GREATER_FORCE)
             if len(self.bot.townhalls.ready) < 3:
                 self.publish(Messages.FOUND_ENEMY_EARLY_AGGRESSION)
+        if self.enemy_moving_out_scouted():
+            self.publish(Messages.ENEMY_MOVING_OUT_SCOUTED)
 
     async def run(self):
         await self.read_messages()
@@ -349,7 +254,7 @@ class BuildManager(Manager):
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY)
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH)
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH)
-        self.subscribe(Messages.FOUND_ENEMY_GREATER_FORCE)
+        self.subscribe(Messages.ENEMY_MOVING_OUT_SCOUTED)
         self.subscribe(Messages.FOUND_ENEMY_EARLY_AGGRESSION)
         self.subscribe(Messages.ENEMY_AIR_TECH_SCOUTED)
         self.subscribe(Messages.ENEMY_COUNTER_WITH_ROACHES_SCOUTED)
@@ -454,12 +359,11 @@ class BuildManager(Manager):
                 if Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE not in self.builds:
                     self.add_build(Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS)
 
-            # Messages indicating we need to defend an early aggression/rush
+            # Messages indicating we need to defend a rush
             defensive_early_game = {
                 Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY,
                 Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH,
-                Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH,
-                Messages.FOUND_ENEMY_EARLY_AGGRESSION,}
+                Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH}
             if message in defensive_early_game:
                 self.ack(message)
 
@@ -473,6 +377,14 @@ class BuildManager(Manager):
                             nearby_enemy_units = enemy_units.closer_than(18, hatchery)
                             if nearby_enemy_units or hatchery.build_progress < 0.8:
                                 self.bot.actions.append(hatchery(const.CANCEL))
+
+                # Switch to a defensive build
+                self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
+
+            # Messages indicating we need to defend an early aggression
+            early_aggression = {Messages.FOUND_ENEMY_EARLY_AGGRESSION}
+            if message in early_aggression:
+                self.ack(message)
 
                 # Switch to a defensive build
                 self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
@@ -512,13 +424,13 @@ class BuildManager(Manager):
                 self.stop_worker_production = True
 
             # Stop townhall and worker production for a short duration
-            stop_non_army_production_for_50_seconds = {
-                Messages.FOUND_ENEMY_GREATER_FORCE,}
-            if message in stop_non_army_production_for_50_seconds:
+            stop_non_army_production = {
+                Messages.ENEMY_MOVING_OUT_SCOUTED}
+            if message in stop_non_army_production:
                 self.ack(message)
 
                 self._stop_nonarmy_production.add(
-                    True, self.bot.state.game_loop, expiry=50)
+                    True, self.bot.state.game_loop, expiry=20)
 
             # Restart townhall and worker production when defending stops
             exit_state = {Messages.STATE_EXITED,}
@@ -844,13 +756,13 @@ class BuildManager(Manager):
                             self._stop_nonarmy_production.contains(True, self.bot.state.game_loop)) and \
                             unit in const2.UNUPGRADED_TOWNHALLS:
                         first_tier_production_structures = {const.SPAWNINGPOOL, const.GATEWAY, const.BARRACKS}
-                        if not self.bot.units(first_tier_production_structures):
+                        if self.bot.units(first_tier_production_structures):
                             continue
                     elif (self.stop_worker_production or
                             self._stop_nonarmy_production.contains(True, self.bot.state.game_loop)) and \
                             unit in const2.WORKERS:
                         first_tier_production_structures = {const.SPAWNINGPOOL, const.GATEWAY, const.BARRACKS}
-                        if not self.bot.units(first_tier_production_structures):
+                        if self.bot.units(first_tier_production_structures):
                             continue
 
                     if (tech_requirement is None or existing_unit_counts[tech_requirement]) > 0 and \
@@ -1938,8 +1850,8 @@ class OverlordManager(StatefulManager):
             overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
             if overlord:
                 distance_to_enemy_start_location = overlord.distance_to(self.bot.enemy_start_location)
-                if distance_to_enemy_start_location < 24:
-                    # Take note of enemy defensive structures sited
+                if distance_to_enemy_start_location < 25:
+                    # Take note of enemy defensive structures sighted
                     enemy_defensive_structures_types = {const.PHOTONCANNON, const.SPINECRAWLER}
                     nearby_enemy_defensive_structures = enemy_structures.of_type(
                         enemy_defensive_structures_types).closer_than(15, overlord)
@@ -1949,6 +1861,15 @@ class OverlordManager(StatefulManager):
                         self.publish(
                             Messages.OVERLORD_SCOUT_FOUND_ENEMY_DEFENSIVE_STRUCTURES,
                             value=closest_enemy_defensive_structure.position)
+
+                    # Take note of enemy rush structures/units sighted
+
+                    barracks_count = len(enemy_structures.of_type(const.BARRACKS)) > 1
+                    gateway_count = len(enemy_structures.of_type(const.GATEWAY)) > 1
+                    zergling_count = len(self.bot.known_enemy_units.of_type(const.ZERGLING)) > 5
+
+                    if barracks_count or gateway_count or zergling_count:
+                        self.publish(Messages.FOUND_ENEMY_EARLY_AGGRESSION)
 
                 if enemy_structures.closer_than(11, overlord).exists:
                     self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_BASE, value=overlord.position)
@@ -2064,8 +1985,8 @@ class ForceManager(StatefulManager):
     def get_army_value_to_attack(self, build_stage):
         """Given a build stage, returns the army value needed to begin an attack"""
         return {
-            BuildStages.OPENING: 0,  # Assume rush. Attack with whatever we've got.
-            BuildStages.EARLY_GAME: 6,  # Only attack if we banked up some units early on
+            BuildStages.OPENING: 2,  # Assume rush. Attack with whatever we've got.
+            BuildStages.EARLY_GAME: 18,  # Only attack if we banked up some units early on
             BuildStages.MID_GAME: 55,  # Attack when a sizeable army is gained
             BuildStages.LATE_GAME: 75,  # Attack when a sizeable army is gained
         }[build_stage]
@@ -2514,12 +2435,12 @@ class ForceManager(StatefulManager):
         if not self._recent_commands.contains(
                 ForceManagerCommands.START_ATTACKING, self.bot.state.game_loop):
             for unit in backline_army:
-                if not unit.is_attacking:
+                if not unit.is_attacking and unit.weapon_cooldown <= 0:
                     self.bot.actions.append(unit.attack(target))
 
         # Send in the frontline army immediatelly
         for unit in frontline_army:
-            if not unit.is_attacking:
+            if not unit.is_attacking and unit.weapon_cooldown <= 0:
                 self.bot.actions.append(unit.attack(target))
 
     async def do_searching(self):
@@ -3044,12 +2965,11 @@ class MicroManager(Manager):
                     target = position.towards(unit.position, 2)
                     self.bot.actions.append(unit.move(target))
 
-
     async def manage_combat(self, unit, attack_priorities=None):
         """Handles combat micro for the given unit"""
 
-        if unit.weapon_cooldown:
-            # Don't manage combat if we're moving
+        if unit.weapon_cooldown or unit.is_moving:
+            # Don't manage combat if we have a weapon cooldown
             return
 
         if attack_priorities is None:
@@ -3066,9 +2986,9 @@ class MicroManager(Manager):
 
     async def manage_combat_micro(self):
         # Units to do default combat micro for
-        # Priorities to target above others
 
         # Micro closer to nearest enemy army cluster if our dps is higher
+        # Micro further from nearest enemy army cluster if our dps is lower
         for army_cluster in self.bot.army_clusters:
             army_center = army_cluster.position
 
@@ -3076,12 +2996,12 @@ class MicroManager(Manager):
             enemy_army_center = nearest_enemy_cluster.position
 
             if army_center.distance_to(enemy_army_center) < 18:
-                types_not_to_move = {const.ZERGLING, const.LURKERMP, const.QUEEN, const.ULTRALISK}
+                types_not_to_move = {const.LURKERMP, const.QUEEN}
                 nearby_army = [u for u in army_cluster if u.type_id not in types_not_to_move]
 
                 if nearby_army and nearest_enemy_cluster:
-                    army_dps = sum(u.ground_dps for u in nearby_army)
-                    enemy_dps = sum(u.ground_dps for u in nearest_enemy_cluster)
+                    army_strength = sum(self.bot.strength_of(u) for u in nearby_army)
+                    enemy_strength = sum(self.bot.strength_of(u) for u in nearest_enemy_cluster)
 
                     for unit in nearby_army:
                         if unit.movement_speed > 0 and \
@@ -3089,18 +3009,28 @@ class MicroManager(Manager):
                                 unit.weapon_cooldown and \
                                 not unit.is_moving:
                             nearest_enemy_unit = unit.position.closest(nearest_enemy_cluster)
+
+                            if army_strength < enemy_strength * 0.9:
+                                # Back off from enemy if our cluster is weaker
+                                how_far_to_move = -6
+                                away_from_enemy = unit.position.towards(
+                                    nearest_enemy_unit, how_far_to_move)
+                                self.bot.actions.append(unit.move(away_from_enemy))
+
                             # Check if nearest enemy unit is melee or ranged
-                            if 0 < nearest_enemy_unit.ground_range < 1.5:
-                                if len(army_cluster) < 8:
+                            elif 0 < nearest_enemy_unit.ground_range < 1.5:
+                                if len(army_cluster) < 8 and unit.ground_range > 1:
                                     # If nearest enemy unit is melee and our cluster is small, back off
                                     how_far_to_move = -2
                                     away_from_enemy = unit.position.towards(
                                         nearest_enemy_unit, how_far_to_move)
                                     self.bot.actions.append(unit.move(away_from_enemy))
                                     self.bot.actions.append(unit.attack(unit.position, queue=True))
+
                             else:
-                                # If nearest enemy unit is ranged, close the distance
-                                if army_dps > enemy_dps * 1.1:
+                                # If nearest enemy unit is ranged
+                                if army_strength > enemy_strength * 1.1:
+                                    # Close the distance if our cluster is stronger
                                     distance_to_enemy_unit = unit.distance_to(nearest_enemy_unit)
                                     if distance_to_enemy_unit > unit.ground_range * 0.5:
                                         how_far_to_move = distance_to_enemy_unit * 0.6
@@ -3112,7 +3042,7 @@ class MicroManager(Manager):
         # Do combat priority selection
         micro_combat_unit_types = \
             {const.ZERGLING, const.ROACH, const.HYDRALISK, const.RAVAGER, const.CORRUPTOR, const.BROODLORD,
-             const.LURKERMPBURROWED, const.ULTRALISK, const.SPINECRAWLER, const.SPORECRAWLER}
+             const.LURKERMPBURROWED, const.ULTRALISK, const.SPINECRAWLER, const.SPORECRAWLER, const.QUEEN}
         units = self.bot.units(micro_combat_unit_types)
         priorities = const2.WORKERS | {const.SIEGETANK, const.SIEGETANKSIEGED, const.QUEEN, const.COLOSSUS,
                                        const.MEDIVAC, const.WARPPRISM}
@@ -3250,7 +3180,9 @@ class LambdaBot(sc2.BotAI):
             self.actions.append(unit(const.BEHAVIOR_BUILDINGATTACKON))
 
     async def on_unit_destroyed(self, unit_tag):
-        # Remove destroyed enemy units from enemy cache
+        # Remove destroyed units from caches
+        if unit_tag in self.unit_cache:
+            del self.unit_cache[unit_tag]
         if unit_tag in self.enemy_cache:
             del self.enemy_cache[unit_tag]
 
@@ -3284,11 +3216,13 @@ class LambdaBot(sc2.BotAI):
         #       await self._client.debug_create_unit([[const.ZERGLING, 15, drones.random.position, 2]])
 
         # Create banelings and zerglings every 15 steps
-        # if self.iteration % 15 == 0:
-        #       hatch = self.units(const.HATCHERY)
-        #       await self._client.debug_create_unit([[const.ZERGLING, 4, hatch.random.position + Point2((11, 0)), 1]])
-        #       await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
-        #       # await self._client.debug_create_unit([[const.ZERGLING, 2, hatch.random.position + Point2((6, 0)), 2]])
+        if self.iteration % 15 == 0:
+              hatch = self.units(const.HATCHERY)
+              # await self._client.debug_create_unit([[const.ZERGLING, 6, hatch.random.position + Point2((11, 0)), 1]])
+              # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
+              # await self._client.debug_create_unit([[const.ZERGLING, 7, hatch.random.position + Point2((6, 0)), 2]])
+              # await self._client.debug_create_unit([[const.ROACH, 1, hatch.random.position + Point2((11, 0)), 1]])
+              # await self._client.debug_create_unit([[const.ROACH, 2, hatch.random.position + Point2((6, 0)), 2]])
 
         class Green:
             r = 0
@@ -3336,7 +3270,7 @@ class LambdaBot(sc2.BotAI):
         Updates the friendly units and enemy units caches
         """
         for units, cache in zip((self.units, self.known_enemy_units),
-                               (self.unit_cache, self.enemy_cache)):
+                                (self.unit_cache, self.enemy_cache)):
             for unit in units:
                 # If we already remember this unit
                 cached_unit = cache.get(unit.tag)
@@ -3519,6 +3453,7 @@ class LambdaBot(sc2.BotAI):
         """
         Returns the calculated standalone estimated strength of a unit
         """
+
         strength = 0
 
         if unit.ground_dps > 0 and unit.air_dps <= 0:
@@ -3534,3 +3469,30 @@ class LambdaBot(sc2.BotAI):
             strength *= 2
 
         return strength
+
+    def moving_closer_to(self, unit, cache, point) -> bool:
+        """
+        Returns true if the unit has been moving closer to POINT over all of
+        its recorded positions. The unit must be represented in `cache` or
+        False will be returned.
+
+        """
+        unit_cached = cache.get(unit.tag)
+        if unit_cached:
+            last_positions = unit_cached.last_positions
+
+            # Only consider units we've seen their last position of
+            if len(last_positions) == unit_cached.last_positions_maxlen:
+                # If every point in the units last positions are closer to our start location, then
+                # add one to the closer_enemy_counts
+                last_position_2 = last_positions[0]
+                for last_position_i in range(1, len(last_positions)):
+                    last_position = last_positions[last_position_i]
+                    if last_position_2.distance_to(point) <= \
+                            last_position.distance_to(point):
+                        break
+                    last_position_2 = last_position
+                else:
+                    return True
+
+        return False
