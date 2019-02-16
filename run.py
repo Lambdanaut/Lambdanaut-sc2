@@ -27,14 +27,14 @@ MAPS = [
 MAP_NAME = ""
 REALTIME = False
 # DIFFICULTY = sc2.Difficulty.CheatInsane
-# DIFFICULTY = sc2.Difficulty.CheatMoney
+DIFFICULTY = sc2.Difficulty.CheatMoney
 # DIFFICULTY = sc2.Difficulty.CheatVision
-DIFFICULTY = sc2.Difficulty.VeryHard
+# DIFFICULTY = sc2.Difficulty.VeryHard
 # DIFFICULTY = sc2.Difficulty.Hard
 # DIFFICULTY = sc2.Difficulty.Medium
 # DIFFICULTY = sc2.Difficulty.Easy
 RACE = sc2.Race.Zerg
-ENEMY_RACE = sc2.Race.Terran
+ENEMY_RACE = sc2.Race.Zerg
 REPLAY_NAME = os.path.join("replays", "last_lambdanaut_replay{}.*.sc2replay".format(datetime_str))
 
 

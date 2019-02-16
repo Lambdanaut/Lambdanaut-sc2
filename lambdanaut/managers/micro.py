@@ -436,7 +436,7 @@ class MicroManager(Manager):
                                 await self.manage_priority_targeting(unit, attack_priorities=priorities)
 
     async def run(self):
-        # Do combat micro (moving closer/further away from enemy units
+        # Do combat micro (moving closer/further away from enemy units)
         await self.manage_combat_micro()
 
         await self.avoid_biles()
@@ -452,5 +452,3 @@ class MicroManager(Manager):
         await self.manage_spine_crawlers()
         await self.manage_structures()
         await self.manage_eggs()
-
-
