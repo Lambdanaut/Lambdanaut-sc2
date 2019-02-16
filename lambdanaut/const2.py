@@ -168,6 +168,7 @@ class BuildManagerCommands(enum.Enum):
 # Force Manager Commands
 class ForceManagerCommands(enum.Enum):
     START_ATTACKING = 0  # When attack has started
+    START_RETREATING = 1  # When retreating has started
 
 
 # Resource Manager Commands
@@ -183,7 +184,8 @@ class ForcesStates(enum.Enum):
     DEFENDING = 2  # Defending against active threat at home
     MOVING_TO_ATTACK = 3
     ATTACKING = 4
-    SEARCHING = 5
+    RETREATING = 5
+    SEARCHING = 6
 
 
 # Overlord Scout States

@@ -53,6 +53,17 @@ class ExpiringList(object):
                     return True
         return False
 
+    def remove(self, item):
+        """
+        Removes `item` from the list.
+        """
+        for i in range(len(self.l)):
+            list_item, item_iteration, expiry = self.l[i]
+            if item == list_item:
+                return self.l.pop(i)
+        return False
+
+
     def items(self, current_iteration):
         """Cleans list of expired items and returns it"""
         to_pop = []

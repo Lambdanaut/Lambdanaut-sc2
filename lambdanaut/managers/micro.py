@@ -391,9 +391,9 @@ class MicroManager(Manager):
             nearest_enemy_cluster = army_center.closest(self.bot.enemy_clusters)
             enemy_army_center = nearest_enemy_cluster.position
 
-            types_not_to_move = {const.LURKERMP, const.QUEEN}
+            types_not_to_move = {const.LURKERMP}
             nearby_army = [u for u in army_cluster if u.type_id not in types_not_to_move]
-            if army_center.distance_to(enemy_army_center) < 18:
+            if army_center.distance_to(enemy_army_center) < 17:
                 # Micro against enemy clusters
                 if nearby_army and nearest_enemy_cluster:
                     army_strength = self.bot.relative_army_strength(army_cluster, nearest_enemy_cluster)
@@ -419,12 +419,6 @@ class MicroManager(Manager):
                                 self.bot.actions.append(unit.move(away_from_enemy))
                                 self.bot.actions.append(unit.attack(unit.position, queue=True))
 
-                            # Handle combat priority targeting
-                            elif not unit.weapon_cooldown:
-                                priorities = const2.WORKERS | {const.SIEGETANK, const.SIEGETANKSIEGED, const.QUEEN,
-                                                               const.COLOSSUS, const.MEDIVAC, const.WARPPRISM}
-                                await self.manage_priority_targeting(unit, attack_priorities=priorities)
-
                             # If nearest enemy unit is ranged close the distance if our cluster is stronger
                             elif army_strength > 2:
                                 distance_to_enemy_unit = unit.distance_to(nearest_enemy_unit)
@@ -434,6 +428,13 @@ class MicroManager(Manager):
                                     towards_enemy = unit.position.towards(
                                         nearest_enemy_unit, how_far_to_move)
                                     self.bot.actions.append(unit.move(towards_enemy))
+
+                            # Handle combat priority targeting
+                            elif not unit.weapon_cooldown:
+                                priorities = const2.WORKERS | {const.SIEGETANK, const.SIEGETANKSIEGED, const.QUEEN,
+                                                               const.COLOSSUS, const.MEDIVAC, const.WARPPRISM}
+                                await self.manage_priority_targeting(unit, attack_priorities=priorities)
+
             else:
                 # Keep units near center of cluster
                 if army_cluster.radius > 25:

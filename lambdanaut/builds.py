@@ -453,19 +453,19 @@ LATE_GAME_CORRUPTOR_BROOD_LORD = [
     AtLeast(75, DRONE),
     AtLeast(1, INFESTATIONPIT),
     # If we have a hydralisk den, build additional hydras until we have a greater spire
-    IfHasThenBuild(HYDRALISKDEN, IfHasThenDontBuild(GREATERSPIRE, HYDRALISK, 10)),
+    IfHasThenBuild(HYDRALISKDEN, IfHasThenDontBuild(GREATERSPIRE, HYDRALISK, 5)),
     # Require at least one spire unless we have a Greater Spire
     IfHasThenDontBuild(GREATERSPIRE, AtLeast(1, SPIRE)),
     AtLeast(1, HIVE),
     AtLeast(6, HATCHERY),
     AtLeast(8, EXTRACTOR),
-    AtLeast(6, CORRUPTOR),
     # Get late game upgrades
     IfHasThenBuild(ZERGMELEEWEAPONSLEVEL2, ZERGLINGATTACKSPEED),
     IfHasThenBuild(ZERGMISSILEWEAPONSLEVEL2, ZERGMISSILEWEAPONSLEVEL3),
     IfHasThenBuild(ZERGGROUNDARMORSLEVEL2, ZERGGROUNDARMORSLEVEL3),
     IfHasThenBuild(ZERGMELEEWEAPONSLEVEL2, ZERGMELEEWEAPONSLEVEL3),
     GREATERSPIRE,
+    AtLeast(6, CORRUPTOR),
     OVERSEER,
 ]
 LATE_GAME_CORRUPTOR_BROOD_LORD += [BROODLORD] * 20

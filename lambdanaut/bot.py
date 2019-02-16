@@ -67,10 +67,10 @@ class LambdaBot(sc2.BotAI):
         self.enemy_cache = {}
 
         # Our army clusters
-        self.army_clusters = clustering.get_fresh_clusters([], n=3)
+        self.army_clusters = clustering.get_fresh_clusters([], n=6)
 
         # Our enemy clusters
-        self.enemy_clusters = clustering.get_fresh_clusters([], n=2)
+        self.enemy_clusters = clustering.get_fresh_clusters([], n=3)
 
     async def on_step(self, iteration):
         self.iteration = iteration
@@ -207,18 +207,18 @@ class LambdaBot(sc2.BotAI):
 
         # Create banelings and zerglings every 15 steps
         # For test micro maps
-        friendly = self.units
-        enemy = self.known_enemy_units
-        if not friendly or not enemy:
-            print("FRIENDLY COUNT: {}".format(len(friendly)))
-            print("ENEMY COUNT: {}".format(len(enemy)))
-            if friendly | enemy:
-                await self._client.debug_kill_unit(friendly | enemy)
-
-            await self._client.debug_create_unit([[const.DRONE, 30, self.start_location + Point2((5, 0)), 1]])
-            await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((4, 0)), 1]])
+        # friendly = self.units
+        # enemy = self.known_enemy_units
+        # if not friendly or not enemy:
+        #     print("FRIENDLY COUNT: {}".format(len(friendly)))
+        #     print("ENEMY COUNT: {}".format(len(enemy)))
+        #     if friendly | enemy:
+        #         await self._client.debug_kill_unit(friendly | enemy)
+        #
+        #     await self._client.debug_create_unit([[const.DRONE, 30, self.start_location + Point2((5, 0)), 1]])
+        #     await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((4, 0)), 1]])
             # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
-            await self._client.debug_create_unit([[const.ZERGLING, 25, self.start_location + Point2((7, 0)), 2]])
+        #     await self._client.debug_create_unit([[const.ZERGLING, 25, self.start_location + Point2((7, 0)), 2]])
             # await self._client.debug_create_unit([[const.ZERGLING, 30, self.start_location + Point2((2, 0)), 2]])
             # await self._client.debug_create_unit([[const.ROACH, 1, hatch.random.position + Point2((11, 0)), 1]])
             # await self._client.debug_create_unit([[const.ROACH, 2, hatch.random.position + Point2((6, 0)), 2]])
@@ -255,7 +255,7 @@ class LambdaBot(sc2.BotAI):
         Updates the position of k-means clusters we keep of units
         """
 
-        our_army_types = const2.ZERG_ARMY_UNITS | {const.SPINECRAWLER}
+        our_army_types = const2.ZERG_ARMY_UNITS | {const.SPINECRAWLER, const.QUEEN}
 
         our_army = self.units(our_army_types)
         enemy_units = self.known_enemy_units.filter(lambda u: u.is_visible)
@@ -468,8 +468,6 @@ class LambdaBot(sc2.BotAI):
         Returns the calculated standalone estimated strength of a unit
         """
 
-        strength = 0
-
         if unit.ground_dps > 0 and unit.air_dps <= 0:
             strength = unit.ground_dps
         elif unit.air_dps > 0 and unit.ground_dps <= 0:
@@ -490,8 +488,14 @@ class LambdaBot(sc2.BotAI):
         unit doesn't have dps, but still does damage (like banelings)
         """
 
-        if unit.type_id is const.BANELING:
-            return 13
+        default_dps_map = {
+            const.BANELING: 13,
+            const.BUNKER: 30,
+        }
+
+        default_dps = default_dps_map.get(unit.type_id)
+        if default_dps is not None:
+            return default_dps
 
         if unit.ground_dps > 0 >= unit.air_dps:
             dps = unit.ground_dps

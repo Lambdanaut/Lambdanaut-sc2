@@ -37,12 +37,14 @@ class ForceManager(StatefulManager):
             ForcesStates.DEFENDING: self.do_defending,
             ForcesStates.MOVING_TO_ATTACK: self.do_moving_to_attack,
             ForcesStates.ATTACKING: self.do_attacking,
+            ForcesStates.RETREATING: self.do_retreating,
             ForcesStates.SEARCHING: self.do_searching,
         }
 
         # Map of functions to do when entering the state
         self.state_start_map = {
             ForcesStates.ATTACKING: self.start_attacking,
+            ForcesStates.RETREATING: self.start_retreating,
         }
 
         # Map of functions to do when leaving the state
@@ -158,13 +160,11 @@ class ForceManager(StatefulManager):
     async def do_housekeeping(self):
         zerg_army_units = const2.ZERG_ARMY_UNITS | {const.ROACHBURROWED}
 
-        army = self.bot.units.filter(
-            lambda unit: unit.type_id in zerg_army_units). \
-            tags_not_in(self.bot.occupied_units)
+        army = self.bot.units(zerg_army_units).tags_not_in(self.bot.occupied_units)
 
         townhalls = self.bot.townhalls
 
-        if townhalls.exists:
+        if townhalls:
             # Call back army that is far away
             for unit in army.idle:
                 closest_townhall = townhalls.closest_to(unit)
@@ -185,7 +185,7 @@ class ForceManager(StatefulManager):
                 if len(nearby_army) < number_of_units_to_townhall:
                     # Move some army to this townhall
                     far_army = army.further_than(22, townhall.position)
-                    if far_army.exists:
+                    if far_army:
                         unit = far_army.random
                         if self.bot.known_enemy_units.closer_than(15, unit).empty:
                             # Move them to the nearest ramp
@@ -209,8 +209,7 @@ class ForceManager(StatefulManager):
                 escorting_worker = self.bot.units.of_type(const2.WORKERS).find_by_tag(escorting_worker_tag)
 
                 if escorting_worker:
-                    army = self.bot.units.filter(
-                        lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS). \
+                    army = self.bot.units(const2.ZERG_ARMY_UNITS). \
                         tags_not_in(self.bot.occupied_units)
                     expansion_location = await self.bot.get_next_expansion()
 
@@ -283,7 +282,7 @@ class ForceManager(StatefulManager):
                     for queen in defending_queens:
                         target = self.bot.closest_and_most_damaged(enemies_nearby, queen)
 
-                        if target and queen.distance_to(target) > 8:
+                        if target and queen.distance_to(target) > 8 and not queen.weapon_cooldown:
                             if target.distance_to(queen) < queen.ground_range:
                                 # Target
                                 self.bot.actions.append(queen.attack(target))
@@ -292,8 +291,7 @@ class ForceManager(StatefulManager):
                                 self.bot.actions.append(queen.attack(target.position))
 
                 # Have army defend
-                army = self.bot.units.filter(
-                    lambda u: u.type_id in const2.ZERG_ARMY_UNITS)
+                army = self.bot.units(const2.ZERG_ARMY_UNITS)
 
                 # The harder we're attacked, the further-out army to pull back
                 if len(enemies_nearby) < 5:
@@ -373,8 +371,7 @@ class ForceManager(StatefulManager):
     async def do_moving_to_attack(self):
         army_units = const2.ZERG_ARMY_UNITS
 
-        army = self.bot.units.filter(
-            lambda unit: unit.type_id in army_units). \
+        army = self.bot.units(army_units). \
             tags_not_in(self.bot.occupied_units)
 
         if not army.exists:
@@ -439,8 +436,7 @@ class ForceManager(StatefulManager):
                     # Get two banelings
                     banelings = banelings[:2]
 
-                    army = self.bot.units.filter(
-                        lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
+                    army = self.bot.units(const2.ZERG_ARMY_UNITS)
                     if army.exists:
                         for baneling in banelings:
                             # Consider them harassing banelings for the moment
@@ -552,8 +548,7 @@ class ForceManager(StatefulManager):
                     roach(const.AbilityId.BURROWUP_ROACH))
 
         # Do main force attacking
-        army = self.bot.units.filter(
-            lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS). \
+        army = self.bot.units(const2.ZERG_ARMY_UNITS). \
             exclude_type(no_attackmove_units). \
             tags_not_in(self.bot.occupied_units)
 
@@ -576,27 +571,42 @@ class ForceManager(StatefulManager):
         if not self._recent_commands.contains(
                 ForceManagerCommands.START_ATTACKING, self.bot.state.game_loop):
             for unit in backline_army:
-                if not unit.is_attacking and unit.weapon_cooldown <= 0:
+                if not unit.is_attacking and not unit.is_moving and unit.weapon_cooldown <= 0:
                     self.bot.actions.append(unit.attack(target))
 
         # Send in the frontline army immediatelly
         for unit in frontline_army:
-            if not unit.is_attacking and unit.weapon_cooldown <= 0:
+            if not unit.is_attacking and not unit.is_moving and unit.weapon_cooldown <= 0:
                 self.bot.actions.append(unit.attack(target))
 
+    async def start_retreating(self):
+        # Add START_RETREATING to recent commands so we don't switch states for a bit.
+        self._recent_commands.add(ForceManagerCommands.START_RETREATING,
+                                  self.bot.state.game_loop, expiry=50)
+
+    async def do_retreating(self):
+        army = self.bot.units(const2.ZERG_ARMY_UNITS). \
+            tags_not_in(self.bot.occupied_units)
+
+        for unit in army:
+            if unit.weapon_cooldown or unit.is_idle or unit.is_moving:
+                townhalls = self.bot.townhalls
+                if townhalls:
+                    nearest_townhall = townhalls.closest_to(unit)
+                    self.bot.actions.append(unit.move(nearest_townhall))
+
     async def do_searching(self):
-        army = self.bot.units.filter(
-            lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS). \
+        army = self.bot.units(const2.ZERG_ARMY_UNITS).\
             tags_not_in(self.bot.occupied_units).idle
 
-        if not army.exists:
+        if not army:
             return
 
         # Get expansion locations starting from enemy start location
         enemy_expansion_positions = self.bot.get_enemy_expansion_positions()
 
         for expansion in enemy_expansion_positions:
-            for unit in army.idle:
+            for unit in army:
                 self.bot.actions.append(unit.move(expansion, queue=True))
 
     async def determine_state_change(self):
@@ -633,8 +643,7 @@ class ForceManager(StatefulManager):
         # HOUSEKEEPING
         if self.state == ForcesStates.HOUSEKEEPING:
 
-            army = self.bot.units.filter(
-                lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
+            army = self.bot.units(const2.ZERG_ARMY_UNITS)
 
             if army.exists:
                 # Value of the army
@@ -679,8 +688,7 @@ class ForceManager(StatefulManager):
 
         # MOVING_TO_ATTACK
         elif self.state == ForcesStates.MOVING_TO_ATTACK:
-            army = self.bot.units.filter(
-                lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
+            army = self.bot.units(const2.ZERG_ARMY_UNITS)
 
             if army.exists:
                 # Value of the army
@@ -697,16 +705,22 @@ class ForceManager(StatefulManager):
 
         # ATTACKING
         elif self.state == ForcesStates.ATTACKING:
-            army = self.bot.units.filter(
-                lambda unit: unit.type_id in const2.ZERG_ARMY_UNITS)
+            army = self.bot.units(const2.ZERG_ARMY_UNITS)
 
-            if army.exists:
+            if army:
 
                 # Value of the army
                 army_value = sum(const2.ZERG_ARMY_VALUE[unit.type_id] for unit in army)
 
                 if army_value < self.army_value_to_attack * 0.4:
                     return await self.change_state(ForcesStates.HOUSEKEEPING)
+
+                # Retreat if our entire army is weaker than the army we see from them.
+                enemy = self.bot.known_enemy_units().exclude_type(const2.WORKERS).not_structure
+                if enemy:
+                    relative_army_strength = self.bot.relative_army_strength(army, enemy)
+                    if relative_army_strength < -4:
+                        return await self.change_state(ForcesStates.RETREATING)
 
                 enemy_start_location = self.bot.enemy_start_location.position
                 # Start searching the map if we're at the enemy's base and can't find them.
@@ -717,11 +731,17 @@ class ForceManager(StatefulManager):
 
                     return await self.change_state(ForcesStates.SEARCHING)
 
+        # RETREATING
+        elif self.state == ForcesStates.RETREATING:
+            if not self._recent_commands.contains(
+                    ForceManagerCommands.START_RETREATING, self.bot.state.game_loop):
+                return await self.change_state(ForcesStates.HOUSEKEEPING)
+
         # SEARCHING
         elif self.state == ForcesStates.SEARCHING:
-            enemy_structure = self.bot.known_enemy_structures
-            if enemy_structure.exists:
-                self.publish(Messages.ARMY_FOUND_ENEMY_BASE, value=enemy_structure.first.position)
+            enemy_structures = self.bot.known_enemy_structures
+            if enemy_structures:
+                self.publish(Messages.ARMY_FOUND_ENEMY_BASE, value=enemy_structures.first.position)
                 return await self.change_state(ForcesStates.HOUSEKEEPING)
 
             units_at_enemy_location = self.bot.units.closer_than(

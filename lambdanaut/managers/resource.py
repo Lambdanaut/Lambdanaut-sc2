@@ -275,13 +275,13 @@ class ResourceManager(Manager):
 
             new_build = {Messages.NEW_BUILD}
             if message in new_build:
-                # Early game pool first defense started. Pull workers off vespene.
+                # Early game pool first defense started.
+                # We need to be mining vespene for banelings nest
                 if val == builds.EARLY_GAME_POOL_FIRST_DEFENSIVE:
                     self.ack(message)
 
-                    self._recent_commands.add(
-                        ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
-                        self.bot.state.game_loop, expiry=80)
+                    self._recent_commands.remove(
+                        ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE)
 
             pull_workers_off_vespene = {Messages.PULL_WORKERS_OFF_VESPENE}
             if message in pull_workers_off_vespene:
