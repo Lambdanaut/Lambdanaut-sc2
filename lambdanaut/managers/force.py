@@ -187,7 +187,7 @@ class ForceManager(StatefulManager):
                     far_army = army.further_than(22, townhall.position)
                     if far_army:
                         unit = far_army.random
-                        if self.bot.known_enemy_units.closer_than(15, unit).empty:
+                        if not self.bot.known_enemy_units.closer_than(15, unit):
                             # Move them to the nearest ramp
                             target = townhall.position
 
