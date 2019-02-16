@@ -38,6 +38,9 @@ class ResourceManager(Manager):
         self.subscribe(Messages.UPGRADE_STARTED)
         self.subscribe(Messages.PULL_WORKERS_OFF_VESPENE)
 
+        # If this flag is set, pull off gas when zergling speed is researched
+        self.pull_off_gas_early = True
+
     async def init(self):
         # Send all workers to the closest mineral patch
         self.initialize_workers()
@@ -269,9 +272,10 @@ class ResourceManager(Manager):
                 if val == const.UpgradeId.ZERGLINGMOVEMENTSPEED:
                     self.ack(message)
 
-                    self._recent_commands.add(
-                        ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
-                        self.bot.state.game_loop, expiry=100)
+                    if self.pull_off_gas_early:
+                        self._recent_commands.add(
+                            ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
+                            self.bot.state.game_loop, expiry=100)
 
             new_build = {Messages.NEW_BUILD}
             if message in new_build:
@@ -280,6 +284,7 @@ class ResourceManager(Manager):
                 if val == builds.EARLY_GAME_POOL_FIRST_DEFENSIVE:
                     self.ack(message)
 
+                    self.pull_off_gas_early = False
                     self._recent_commands.remove(
                         ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE)
 
