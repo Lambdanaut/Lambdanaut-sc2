@@ -5,6 +5,7 @@ from typing import Optional
 import sc2.constants as const
 
 import lambdanaut.builds as builds
+from lambdanaut.builds import Builds
 from lambdanaut.expiringlist import ExpiringList
 from lambdanaut.const2 import Messages, ResourceManagerCommands
 from lambdanaut.managers import Manager
@@ -281,7 +282,7 @@ class ResourceManager(Manager):
             if message in new_build:
                 # Early game pool first defense started.
                 # We need to be mining vespene for banelings nest
-                if val == builds.EARLY_GAME_POOL_FIRST_DEFENSIVE:
+                if val == Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE:
                     self.ack(message)
 
                     self.pull_off_gas_early = False

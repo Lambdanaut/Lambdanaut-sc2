@@ -600,7 +600,6 @@ class BuildManager(Manager):
                         if len(build_targets) == n_targets:
                             return build_targets
 
-
         return build_targets
 
     async def create_build_target(self, build_target) -> bool:
