@@ -51,10 +51,9 @@ class Cluster(list):
 
         return position_changed
 
-    def refresh_cluster(self):
+    def refresh(self):
         """
         Clears a cluster and sets its center to a random point of its data
-
         """
         if len(self):
             # Choose a random data point from self
@@ -65,6 +64,15 @@ class Cluster(list):
 
         self.clear()
         self.position = centroid.position
+
+    def merge(self, cluster2):
+        """
+        Merges the two clusters together and updates its position
+        `cluster2` will be cleared and refreshed
+        """
+        self += cluster2
+        self.update_position()
+        cluster2.refresh()
 
 
 def get_fresh_clusters(data, n=4) -> List[Cluster]:
@@ -93,7 +101,7 @@ def k_means_update(clusters: List[Cluster], data):
     """
 
     for cluster in clusters:
-        cluster.refresh_cluster()
+        cluster.refresh()
 
     while True:
 
@@ -106,3 +114,12 @@ def k_means_update(clusters: List[Cluster], data):
 
         if not any([cluster.update_position() for cluster in clusters]):
             break
+
+    # Merge clusters that are very close to each other
+    for cluster in clusters:
+        clusters_excluding_this_cluster = [c for c in clusters if c.position != cluster.position]
+        nearest_cluster = cluster.position.closest(clusters_excluding_this_cluster)
+
+        if cluster and nearest_cluster and \
+                cluster.position.distance_to(nearest_cluster.position) < 18:
+            cluster.merge(nearest_cluster)

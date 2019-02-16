@@ -33,7 +33,8 @@ class OverlordManager(StatefulManager):
 
         # Overlords used for scouting
         # These must be added to the set in scouting_overlord_tags()
-        self.scouting_overlord_tag = self.bot.units(const.OVERLORD).first.tag
+        overlords = self.bot.units(const.OVERLORD)
+        self.scouting_overlord_tag = overlords.first.tag if overlords else None
         self.proxy_scouting_overlord_tag = None
         self.third_expansion_scouting_overlord_tag = None
         self.baneling_drop_overlord_tag = None

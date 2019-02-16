@@ -28,15 +28,16 @@ class MicroManager(Manager):
         Micros back damaged melee units
         Returns a boolean indicating whether they were micro'd back
 
+        CURRENTLY NOT IN USE BECAUSE IT DOESN'T SEEM TO PROVIDE ANY BENEFITS
+        WOULD THEORETICALLY BE USED BY WORKERS AND ZERGLINGS
         """
-
-        if unit.health_percentage < 0.2:
+        if unit.health_percentage < 0.25:
             cached_unit = self.bot.unit_cache.get(unit.tag)
             if cached_unit and cached_unit.is_taking_damage:
                 if self.bot.known_enemy_units:
                     nearest_enemy = self.bot.known_enemy_units.closest_to(unit)
                     nearby_friendly_units = self.bot.units.closer_than(8, nearest_enemy)
-                    if len(nearby_friendly_units) > 2 and \
+                    if len(nearby_friendly_units) > 8 and \
                             nearest_enemy.distance_to(unit) < 6 and \
                             nearest_enemy.can_attack_ground and \
                             nearest_enemy.ground_range < 1:
@@ -46,10 +47,7 @@ class MicroManager(Manager):
         return False
 
     async def manage_workers(self):
-        workers = self.bot.units(const2.WORKERS)
-
-        for worker in workers:
-            await self.micro_back_melee(worker)
+        pass
 
     async def manage_zerglings(self):
         zerglings = self.bot.units(const.ZERGLING)
@@ -58,7 +56,6 @@ class MicroManager(Manager):
 
         # Micro zerglings
         for zergling in zerglings:
-            await self.micro_back_melee(zergling)
 
             nearby_enemy_units = self.bot.known_enemy_units.closer_than(8, zergling)
             if nearby_enemy_units:
@@ -368,12 +365,8 @@ class MicroManager(Manager):
                     target = position.towards(unit.position, 2)
                     self.bot.actions.append(unit.move(target))
 
-    async def manage_combat(self, unit, attack_priorities=None):
-        """Handles combat micro for the given unit"""
-
-        if unit.weapon_cooldown:
-            # Don't manage combat if we have a weapon cooldown
-            return
+    async def manage_priority_targeting(self, unit, attack_priorities=None):
+        """Handles combat priority targeting for the given unit"""
 
         if attack_priorities is None:
             attack_priorities = set()
@@ -403,43 +396,44 @@ class MicroManager(Manager):
             if army_center.distance_to(enemy_army_center) < 18:
                 # Micro against enemy clusters
                 if nearby_army and nearest_enemy_cluster:
-                    army_strength = sum(self.bot.strength_of(u) for u in nearby_army)
-                    enemy_strength = sum(self.bot.strength_of(u) for u in nearest_enemy_cluster)
+                    army_strength = self.bot.relative_army_strength(nearby_army, nearest_enemy_cluster)
+                    print("ARMY STRENGTH: {}".format(army_strength))
 
                     for unit in nearby_army:
                         if unit.movement_speed > 0 and \
-                                unit.ground_range > 2 and \
-                                unit.weapon_cooldown and \
                                 not unit.is_moving:
                             nearest_enemy_unit = unit.position.closest(nearest_enemy_cluster)
 
-                            if army_strength < enemy_strength * 0.9:
-                                # Back off from enemy if our cluster is weaker
-                                how_far_to_move = -3
+                            # Back off from enemy if our cluster is much weaker
+                            if army_strength < -5:
+                                away_from_enemy = army_center.towards(
+                                    nearest_enemy_unit, -7)
+                                self.bot.actions.append(unit.move(away_from_enemy))
+
+                            # If nearest enemy unit is melee and our cluster is small, back off
+                            elif 0 < nearest_enemy_unit.ground_range < 1.5 and len(army_cluster) < 8 \
+                                    and unit.ground_range > 1:
+                                how_far_to_move = -2
                                 away_from_enemy = unit.position.towards(
                                     nearest_enemy_unit, how_far_to_move)
                                 self.bot.actions.append(unit.move(away_from_enemy))
+                                self.bot.actions.append(unit.attack(unit.position, queue=True))
 
-                            # Check if nearest enemy unit is melee or ranged
-                            elif 0 < nearest_enemy_unit.ground_range < 1.5:
-                                if len(army_cluster) < 8 and unit.ground_range > 1:
-                                    # If nearest enemy unit is melee and our cluster is small, back off
-                                    how_far_to_move = -2
-                                    away_from_enemy = unit.position.towards(
+                            # Handle combat priority targeting
+                            elif not unit.weapon_cooldown:
+                                priorities = const2.WORKERS | {const.SIEGETANK, const.SIEGETANKSIEGED, const.QUEEN,
+                                                               const.COLOSSUS, const.MEDIVAC, const.WARPPRISM}
+                                await self.manage_priority_targeting(unit, attack_priorities=priorities)
+
+                            # If nearest enemy unit is ranged close the distance if our cluster is stronger
+                            elif army_strength > 2:
+                                distance_to_enemy_unit = unit.distance_to(nearest_enemy_unit)
+                                if distance_to_enemy_unit > unit.ground_range * 0.5 and \
+                                        not unit.is_moving and unit.weapon_cooldown <= 0:
+                                    how_far_to_move = distance_to_enemy_unit * 0.6
+                                    towards_enemy = unit.position.towards(
                                         nearest_enemy_unit, how_far_to_move)
-                                    self.bot.actions.append(unit.move(away_from_enemy))
-                                    self.bot.actions.append(unit.attack(unit.position, queue=True))
-
-                            else:
-                                # If nearest enemy unit is ranged
-                                if army_strength > enemy_strength * 1.1:
-                                    # Close the distance if our cluster is stronger
-                                    distance_to_enemy_unit = unit.distance_to(nearest_enemy_unit)
-                                    if distance_to_enemy_unit > unit.ground_range * 0.5:
-                                        how_far_to_move = distance_to_enemy_unit * 0.6
-                                        towards_enemy = unit.position.towards(
-                                            nearest_enemy_unit, how_far_to_move)
-                                        self.bot.actions.append(unit.move(towards_enemy))
+                                    self.bot.actions.append(unit.move(towards_enemy))
             else:
                 # Keep units near center of cluster
                 if army_cluster.radius > 25:
@@ -448,16 +442,6 @@ class MicroManager(Manager):
                             self.bot.actions.append(unit.attack(army_cluster.position))
 
     async def run(self):
-        # Do combat priority selection
-        micro_combat_unit_types = \
-            {const.ZERGLING, const.ROACH, const.HYDRALISK, const.RAVAGER, const.CORRUPTOR, const.BROODLORD,
-             const.LURKERMPBURROWED, const.ULTRALISK, const.SPINECRAWLER, const.SPORECRAWLER, const.QUEEN}
-        units = self.bot.units(micro_combat_unit_types)
-        priorities = const2.WORKERS | {const.SIEGETANK, const.SIEGETANKSIEGED, const.QUEEN, const.COLOSSUS,
-                                       const.MEDIVAC, const.WARPPRISM}
-        for unit in units:
-            await self.manage_combat(unit, attack_priorities=priorities)
-
         # Do combat micro (moving closer/further away from enemy units
         await self.manage_combat_micro()
 

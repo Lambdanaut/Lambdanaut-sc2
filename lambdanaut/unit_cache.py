@@ -1,8 +1,8 @@
 from collections import deque
 
 class UnitCached(object):
-    health_percentage = 1.0
-    shield_percentage = 1.0
+    health_percentage = 0.001
+    shield_percentage = 0.001
 
     is_taking_damage = False
 

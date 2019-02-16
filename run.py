@@ -24,8 +24,8 @@ MAPS = [
     'BlueshiftLE',
     'PortAleksanderLE',]
 
-MAP_NAME = ""
-REALTIME = False
+MAP_NAME = "micro"
+REALTIME = True
 # DIFFICULTY = sc2.Difficulty.CheatInsane
 DIFFICULTY = sc2.Difficulty.CheatMoney
 # DIFFICULTY = sc2.Difficulty.CheatVision

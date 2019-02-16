@@ -1,4 +1,5 @@
 from collections import defaultdict
+import math
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import sc2
@@ -77,7 +78,10 @@ class LambdaBot(sc2.BotAI):
             builds.update_default_builds(self.enemy_race)
 
             # Setup Global Intel variables
-            self.enemy_start_location = self.enemy_start_locations[0]
+            try:
+                self.enemy_start_location = self.enemy_start_locations[0]
+            except IndexError:
+                self.enemy_start_location = self.game_info.map_center
             self.not_enemy_start_locations = {self.start_location}
 
             # Load up managers
@@ -146,6 +150,22 @@ class LambdaBot(sc2.BotAI):
             del self.enemy_cache[unit_tag]
 
     @property
+    def enemy_race(self) -> sc2.data.Race:
+        """
+        On testing maps the enemy_race bugs out. Just set their race to Zerg
+        if we get a KeyError.
+        """
+        try:
+            return super(LambdaBot, self).enemy_race
+        except KeyError:
+            return sc2.data.Race.Zerg
+
+    @property
+    def start_location(self) -> Point2:
+        """Set start location to map center if there is not one"""
+        return self.game_info.player_start_location or self.game_info.map_center
+
+    @property
     def pathable_start_location(self):
         """Pathable point near start location"""
         return self.find_nearby_pathable_point(self.start_location)
@@ -174,7 +194,7 @@ class LambdaBot(sc2.BotAI):
         #       await self._client.debug_create_unit([[const.ZERGLING, 11, drones.random.position, 1]])
         #       await self._client.debug_create_unit([[const.ZERGLING, 15, drones.random.position, 2]])
 
-        # Create banelings and zerglings every 15 steps
+        # Create Units every 15 iterations
         if self.iteration % 15 == 0:
               hatch = self.units(const.HATCHERY)
               # await self._client.debug_create_unit([[const.ZERGLING, 6, hatch.random.position + Point2((11, 0)), 1]])
@@ -182,6 +202,24 @@ class LambdaBot(sc2.BotAI):
               # await self._client.debug_create_unit([[const.ZERGLING, 7, hatch.random.position + Point2((6, 0)), 2]])
               # await self._client.debug_create_unit([[const.ROACH, 1, hatch.random.position + Point2((11, 0)), 1]])
               # await self._client.debug_create_unit([[const.ROACH, 2, hatch.random.position + Point2((6, 0)), 2]])
+
+        # Create banelings and zerglings every 15 steps
+        # For test micro maps
+        friendly = self.units
+        enemy = self.known_enemy_units
+        if not friendly or not enemy:
+            print("FRIENDLY COUNT: {}".format(len(friendly)))
+            print("ENEMY COUNT: {}".format(len(enemy)))
+            if friendly | enemy:
+                await self._client.debug_kill_unit(friendly | enemy)
+
+            # await self._client.debug_create_unit([[const.ROACH, 4, self.start_location + Point2((4, 0)), 1]])
+            await self._client.debug_create_unit([[const.ZERGLING, 1, self.start_location + Point2((5, 0)), 1]])
+            # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
+            await self._client.debug_create_unit([[const.ZERGLING, 8, self.start_location + Point2((7, 0)), 2]])
+            # await self._client.debug_create_unit([[const.ZERGLING, 30, self.start_location + Point2((2, 0)), 2]])
+            # await self._client.debug_create_unit([[const.ROACH, 1, hatch.random.position + Point2((11, 0)), 1]])
+            # await self._client.debug_create_unit([[const.ROACH, 2, hatch.random.position + Point2((6, 0)), 2]])
 
         class Green:
             r = 0
@@ -251,6 +289,8 @@ class LambdaBot(sc2.BotAI):
 
                 else:
                     new_cached_unit = unit_cache.UnitCached()
+                    new_cached_unit.health_percentage = unit.health_percentage
+                    new_cached_unit.shield_percentage = unit.shield_percentage
                     new_cached_unit.last_positions.append(unit.position)
                     cache[unit.tag] = new_cached_unit
 
@@ -361,8 +401,11 @@ class LambdaBot(sc2.BotAI):
                 [(distance, dy) for dy in range(-distance, distance + 1, placement_step)]
             )]
 
-            positions = [position for position in possible_positions
-                         if self.in_pathing_grid(position)]
+            try:
+                positions = [position for position in possible_positions
+                             if self.in_pathing_grid(position)]
+            except AssertionError:
+                return None
 
             if positions:
                 return min(positions, key=lambda p: p.distance_to(near))
@@ -408,7 +451,15 @@ class LambdaBot(sc2.BotAI):
         if not unit_group:
             return
 
-        return unit_group.sorted(lambda u: ((u.health_percentage + u.shield_percentage) / 2) * u.distance_to(unit) * (int(u not in priorities) + 1))[0]
+        def metric(u):
+            if u.shield_max > 0:
+                health = (u.health_percentage + u.shield_percentage) // 2
+            else:
+                health = u.health_percentage
+
+            return health * u.distance_to(unit) * (int(u not in priorities) + 1)
+
+        return unit_group.sorted(metric)[0]
 
     def strength_of(self, unit):
         """
@@ -430,6 +481,88 @@ class LambdaBot(sc2.BotAI):
             strength *= 2
 
         return strength
+
+    def adjusted_dps(self, unit: sc2.unit.Unit) -> float:
+        """
+        Gets an average of a unit's dps, and returns alternative values if the
+        unit doesn't have dps, but still does damage (like banelings)
+        """
+
+        if unit.type_id is const.BANELING:
+            return 13
+
+        if unit.ground_dps > 0 and unit.air_dps <= 0:
+            dps = unit.ground_dps
+        elif unit.air_dps > 0 and unit.ground_dps <= 0:
+            dps = unit.air_dps
+        else:
+            dps = (unit.ground_dps + unit.air_dps) / 2
+
+        return dps
+
+
+    def relative_army_strength(self, u1: sc2.units.Units, u2: sc2.units.Units) -> float:
+        """
+        Returns a positive value if u1 is stronger, and negative if u2 is stronger.
+        A value of +12 would be very good and a value of -12 would be very bad.
+
+        Uses Lanchester's Law
+        https://en.wikipedia.org/wiki/Lanchester%27s_laws
+        """
+
+        u1_dps = sum(self.adjusted_dps(u) for u in u1)
+        u2_dps = sum(self.adjusted_dps(u) for u in u2)
+
+        if u1_dps == 0 and u2_dps == 0:
+            return 0
+
+        def calc_health(u: sc2.unit.Unit) -> int:
+            return u.health + u.shield
+
+        u1_health = sum(calc_health(u) for u in u1)
+        u2_health = sum(calc_health(u) for u in u2)
+
+        if u1_health == 0 and u2_health == 0:
+            return 0
+        if u1_health == 0 or not u1:
+            return -len(u2)
+        elif u2_health == 0 or not u2:
+            return len(u1)
+
+        u1_avg_dps = u1_dps / len(u1)
+        u2_avg_dps = u2_dps / len(u2)
+
+        u1_avg_health = u1_health / len(u1)
+        u2_avg_health = u2_health / len(u2)
+
+        u1_avg_height = sum(u.position3d.z for u in u1) / len(u1)
+        u2_avg_height = sum(u.position3d.z for u in u2) / len(u2)
+
+        # Simulate high ground advantage with 1.5x DPS
+        if u1_avg_height * 0.85 > u2_avg_height:
+            u1_avg_dps *= 1.5
+        elif u2_avg_height * 0.85 > u1_avg_height:
+            u2_avg_dps *= 1.5
+
+        # How many enemy units are destroyed per second
+        u1_loss_rate = u1_avg_dps / u2_avg_health
+        u2_loss_rate = u2_avg_dps / u1_avg_health
+
+        # Lancasters law calls for an exponent of 2.
+        # Use 1.5 to slightly bias towards the linear law
+        power = 1.5
+
+        u1_term = u1_loss_rate * len(u1) ** power
+        u2_term = u2_loss_rate * len(u2) ** power
+
+        if u1_term > u2_term:
+            result = math.sqrt(len(u1) ** power - u2_loss_rate / u1_loss_rate * len(u2) ** power)
+            return result
+        elif u2_term > u1_term:
+            result = math.sqrt(len(u2) ** power - u1_loss_rate / u2_loss_rate * len(u1) ** power)
+            return -result
+
+        return 0
 
     def moving_closer_to(self, unit, cache, point) -> bool:
         """
