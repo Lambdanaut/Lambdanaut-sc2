@@ -396,7 +396,7 @@ class MicroManager(Manager):
             if army_center.distance_to(enemy_army_center) < 18:
                 # Micro against enemy clusters
                 if nearby_army and nearest_enemy_cluster:
-                    army_strength = self.bot.relative_army_strength(nearby_army, nearest_enemy_cluster)
+                    army_strength = self.bot.relative_army_strength(army_cluster, nearest_enemy_cluster)
                     print("ARMY STRENGTH: {}".format(army_strength))
 
                     for unit in nearby_army:

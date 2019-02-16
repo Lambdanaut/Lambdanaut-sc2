@@ -3,6 +3,8 @@ import math
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import sc2
+import sc2.unit
+import sc2.units
 import sc2.constants as const
 from sc2.position import Point2, Point3
 
@@ -213,10 +215,10 @@ class LambdaBot(sc2.BotAI):
             if friendly | enemy:
                 await self._client.debug_kill_unit(friendly | enemy)
 
-            # await self._client.debug_create_unit([[const.ROACH, 4, self.start_location + Point2((4, 0)), 1]])
-            await self._client.debug_create_unit([[const.ZERGLING, 1, self.start_location + Point2((5, 0)), 1]])
+            await self._client.debug_create_unit([[const.DRONE, 30, self.start_location + Point2((5, 0)), 1]])
+            await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((4, 0)), 1]])
             # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
-            await self._client.debug_create_unit([[const.ZERGLING, 8, self.start_location + Point2((7, 0)), 2]])
+            await self._client.debug_create_unit([[const.ZERGLING, 25, self.start_location + Point2((7, 0)), 2]])
             # await self._client.debug_create_unit([[const.ZERGLING, 30, self.start_location + Point2((2, 0)), 2]])
             # await self._client.debug_create_unit([[const.ROACH, 1, hatch.random.position + Point2((11, 0)), 1]])
             # await self._client.debug_create_unit([[const.ROACH, 2, hatch.random.position + Point2((6, 0)), 2]])
@@ -369,7 +371,7 @@ class LambdaBot(sc2.BotAI):
         return expansions
 
     async def sort_pathing_distances_to(self, l: List[Union[Point2, sc2.unit.Unit]],
-                                        end_p: Union[Point2, sc2.unit.Unit]) -> List[Union[float, int]]:
+                                        end_p: Union[Point2, sc2.unit.Unit]) -> List[Point2]:
         """
         Sorts each item in `l` based on its pathing distance from `end_p`
 
@@ -390,9 +392,9 @@ class LambdaBot(sc2.BotAI):
         return sorted_l
 
     def find_nearby_pathable_point(self, near: sc2.position.Point2) -> Union[None, sc2.position.Point2]:
-        DISTANCE = 70
+        distance = 70
         placement_step = 5
-        for distance in range(2, DISTANCE, 2):
+        for distance in range(2, distance, 2):
 
             possible_positions = [sc2.position.Point2(p).offset(near).to2 for p in (
                 [(dx, -distance) for dx in range(-distance, distance + 1, placement_step)] +
@@ -418,7 +420,7 @@ class LambdaBot(sc2.BotAI):
         p3 = p1 + sc2.position.Point2((0, rect.height))
         p4 = p1 + sc2.position.Point2((rect.width, rect.height))
 
-        return (p1, p2, p3, p4)
+        return p1, p2, p3, p4
 
     def adjacent_corners(self, rect, corner: sc2.position.Point2) -> Tuple[sc2.position.Point2]:
         """
@@ -491,17 +493,19 @@ class LambdaBot(sc2.BotAI):
         if unit.type_id is const.BANELING:
             return 13
 
-        if unit.ground_dps > 0 and unit.air_dps <= 0:
+        if unit.ground_dps > 0 >= unit.air_dps:
             dps = unit.ground_dps
-        elif unit.air_dps > 0 and unit.ground_dps <= 0:
+        elif unit.air_dps > 0 >= unit.ground_dps:
             dps = unit.air_dps
         else:
             dps = (unit.ground_dps + unit.air_dps) / 2
 
         return dps
 
-
-    def relative_army_strength(self, u1: sc2.units.Units, u2: sc2.units.Units) -> float:
+    def relative_army_strength(
+            self,
+            u1: Union[clustering.Cluster, sc2.units.Units],
+            u2: Union[clustering.Cluster, sc2.units.Units]) -> float:
         """
         Returns a positive value if u1 is stronger, and negative if u2 is stronger.
         A value of +12 would be very good and a value of -12 would be very bad.
@@ -510,8 +514,18 @@ class LambdaBot(sc2.BotAI):
         https://en.wikipedia.org/wiki/Lanchester%27s_laws
         """
 
+        # Add in our nearby workers as army
+        u1_nearby_workers = self.units(const2.WORKERS).closer_than(14, u1.center)
+        # u2_nearby_workers = self.known_enemy_units(const2.WORKERS).closer_than(14, u2.center)
+
+        u1_nearby_workers_dps = sum(self.adjusted_dps(u) for u in u1_nearby_workers)
+        # u2_nearby_workers_dps = sum(self.adjusted_dps(u) for u in u2_nearby_drones)
+
         u1_dps = sum(self.adjusted_dps(u) for u in u1)
         u2_dps = sum(self.adjusted_dps(u) for u in u2)
+
+        u1_dps += u1_nearby_workers_dps
+        # u2_dps += u2_nearby_workers_dps
 
         if u1_dps == 0 and u2_dps == 0:
             return 0
@@ -548,7 +562,7 @@ class LambdaBot(sc2.BotAI):
         u1_loss_rate = u1_avg_dps / u2_avg_health
         u2_loss_rate = u2_avg_dps / u1_avg_health
 
-        # Lancasters law calls for an exponent of 2.
+        # Lanchesters law calls for an exponent of 2.
         # Use 1.5 to slightly bias towards the linear law
         power = 1.5
 

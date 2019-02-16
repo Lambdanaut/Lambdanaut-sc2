@@ -28,6 +28,10 @@ class Cluster(list):
         else:
             return 0
 
+    @property
+    def center(self):
+        return self.position
+
     def update_position(self) -> bool:
         """Updates the position by averaging the data in this cluster
 
