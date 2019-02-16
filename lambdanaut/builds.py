@@ -233,14 +233,14 @@ EARLY_GAME_POOL_FIRST_DEFENSIVE = [
     OVERLORD,  # 3
     EXTRACTOR,
     ZERGLING, ZERGLING,
-    ZERGLING, ZERGLING,
-    CanAfford(SPINECRAWLER),
-    ZERGLING, ZERGLING,
-    CanAfford(SPINECRAWLER),
-    QUEEN,
     BANELINGNEST,
-    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 15),  # Build 6 zerglings until we get a roach warren
-    CanAfford(BANELING), CanAfford(BANELING), CanAfford(BANELING), CanAfford(BANELING),
+    ZERGLING, ZERGLING,
+    CanAfford(SPINECRAWLER),
+    ZERGLING, ZERGLING,
+    QUEEN,
+    CanAfford(SPINECRAWLER),
+    BANELING, BANELING, BANELING, BANELING,
+    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 16),  # Build 16 zerglings until we get a roach warren
     CanAfford(SPINECRAWLER),
     QUEEN,
     IfHasThenDontBuild(ROACHWARREN, BANELING, 8),  # Build 6 banelings until we get a roach warren

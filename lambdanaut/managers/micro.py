@@ -334,7 +334,7 @@ class MicroManager(Manager):
 
         # Cancel damaged not-ready structures
         for structure in structures.not_ready:
-            if structure.health_percentage < 0.1 or \
+            if structure.health_percentage < 0.05 or \
                     (structure.build_progress > 0.9 and structure.health_percentage < 0.4):
                 self.bot.actions.append(structure(const.CANCEL))
 

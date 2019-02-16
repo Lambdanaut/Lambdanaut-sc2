@@ -167,17 +167,17 @@ class BuildManager(Manager):
                 Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH}
             if message in defensive_early_game:
                 self.ack(message)
-
-                # Cancel constructing hatcheries that are not near completion
-                constructing_hatcheries = self.bot.units(const.HATCHERY).not_ready
-                if constructing_hatcheries.exists:
-                    self.print("Cancelling all constructing hatcheries")
-                    for hatchery in constructing_hatcheries:
-                        enemy_units = self.bot.known_enemy_units
-                        if enemy_units.exists:
-                            nearby_enemy_units = enemy_units.closer_than(18, hatchery)
-                            if nearby_enemy_units or hatchery.build_progress < 0.8:
-                                self.bot.actions.append(hatchery(const.CANCEL))
+                #  TAKEN OUT BECAUSE THE HATCHERY WILL CANCEL ITSELF WHEN IT'S DAMAGED
+                # # Cancel constructing hatcheries that are not near completion
+                # constructing_hatcheries = self.bot.units(const.HATCHERY).not_ready
+                # if constructing_hatcheries.exists:
+                #     self.print("Cancelling all constructing hatcheries")
+                #     for hatchery in constructing_hatcheries:
+                #         enemy_units = self.bot.known_enemy_units
+                #         if enemy_units.exists:
+                #             nearby_enemy_units = enemy_units.closer_than(18, hatchery)
+                #             if nearby_enemy_units or hatchery.build_progress < 0.8:
+                #                 self.bot.actions.append(hatchery(const.CANCEL))
 
                 # Switch to a defensive build
                 self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
