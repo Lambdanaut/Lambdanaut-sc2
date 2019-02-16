@@ -397,7 +397,6 @@ class MicroManager(Manager):
                 # Micro against enemy clusters
                 if nearby_army and nearest_enemy_cluster:
                     army_strength = self.bot.relative_army_strength(army_cluster, nearest_enemy_cluster)
-                    print("ARMY STRENGTH: {}".format(army_strength))
 
                     for unit in nearby_army:
                         if unit.movement_speed > 0 and \
@@ -422,7 +421,8 @@ class MicroManager(Manager):
                             # If nearest enemy unit is ranged close the distance if our cluster is stronger
                             elif army_strength > 2:
                                 distance_to_enemy_unit = unit.distance_to(nearest_enemy_unit)
-                                if distance_to_enemy_unit > unit.ground_range * 0.5 and \
+                                if unit.ground_range > 1 and \
+                                        distance_to_enemy_unit > unit.ground_range * 0.5 and \
                                         not unit.is_moving and unit.weapon_cooldown <= 0:
                                     how_far_to_move = distance_to_enemy_unit * 0.6
                                     towards_enemy = unit.position.towards(
@@ -434,13 +434,6 @@ class MicroManager(Manager):
                                 priorities = const2.WORKERS | {const.SIEGETANK, const.SIEGETANKSIEGED, const.QUEEN,
                                                                const.COLOSSUS, const.MEDIVAC, const.WARPPRISM}
                                 await self.manage_priority_targeting(unit, attack_priorities=priorities)
-
-            else:
-                # Keep units near center of cluster
-                if army_cluster.radius > 25:
-                    for unit in nearby_army:
-                        if unit.is_idle:
-                            self.bot.actions.append(unit.attack(army_cluster.position))
 
     async def run(self):
         # Do combat micro (moving closer/further away from enemy units
