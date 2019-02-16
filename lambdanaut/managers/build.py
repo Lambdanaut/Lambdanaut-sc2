@@ -213,8 +213,9 @@ class BuildManager(Manager):
                 Messages.ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD,}
             if message in broodlord_rush_mid_game:
                 self.ack(message)
-                if self.build_stage != BuildStages.LATE_GAME:
-                    self.add_build(Builds.MID_GAME_CORRUPTOR_BROOD_LORD_RUSH)
+            # # # TAKEN OUT FOR NOW BECAUSE THE RUSH SUCKS
+            #     if self.build_stage != BuildStages.LATE_GAME:
+            #         self.add_build(Builds.MID_GAME_CORRUPTOR_BROOD_LORD_RUSH)
 
             # Stop townhall and worker production during defending
             large_defense = {

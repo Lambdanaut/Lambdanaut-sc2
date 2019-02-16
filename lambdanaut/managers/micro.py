@@ -411,7 +411,7 @@ class MicroManager(Manager):
 
                             # If nearest enemy unit is melee and our cluster is small, back off
                             elif 0 < nearest_enemy_unit.ground_range < 1.5 and len(army_cluster) < 8 \
-                                    and unit.ground_range > 1:
+                                    and unit.ground_range > 1 and nearest_enemy_unit.distance_to(unit) > 0.5:
                                 how_far_to_move = -2
                                 away_from_enemy = unit.position.towards(
                                     nearest_enemy_unit, how_far_to_move)
