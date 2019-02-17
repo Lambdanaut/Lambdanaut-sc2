@@ -305,7 +305,7 @@ class MicroManager(Manager):
             if townhalls.exists:
                 townhall = townhalls.closest_to(self.bot.enemy_start_location)
 
-                nearby_spine_crawlers = spine_crawlers.closer_than(25, townhall)
+                nearby_spine_crawlers = spine_crawlers.closer_than(18, townhall)
 
                 # Unroot spine crawlers that are far away from the front expansions
                 if not nearby_spine_crawlers.exists or (
@@ -326,7 +326,7 @@ class MicroManager(Manager):
                     except:
                         ramp_height = None
 
-                    if nearby_ramp.distance_to(townhall) < 18 \
+                    if nearby_ramp.distance_to(townhall) < 17 \
                             and ramp_height is not None and ramp_height <= townhall.position3d.z:
                         target = nearby_ramp
                     else:

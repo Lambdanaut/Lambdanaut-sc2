@@ -263,7 +263,7 @@ class ForceManager(StatefulManager):
 
                 # Have nearest queen defend
                 queens = self.bot.units(const.QUEEN)
-                if queens and len(enemies_nearby) > 2:
+                if queens and len(enemies_nearby) < 3:
                     # Only send the closest queen if the enemy is only a couple units
                     queen = queens.closest_to(enemies_nearby[0].position)
                     target = self.bot.closest_and_most_damaged(enemies_nearby, queen)

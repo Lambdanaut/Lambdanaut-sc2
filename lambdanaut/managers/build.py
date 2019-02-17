@@ -222,7 +222,7 @@ class BuildManager(Manager):
                 Messages.DEFENDING_AGAINST_MULTIPLE_ENEMIES,}
             if message in large_defense:
                 self.ack(message)
-                self.stop_townhall_production = True
+                # self.stop_townhall_production = True  # Commented out because of spine rushes
                 self.stop_worker_production = True
 
             # Stop townhall and worker production for a short duration
