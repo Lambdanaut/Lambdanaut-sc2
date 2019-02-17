@@ -447,7 +447,7 @@ class LambdaBot(sc2.BotAI):
             priorities = set()
 
         if can_attack:
-            unit_group = unit_group.filter(lambda u: self.can_attack(unit, u))
+            unit_group = [u for u in unit_group if self.can_attack(unit, u)]
 
         if not unit_group:
             return
