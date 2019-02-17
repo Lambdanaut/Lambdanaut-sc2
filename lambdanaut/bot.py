@@ -150,6 +150,9 @@ class LambdaBot(sc2.BotAI):
         if unit_tag in self.enemy_cache:
             del self.enemy_cache[unit_tag]
 
+    async def on_building_construction_complete(self, unit: sc2.unit.Unit):
+        self.publish(None, Messages.STRUCTURE_COMPLETE, unit)
+
     @property
     def enemy_race(self) -> sc2.data.Race:
         """

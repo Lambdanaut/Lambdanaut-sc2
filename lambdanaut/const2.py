@@ -150,17 +150,18 @@ class Messages(enum.Enum):
 
     # UNITS TRAINED MESSAGES
     UNIT_CREATED = 20
-    UPGRADE_STARTED = 21
+    STRUCTURE_COMPLETE = 21
+    UPGRADE_STARTED = 22
 
     # UNIT ORDER MESSAGES
-    DRONE_LEAVING_TO_CREATE_HATCHERY = 22  # Value is Drone's tag
-    OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 23  # Move the second overlord scout to the enemy's main ramp
-    PULL_WORKERS_OFF_VESPENE = 24  # Value is int of workers to mine vespene. None if return to default.
-    UNROOT_ALL_SPINECRAWLERS = 25  # Message indicating we should uproot and reposition spinecrawlers
+    DRONE_LEAVING_TO_CREATE_HATCHERY = 23  # Value is Drone's tag
+    OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 24  # Move the second overlord scout to the enemy's main ramp
+    PULL_WORKERS_OFF_VESPENE = 25  # Value is int of workers to mine vespene. None if return to default.
+    UNROOT_ALL_SPINECRAWLERS = 26  # Message indicating we should uproot and reposition spinecrawlers
 
     # STATE MACHINE CHANGE MESSAGES
-    STATE_ENTERED = 26  # Value is State being left
-    STATE_EXITED = 27  # Value is State entered
+    STATE_ENTERED = 27  # Value is State being left
+    STATE_EXITED = 28  # Value is State entered
 
 
 # Build Manager Commands

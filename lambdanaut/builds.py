@@ -248,7 +248,6 @@ EARLY_GAME_POOL_FIRST_DEFENSIVE = [
     CanAfford(ZERGLINGMOVEMENTSPEED),
     IfHasThenDontBuild(ROACHWARREN, BANELING, 5),
     IfHasThenDontBuild(ROACHWARREN, ZERGLING, 12),
-    PublishMessage(Messages.UNROOT_ALL_SPINECRAWLERS),  # Unroot all spine crawlers
 ]
 
 # Get a spawning pool first with Zerglings for an all-in rush

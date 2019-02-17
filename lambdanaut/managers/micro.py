@@ -26,6 +26,7 @@ class MicroManager(Manager):
 
         # Subscribe to messages
         self.subscribe(Messages.UNROOT_ALL_SPINECRAWLERS)
+        self.subscribe(Messages.STRUCTURE_COMPLETE)
 
     async def micro_back_melee(self, unit) -> bool:
         """
@@ -449,8 +450,9 @@ class MicroManager(Manager):
         for message, val in self.messages.items():
 
             # Messages indicating that we should unroot and reposition spine crawlers
-            unroot_all_spinecrawlers = {Messages.UNROOT_ALL_SPINECRAWLERS}
-            if message in unroot_all_spinecrawlers:
+            # Reposition spine crawlers when a hatchery is completed
+            if message is Messages.UNROOT_ALL_SPINECRAWLERS \
+                    or (message is Messages.STRUCTURE_COMPLETE and val.type_id is const.HATCHERY):
                 self.ack(message)
 
                 rooted_spine_crawlers = self.bot.units(const.SPINECRAWLER).ready
