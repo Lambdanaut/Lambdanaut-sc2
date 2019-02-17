@@ -242,7 +242,7 @@ class ForceManager(StatefulManager):
                 # Workers attack enemy
                 ground_enemies = enemies_nearby.not_flying
                 workers = self.bot.workers.closer_than(15, enemies_nearby.random.position)
-                if workers.exists and ground_enemies.exists and \
+                if workers and ground_enemies.exists and \
                         len(workers) > len(ground_enemies):
                     for worker in workers:
                         if worker.tag in self.workers_defending:
@@ -260,34 +260,21 @@ class ForceManager(StatefulManager):
                                         self.bot.actions.append(worker.attack(target.position))
                                         self.workers_defending.add(worker.tag)
 
-                # Have queens defend
+                # Have nearest queen defend
                 queens = self.bot.units(const.QUEEN)
-                if queens.exists:
-                    if len(enemies_nearby) > 2:
-                        # Try to get the most energized queens
-                        defending_queens = queens.filter(
-                            lambda q: q.energy > 49
-                        )
-                        if not defending_queens.exists:
-                            # If no energized queens, just get the closest queens
-                            defending_queens = queens.sorted(
-                                lambda q: q.distance_to(enemies_nearby.center)).take(
-                                3, require_all=False)
-                    else:
-                        # Only send the closest queen if the enemy is only a single unit
-                        defending_queens = [queens.closest_to(
-                            enemies_nearby.random.position)]
+                if queens and len(enemies_nearby) > 2:
+                    # Only send the closest queen if the enemy is only a couple units
+                    target = self.bot.closest_and_most_damaged(enemies_nearby, queen)
 
-                    for queen in defending_queens:
-                        target = self.bot.closest_and_most_damaged(enemies_nearby, queen)
+                    queen = queens.closest_to(target)
 
-                        if target and queen.distance_to(target) > 8 and not queen.weapon_cooldown:
-                            if target.distance_to(queen) < queen.ground_range:
-                                # Target
-                                self.bot.actions.append(queen.attack(target))
-                            else:
-                                # Position
-                                self.bot.actions.append(queen.attack(target.position))
+                    if target and queen.distance_to(target) > 18 and not queen.weapon_cooldown:
+                        if target.distance_to(queen) < queen.ground_range:
+                            # Target
+                            self.bot.actions.append(queen.attack(target))
+                        else:
+                            # Position
+                            self.bot.actions.append(queen.attack(target.position))
 
                 # # Have army defend
                 # army = self.bot.units(const2.ZERG_ARMY_UNITS)
