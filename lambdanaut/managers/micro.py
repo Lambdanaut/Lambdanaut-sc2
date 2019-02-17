@@ -305,10 +305,11 @@ class MicroManager(Manager):
             if townhalls.exists:
                 townhall = townhalls.closest_to(self.bot.enemy_start_location)
 
-                nearby_spine_crawlers = spine_crawlers.closer_than(18, townhall)
+                nearby_spine_crawlers = rooted_spine_crawlers.closer_than(18, townhall).filter(
+                    lambda sc: sc.position3d.z <= townhall.position3d.z)
 
                 # Unroot spine crawlers that are far away from the front expansions
-                if not nearby_spine_crawlers.exists or (
+                if not nearby_spine_crawlers or (
                         len(nearby_spine_crawlers) < len(spine_crawlers) / 2):
 
                     for sc in rooted_spine_crawlers.idle:
