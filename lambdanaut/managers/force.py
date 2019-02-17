@@ -304,8 +304,7 @@ class ForceManager(StatefulManager):
                 #     if target and unit.weapon_cooldown <= 0:
                 #         self.bot.actions.append(unit.attack(target.position))
 
-                ### COMMENTED OUT FOR NOW. The hope is that we can be more picky about how we defend,
-                # Have army defend
+                # Have army clusters defend
                 army_clusters = self.bot.army_clusters
 
                 # The harder we're attacked, the further-out army to pull back
@@ -326,7 +325,7 @@ class ForceManager(StatefulManager):
                                     if target and unit.weapon_cooldown <= 0:
                                         self.bot.actions.append(unit.attack(target.position))
 
-                        elif army_strength < -1.5:
+                        elif army_strength < -1:
                             # If enemy is greater regroup to center of cluster towards friendly townhall
                             for unit in army_cluster:
                                 if unit.type_id not in const2.NON_COMBATANTS:

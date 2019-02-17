@@ -399,19 +399,22 @@ class MicroManager(Manager):
                     army_strength = self.bot.relative_army_strength(army_cluster, nearest_enemy_cluster)
 
                     for unit in nearby_army:
+                        unit = unit.snapshot  # Extract snapshot from cache object
                         if unit.movement_speed > 0 and \
                                 not unit.is_moving:
                             nearest_enemy_unit = unit.position.closest(nearest_enemy_cluster)
+                            unit_is_combatant = unit.type_id not in const2.NON_COMBATANTS
 
                             # Back off from enemy if our cluster is much weaker
-                            if army_strength < -5:
+                            if army_strength < -5 and unit_is_combatant:
                                 away_from_enemy = army_center.towards(
                                     nearest_enemy_unit, -7)
                                 self.bot.actions.append(unit.move(away_from_enemy))
 
                             # If nearest enemy unit is melee and our cluster is small, back off
                             elif 0 < nearest_enemy_unit.ground_range < 1.5 and len(army_cluster) < 8 \
-                                    and unit.ground_range > 1 and nearest_enemy_unit.distance_to(unit) > 0.5:
+                                    and unit.ground_range > 1 and nearest_enemy_unit.distance_to(unit) > 0.5 \
+                                    and unit_is_combatant:
                                 how_far_to_move = -2
                                 away_from_enemy = unit.position.towards(
                                     nearest_enemy_unit, how_far_to_move)
@@ -419,7 +422,8 @@ class MicroManager(Manager):
                                 self.bot.actions.append(unit.attack(unit.position, queue=True))
 
                             # If nearest enemy unit is ranged close the distance if our cluster is stronger
-                            elif army_strength > 2:
+                            elif army_strength > 2 and \
+                                    unit_is_combatant:
                                 distance_to_enemy_unit = unit.distance_to(nearest_enemy_unit)
                                 if unit.ground_range > 1 and \
                                         distance_to_enemy_unit > unit.ground_range * 0.5 and \
