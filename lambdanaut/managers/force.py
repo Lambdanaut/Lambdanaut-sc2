@@ -260,7 +260,6 @@ class ForceManager(StatefulManager):
                                         self.bot.actions.append(worker.attack(target.position))
                                         self.workers_defending.add(worker.tag)
 
-
                 # Have queens defend
                 queens = self.bot.units(const.QUEEN)
                 if queens.exists:
@@ -290,56 +289,53 @@ class ForceManager(StatefulManager):
                                 # Position
                                 self.bot.actions.append(queen.attack(target.position))
 
-                # Have army defend
-                army = self.bot.units(const2.ZERG_ARMY_UNITS)
-
-                # The harder we're attacked, the further-out army to pull back
-                if len(enemies_nearby) < 5:
-                    army.closer_than(self.bot.start_location_to_enemy_start_location_distance * 0.6,
-                                     self.bot.enemy_start_location)
-
-                for unit in army:
-
-                    target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
-
-                    if target and unit.weapon_cooldown <= 0:
-                        self.bot.actions.append(unit.attack(target.position))
-
-
-                #### COMMENTED OUT FOR NOW. The hope is that we can be more picky about how we defend,
                 # # Have army defend
-                # army_clusters = self.bot.army_clusters
+                # army = self.bot.units(const2.ZERG_ARMY_UNITS)
                 #
                 # # The harder we're attacked, the further-out army to pull back
                 # if len(enemies_nearby) < 5:
-                #     army_clusters = [self.bot.start_location.closest(army_clusters)]
+                #     army.closer_than(self.bot.start_location_to_enemy_start_location_distance * 0.6,
+                #                      self.bot.enemy_start_location)
                 #
-                # nearest_enemy_cluster = self.bot.start_location.closest(self.bot.enemy_clusters)
-                # for army_cluster in army_clusters:
-                #     nearby_army = [u for u in army_cluster]
+                # for unit in army:
                 #
-                #     if nearby_army and nearest_enemy_cluster:
-                #         army_strength = sum(self.bot.strength_of(u) for u in nearby_army)
-                #         enemy_strength = sum(self.bot.strength_of(u) for u in nearest_enemy_cluster)
+                #     target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
                 #
-                #         if army_strength >= enemy_strength * 0.7:
-                #             # Attack enemy if we stand a chance
-                #             for unit in nearby_army:
-                #                 target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
-                #
-                #                 if target and unit.weapon_cooldown <= 0:
-                #                     self.bot.actions.append(unit.attack(target.position))
-                #
-                #         else:
-                #             # Regroup to center of cluster if enemy is greater
-                #             for unit in nearby_army:
-                #                 closest_enemy = enemies_nearby.closest_to(unit)
-                #                 if closest_enemy.distance_to(unit) < 8:
-                #                     target = army_cluster.position
-                #                     self.bot.actions.append(unit.attack(target))
+                #     if target and unit.weapon_cooldown <= 0:
+                #         self.bot.actions.append(unit.attack(target.position))
 
+                ### COMMENTED OUT FOR NOW. The hope is that we can be more picky about how we defend,
+                # Have army defend
+                army_clusters = self.bot.army_clusters
 
+                # The harder we're attacked, the further-out army to pull back
+                if len(enemies_nearby) < 5:
+                    army_clusters = [self.bot.start_location.closest(army_clusters)]
 
+                nearest_enemy_cluster = self.bot.start_location.closest(self.bot.enemy_clusters)
+                for army_cluster in army_clusters:
+                    if army_cluster and nearest_enemy_cluster:
+                        army_strength = self.bot.relative_army_strength(army_cluster, nearest_enemy_cluster)
+
+                        if army_strength >= 0:
+                            # Attack enemy if we stand a chance
+                            for unit in army_cluster:
+                                if unit.type_id not in const2.NON_COMBATANTS:
+                                    target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
+
+                                    if target and unit.weapon_cooldown <= 0:
+                                        self.bot.actions.append(unit.attack(target.position))
+
+                        elif army_strength < -1.5:
+                            # If enemy is greater regroup to center of cluster towards friendly townhall
+                            for unit in army_cluster:
+                                if unit.type_id not in const2.NON_COMBATANTS:
+                                    closest_enemy = enemies_nearby.closest_to(unit.position)
+                                    # if closest_enemy.distance_to(unit) < 8:
+                                    nearest_townhall = self.bot.townhalls.closest_to(unit.position)
+                                    if unit.distance_to(nearest_townhall) > 6:
+                                        towards_townhall = army_cluster.position.towards(nearest_townhall, +2)
+                                        self.bot.actions.append(unit.move(towards_townhall))
 
             # Bring back defending workers that have drifted too far from town halls
             workers_defending_to_remove = set()

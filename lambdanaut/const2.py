@@ -98,6 +98,9 @@ ENEMY_NON_ARMY = \
     {const.OVERLORD, const.OVERSEER}
 
 WORKERS = {const.PROBE, const.DRONE, const.SCV}
+
+NON_COMBATANTS = WORKERS | {const.OVERLORD, const.OVERSEER, const.OBSERVER, const.BROODLING, const.OVERLORDTRANSPORT}
+
 VESPENE_REFINERIES = {const.EXTRACTOR, const.REFINERY, const.ASSIMILATOR}
 
 # Value of army units

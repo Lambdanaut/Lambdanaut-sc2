@@ -199,7 +199,7 @@ class LambdaBot(sc2.BotAI):
         if self.iteration % 15 == 0:
 
             hatch = self.units(const.HATCHERY)
-            # await self._client.debug_create_unit([[const.ZERGLING, 1, self.start_location - Point2((3, 0)), 1]])
+            # await self._client.debug_create_unit([[const.ZERGLING, 1, self.start_location - Point2((4, 0)), 1]])
             # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.ZERGLING, 7, hatch.random.position + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.ROACH, 1, hatch.random.position + Point2((11, 0)), 1]])
@@ -207,7 +207,7 @@ class LambdaBot(sc2.BotAI):
 
         # Create banelings and zerglings every 15 steps
         # For testing micro maps
-
+        #
         # friendly = self.units
         # enemy = self.known_enemy_units
         # if not friendly or not enemy:
@@ -215,13 +215,13 @@ class LambdaBot(sc2.BotAI):
         #     print("ENEMY COUNT: {}".format(len(enemy)))
         #     if friendly | enemy:
         #         await self._client.debug_kill_unit(friendly | enemy)
-        #
-        #     # await self._client.debug_create_unit([[const.DRONE, 30, self.start_location + Point2((5, 0)), 1]])
-        #     # await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((4, 0)), 1]])
-        #     # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
-        #     await self._client.debug_create_unit([[const.HATCHERY, 1, self.start_location - Point2((9, 0)), 1]])
-        #     await self._client.debug_create_unit([[const.ZERGLING, 5, self.start_location + Point2((7, 0)), 2]])
-        #     await self._client.debug_create_unit([[const.SPINECRAWLER, 6, self.start_location + Point2((8, 0)), 2]])
+
+            # await self._client.debug_create_unit([[const.DRONE, 30, self.start_location + Point2((5, 0)), 1]])
+            # await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((4, 0)), 1]])
+            # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
+            # await self._client.debug_create_unit([[const.HATCHERY, 1, self.start_location - Point2((11, 0)), 1]])
+            # await self._client.debug_create_unit([[const.ZERGLING, 5, self.start_location + Point2((7, 0)), 2]])
+            # await self._client.debug_create_unit([[const.SPINECRAWLER, 6, self.start_location + Point2((8, 0)), 2]])
 
         class Green:
             r = 0
@@ -255,7 +255,7 @@ class LambdaBot(sc2.BotAI):
         Updates the position of k-means clusters we keep of units
         """
 
-        types_to_exclude = {const.OVERLORD}
+        types_to_exclude = {const.OVERLORD, const}
 
         our_army = [u for u in self.unit_cache.values() if u.type_id not in types_to_exclude]
         enemy_army = [u for u in self.enemy_cache.values() if u.type_id not in types_to_exclude]
