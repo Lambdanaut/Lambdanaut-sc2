@@ -321,7 +321,13 @@ class MicroManager(Manager):
                     nearby_ramp = townhall.position.towards(
                         self.bot.enemy_start_location, 2).closest(nearby_ramps)
 
-                    if nearby_ramp.distance_to(townhall) < 18:
+                    try:
+                        ramp_height = self.bot.game_info.terrain_height[nearby_ramp]
+                    except:
+                        ramp_height = None
+
+                    if nearby_ramp.distance_to(townhall) < 18 \
+                            and ramp_height is not None and ramp_height <= townhall.position3d.z:
                         target = nearby_ramp
                     else:
                         near_townhall = townhall.position.towards_with_random_angle(

@@ -36,7 +36,9 @@ class ExpiringList(object):
 
     def add(self, item, iteration, expiry):
         """Adds an item to the list with the given expiration"""
-        to_append = (item, iteration, round(expiry * FPS))
+        expiry = round(expiry * FPS) if self.divide_by_fps else expiry
+
+        to_append = (item, iteration, round(expiry))
         self.l.append(to_append)
 
     def contains(self, item, current_iteration):
