@@ -460,7 +460,10 @@ class LambdaBot(sc2.BotAI):
 
             return health * u.distance_to(unit) * (int(u not in priorities) + 1)
 
-        return unit_group.sorted(metric)[0]
+        if isinstance(unit_group, sc2.Units.Units):
+            return unit_group.sorted(metric)[0]
+        else:
+            return sorted(unit_group, key=metric)[0]
 
     def strength_of(self, unit):
         """
