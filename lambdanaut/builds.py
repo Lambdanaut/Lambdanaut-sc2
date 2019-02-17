@@ -230,8 +230,8 @@ EARLY_GAME_POOL_FIRST_CAUTIOUS = [
 # Enemy cheese found. Get a spawning pool first with Zerglings and Spine Crawlers
 EARLY_GAME_POOL_FIRST_DEFENSIVE = [
     SPAWNINGPOOL,
-    OVERLORD,  # 3
     EXTRACTOR,
+    OVERLORD,  # 3
     ZERGLING, ZERGLING,
     QUEEN,
     CanAfford(SPINECRAWLER),
@@ -239,13 +239,17 @@ EARLY_GAME_POOL_FIRST_DEFENSIVE = [
     BANELINGNEST,
     ZERGLING, ZERGLING,
     CanAfford(SPINECRAWLER),
-    BANELING, BANELING, BANELING, BANELING,
-    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 16),  # Build 16 zerglings until we get a roach warren
     CanAfford(SPINECRAWLER),
     QUEEN,
-    IfHasThenDontBuild(ROACHWARREN, BANELING, 8),  # Build 6 banelings until we get a roach warren
+    BANELING, BANELING, BANELING, BANELING,
+    CanAfford(HATCHERY),
+    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 8),  # Build 8 zerglings until we get a roach warren
+    IfHasThenDontBuild(ROACHWARREN, BANELING, 4),  # Build 4 banelings until we get a roach warren
     CanAfford(ZERGLINGMOVEMENTSPEED),
-    HATCHERY,
+    IfHasThenDontBuild(ROACHWARREN, BANELING, 5),
+    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 8),
+    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 8),
+    PublishMessage(Messages.UNROOT_ALL_SPINECRAWLERS),  # Unroot all spine crawlers
 ]
 
 # Get a spawning pool first with Zerglings for an all-in rush

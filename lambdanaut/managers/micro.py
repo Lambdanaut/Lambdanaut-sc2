@@ -3,6 +3,7 @@ import math
 import sc2.constants as const
 
 import lambdanaut.const2 as const2
+from lambdanaut.const2 import Messages
 from lambdanaut.managers import Manager
 import lambdanaut.utils as utils
 
@@ -22,6 +23,9 @@ class MicroManager(Manager):
         # We only want to send a single bile at each force field.
         # Tag the biled ones.
         self.biled_forcefields = set()
+
+        # Subscribe to messages
+        self.subscribe(Messages.UNROOT_ALL_SPINECRAWLERS)
 
     async def micro_back_melee(self, unit) -> bool:
         """
@@ -438,7 +442,28 @@ class MicroManager(Manager):
                                                                const.COLOSSUS, const.MEDIVAC, const.WARPPRISM}
                                 await self.manage_priority_targeting(unit, attack_priorities=priorities)
 
+    async def read_messages(self):
+        """
+        Reads incoming subscribed messages and performs micro adjustments and actions"""
+
+        for message, val in self.messages.items():
+
+            # Messages indicating that we should unroot and reposition spine crawlers
+            unroot_all_spinecrawlers = {Messages.UNROOT_ALL_SPINECRAWLERS}
+            if message in unroot_all_spinecrawlers:
+                self.ack(message)
+
+                rooted_spine_crawlers = self.bot.units(const.SPINECRAWLER).ready
+                for sc in rooted_spine_crawlers.idle:
+                    self.bot.actions.append(sc(
+                        const.AbilityId.SPINECRAWLERUPROOT_SPINECRAWLERUPROOT))
+
     async def run(self):
+        await super(MicroManager, self).run()
+
+        # Read and respond to messages
+        await self.read_messages()
+
         # Do combat micro (moving closer/further away from enemy units)
         await self.manage_combat_micro()
 

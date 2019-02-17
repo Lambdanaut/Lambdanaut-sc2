@@ -156,10 +156,11 @@ class Messages(enum.Enum):
     DRONE_LEAVING_TO_CREATE_HATCHERY = 22  # Value is Drone's tag
     OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 23  # Move the second overlord scout to the enemy's main ramp
     PULL_WORKERS_OFF_VESPENE = 24  # Value is int of workers to mine vespene. None if return to default.
+    UNROOT_ALL_SPINECRAWLERS = 25  # Message indicating we should uproot and reposition spinecrawlers
 
     # STATE MACHINE CHANGE MESSAGES
-    STATE_ENTERED = 25  # Value is State being left
-    STATE_EXITED = 26  # Value is State entered
+    STATE_ENTERED = 26  # Value is State being left
+    STATE_EXITED = 27  # Value is State entered
 
 
 # Build Manager Commands

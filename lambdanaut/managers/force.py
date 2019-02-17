@@ -93,7 +93,7 @@ class ForceManager(StatefulManager):
         """Given a build stage, returns the army value needed to begin an attack"""
         return {
             BuildStages.OPENING: 2,  # Assume rush. Attack with whatever we've got.
-            BuildStages.EARLY_GAME: 18,  # Only attack if we banked up some units early on
+            BuildStages.EARLY_GAME: 24,  # Only attack if we banked up some units early on
             BuildStages.MID_GAME: 55,  # Attack when a sizeable army is gained
             BuildStages.LATE_GAME: 75,  # Attack when a sizeable army is gained
         }[build_stage]
