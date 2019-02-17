@@ -458,8 +458,7 @@ class MicroManager(Manager):
 
             # Messages indicating that we should unroot and reposition spine crawlers
             # Reposition spine crawlers when a hatchery is completed
-            if message is Messages.UNROOT_ALL_SPINECRAWLERS \
-                    or (message is Messages.STRUCTURE_COMPLETE and val.type_id is const.HATCHERY):
+            if message is Messages.UNROOT_ALL_SPINECRAWLERS:
                 self.ack(message)
 
                 rooted_spine_crawlers = self.bot.units(const.SPINECRAWLER).ready
