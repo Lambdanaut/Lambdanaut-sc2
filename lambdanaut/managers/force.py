@@ -242,7 +242,7 @@ class ForceManager(StatefulManager):
 
                 # Workers attack enemy
                 ground_enemies = [enemy for enemy in enemies_nearby if not enemy.is_flying]
-                workers = self.bot.workers.closer_than(15, enemies_nearby.random.position)
+                workers = self.bot.workers.closer_than(15, enemies_nearby[0].position)
                 if workers and ground_enemies and \
                         len(workers) > len(ground_enemies):
                     for worker in workers:
