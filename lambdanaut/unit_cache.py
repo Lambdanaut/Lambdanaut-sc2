@@ -1,15 +1,40 @@
+from typing import List
+
+import sc2.unit
+import sc2.position
+
 from collections import deque
 
+
 class UnitCached(object):
-    health_percentage = 0.001
-    shield_percentage = 0.001
 
-    is_taking_damage = False
-
-    # Tracks last 10 positions of unit
+    # Maximum length of self.last_positions deque list
     last_positions_maxlen = 10
-    last_positions = None
 
-    def __init__(self):
-        # Initialize mutable variables
-        self.last_positions = deque(maxlen=self.last_positions_maxlen)
+    def __init__(self, unit: sc2.unit.Unit):
+        self.snapshot = unit
+
+        self.last_positions: List[sc2.position.Point2] = deque(maxlen=self.last_positions_maxlen)
+        self.last_positions.append(unit.position)
+
+    def update(self, unit):
+        # Update last positions
+        self.last_positions.append(unit.position)
+
+        # Compare its health/shield since last step, to find out if it has taken any damage
+        if unit.health_percentage < self.snapshot.health_percentage or \
+                unit.shield_percentage < self.snapshot.shield_percentage:
+            self.is_taking_damage = True
+        else:
+            self.is_taking_damage = False
+
+        # Update snapshot
+        self.snapshot = unit
+
+    def __getattr__(self, item):
+        """Passes calls down to the snapshot"""
+
+        try:
+            return self.__getattribute__(item)
+        except AttributeError:
+            return getattr(self.snapshot, item)

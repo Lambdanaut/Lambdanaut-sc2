@@ -11,7 +11,7 @@ from .client import Client
 from .player import Human, Bot
 from .data import Race, Difficulty, Result, ActionResult, CreateGameError
 from .game_state import GameState
-from .protocol import ConnectionAlreadyClosed
+from .protocol import ConnectionAlreadyClosed, ProtocolError
 
 class SlidingTimeWindow:
     def __init__(self, size: int):
@@ -92,11 +92,19 @@ async def _play_game_ai(client, player_id, ai, realtime, step_time_limit, game_t
     game_info = await client.get_game_info()
 
     ai._prepare_start(client, player_id, game_info, game_data)
-    ai.on_start()
+    try:
+        ai.on_start()
+    except Exception as e:
+        logger.exception(f"AI on_start threw an error")
+        logger.error(f"resigning due to previous error")
+        ai.on_end(Result.Defeat)
+        return Result.Defeat
 
     iteration = 0
     while True:
         state = await client.observation()
+        logger.debug(f"Score: {state.observation.observation.score.score}")
+
         if client._game_result:
             ai.on_end(client._game_result[player_id])
             return client._game_result[player_id]
@@ -112,7 +120,7 @@ async def _play_game_ai(client, player_id, ai, realtime, step_time_limit, game_t
         if iteration == 0:
             ai._prepare_first_step()
 
-        logger.debug(f"Running AI step, it={iteration} {gs.game_loop * 0.725 * (1 / 16):.2f}s)")
+        logger.debug(f"Running AI step, it={iteration} {gs.game_loop * 0.725 * (1 / 16):.2f}s")
 
         try:
             await ai.issue_events()
@@ -160,6 +168,15 @@ async def _play_game_ai(client, player_id, ai, realtime, step_time_limit, game_t
                             time_penalty_cooldown = int(time_penalty)
                             time_window.clear()
         except Exception as e:
+            if isinstance(e, ProtocolError) and e.is_game_over_error:
+                if realtime:
+                    return None
+                result = client._game_result[player_id]
+                if result is None:
+                    log.error("Game over, but no results gathered")
+                    raise
+                return result
+
             # NOTE: this message is caught by pytest suite
             logger.exception(f"AI step threw an error") # DO NOT EDIT!
             logger.error(f"resigning due to previous error")
@@ -180,8 +197,8 @@ async def _play_game_ai(client, player_id, ai, realtime, step_time_limit, game_t
 async def _play_game(player, client, realtime, portconfig, step_time_limit=None, game_time_limit=None, rgb_render_config=None):
     assert isinstance(realtime, bool), repr(realtime)
 
-    player_id = await client.join_game(player.race, portconfig=portconfig, rgb_render_config=rgb_render_config)
-    logging.info(f"Player id: {player_id}")
+    player_id = await client.join_game(player.name, player.race, portconfig=portconfig, rgb_render_config=rgb_render_config)
+    logging.info(f"Player id: {player_id} ({player.name})")
 
     if isinstance(player, Human):
         result = await _play_game_human(client, player_id, realtime, game_time_limit)

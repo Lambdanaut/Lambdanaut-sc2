@@ -24,7 +24,7 @@ from lambdanaut.const2 import Messages
 from lambdanaut.builds import Builds
 
 
-VERSION = '2.6'
+VERSION = '2.6.1'
 DEBUG = True
 BUILD = Builds.EARLY_GAME_DEFAULT_OPENER
 
@@ -70,7 +70,7 @@ class LambdaBot(sc2.BotAI):
         self.army_clusters = clustering.get_fresh_clusters([], n=6)
 
         # Our enemy clusters
-        self.enemy_clusters = clustering.get_fresh_clusters([], n=3)
+        self.enemy_clusters = clustering.get_fresh_clusters([], n=5)
 
     async def on_step(self, iteration):
         self.iteration = iteration
@@ -198,15 +198,17 @@ class LambdaBot(sc2.BotAI):
 
         # Create Units every 15 iterations
         if self.iteration % 15 == 0:
-              hatch = self.units(const.HATCHERY)
-              # await self._client.debug_create_unit([[const.ZERGLING, 6, hatch.random.position + Point2((11, 0)), 1]])
-              # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
-              # await self._client.debug_create_unit([[const.ZERGLING, 7, hatch.random.position + Point2((6, 0)), 2]])
-              # await self._client.debug_create_unit([[const.ROACH, 1, hatch.random.position + Point2((11, 0)), 1]])
-              # await self._client.debug_create_unit([[const.ROACH, 2, hatch.random.position + Point2((6, 0)), 2]])
+
+            hatch = self.units(const.HATCHERY)
+            # await self._client.debug_create_unit([[const.ZERGLING, 1, self.start_location - Point2((3, 0)), 1]])
+            # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
+            # await self._client.debug_create_unit([[const.ZERGLING, 7, hatch.random.position + Point2((6, 0)), 2]])
+            # await self._client.debug_create_unit([[const.ROACH, 1, hatch.random.position + Point2((11, 0)), 1]])
+            # await self._client.debug_create_unit([[const.ROACH, 2, hatch.random.position + Point2((6, 0)), 2]])
 
         # Create banelings and zerglings every 15 steps
-        # For test micro maps
+        # For testing micro maps
+
         # friendly = self.units
         # enemy = self.known_enemy_units
         # if not friendly or not enemy:
@@ -215,13 +217,12 @@ class LambdaBot(sc2.BotAI):
         #     if friendly | enemy:
         #         await self._client.debug_kill_unit(friendly | enemy)
         #
-        #     await self._client.debug_create_unit([[const.DRONE, 30, self.start_location + Point2((5, 0)), 1]])
-        #     await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((4, 0)), 1]])
-            # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
-        #     await self._client.debug_create_unit([[const.ZERGLING, 25, self.start_location + Point2((7, 0)), 2]])
-            # await self._client.debug_create_unit([[const.ZERGLING, 30, self.start_location + Point2((2, 0)), 2]])
-            # await self._client.debug_create_unit([[const.ROACH, 1, hatch.random.position + Point2((11, 0)), 1]])
-            # await self._client.debug_create_unit([[const.ROACH, 2, hatch.random.position + Point2((6, 0)), 2]])
+        #     # await self._client.debug_create_unit([[const.DRONE, 30, self.start_location + Point2((5, 0)), 1]])
+        #     # await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((4, 0)), 1]])
+        #     # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
+        #     await self._client.debug_create_unit([[const.HATCHERY, 1, self.start_location - Point2((9, 0)), 1]])
+        #     await self._client.debug_create_unit([[const.ZERGLING, 5, self.start_location + Point2((7, 0)), 2]])
+        #     await self._client.debug_create_unit([[const.SPINECRAWLER, 6, self.start_location + Point2((8, 0)), 2]])
 
         class Green:
             r = 0
@@ -258,7 +259,7 @@ class LambdaBot(sc2.BotAI):
         our_army_types = const2.ZERG_ARMY_UNITS | {const.SPINECRAWLER, const.QUEEN}
 
         our_army = self.units(our_army_types)
-        enemy_units = self.known_enemy_units.filter(lambda u: u.is_visible)
+        enemy_units = self.known_enemy_units
 
         if our_army:
             clustering.k_means_update(self.army_clusters, our_army)
@@ -270,31 +271,30 @@ class LambdaBot(sc2.BotAI):
         """
         Updates the friendly units and enemy units caches
         """
+        # Update cached values and create new cached units
         for units, cache in zip((self.units, self.known_enemy_units),
                                 (self.unit_cache, self.enemy_cache)):
             for unit in units:
                 # If we already remember this unit
                 cached_unit = cache.get(unit.tag)
                 if cached_unit:
-
-                    # Compare its health/shield since last step, to find out if it has taken any damage
-                    if unit.health_percentage < cached_unit.health_percentage or \
-                            unit.shield_percentage < cached_unit.shield_percentage:
-                        cached_unit.is_taking_damage = True
-                    else:
-                        cached_unit.is_taking_damage = False
-
                     # Update cached unit health and shield
-                    cached_unit.health_percentage = unit.health_percentage
-                    cached_unit.shield_percentage = unit.shield_percentage
-                    cached_unit.last_positions.append(unit.position)
+                    cached_unit.update(unit)
 
                 else:
-                    new_cached_unit = unit_cache.UnitCached()
-                    new_cached_unit.health_percentage = unit.health_percentage
-                    new_cached_unit.shield_percentage = unit.shield_percentage
-                    new_cached_unit.last_positions.append(unit.position)
+                    new_cached_unit = unit_cache.UnitCached(unit)
                     cache[unit.tag] = new_cached_unit
+
+        # Forget enemy cached units that have moved to a new location
+        cached_enemy_tags_to_delete = set()
+        for cached_unit in self.enemy_cache.values():
+            position = cached_unit.position
+            if self.is_visible(position):
+                cached_unit_snapshot = self.known_enemy_units.find_by_tag(cached_unit.tag)
+                if not cached_unit_snapshot:
+                    cached_enemy_tags_to_delete.add(cached_unit.tag)
+        for cached_tag in cached_enemy_tags_to_delete:
+            del self.enemy_cache[cached_tag]
 
     def publish(self, manager, message_type: const2.Messages, value: Optional[Any] = None):
         """
@@ -489,8 +489,12 @@ class LambdaBot(sc2.BotAI):
         """
 
         default_dps_map = {
-            const.BANELING: 13,
+            const.BANELING: 15,
             const.BUNKER: 30,
+            const.HIGHTEMPLAR: 22,
+            const.INFESTOR: 22,
+            const.DISRUPTOR: 25,
+            const.VIPER: 20,
         }
 
         default_dps = default_dps_map.get(unit.type_id)

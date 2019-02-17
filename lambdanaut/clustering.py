@@ -7,12 +7,8 @@ from sc2.position import Point2
 
 
 class Cluster(list):
-    def __init__(self, position: Point2, *args: Union["Units", List["Point2"]]):
-        """
+    def __init__(self, position: Point2, *args: Union[Units, List[Point2], List[Units]]):
 
-        :param position:
-        :param args:
-        """
         super(Cluster, self).__init__(*args)
 
         self.position = position
@@ -125,5 +121,5 @@ def k_means_update(clusters: List[Cluster], data):
         nearest_cluster = cluster.position.closest(clusters_excluding_this_cluster)
 
         if cluster and nearest_cluster and \
-                cluster.position.distance_to(nearest_cluster.position) < 18:
+                cluster.position.distance_to(nearest_cluster.position) < 15:
             cluster.merge(nearest_cluster)

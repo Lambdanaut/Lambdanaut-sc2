@@ -11,16 +11,18 @@
 
 ## HIGH PRIORITY
 
-  * Retreat from battles when our cluster is weaker than their cluster
-
-  * Write a better heuristic for determining stronger army compositions
- 
   * Test micro on a test map. Get better micro through this.
+  
+  * Write mutalisk micro and re-add mutalisk to ling-bane-muta build
+  
+  * Integrate remembered enemy units into clusters
+  
+  * Better defending micro. Need to beat cheezerg's cheezy cheese 
+
+## MEDIUM PRIORITY
 
   * Make midgame rush to brood lords not sucky
   
-## MEDIUM PRIORITY
-
   * Build a recurrent neural net that learns to micro Mutalisks
     * Goal: Kill as many enemy units as possible before losing all mutalisks
 
@@ -28,7 +30,7 @@
     * If priority target is on the other side of a hard wall, zerglings may not attack wall to get to it. 
     * Haven't reproduce this yet. Just a theory
   
-  * Turn back overlords if 3 raxes or over 3 marines are scouted with first scout
+  * Turn back overlords if 2 raxes or over 3 marines are scouted with first scout
     * Also enter pool defensive build
   
   * Search for further enemy expansions and structures.
@@ -182,3 +184,8 @@
     * `This might be solved? I'm not sure. The code looks fine`
 
   * Clean up code. Separate managers into their own files. :o
+
+  * Retreat from battles when our cluster is weaker than their cluster
+
+  * Write a better heuristic for determining stronger army compositions
+ 
