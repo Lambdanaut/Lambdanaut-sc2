@@ -306,7 +306,8 @@ class ForceManager(StatefulManager):
                         if army_strength >= 0:
                             # Attack enemy if we stand a chance
                             for unit in army_cluster:
-                                if unit.type_id not in const2.NON_COMBATANTS:
+                                if unit.type_id not in const2.NON_COMBATANTS \
+                                        and unit.tag not in self.bot.townhall_queens.values():
                                     target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
 
                                     if target and unit.weapon_cooldown <= 0:

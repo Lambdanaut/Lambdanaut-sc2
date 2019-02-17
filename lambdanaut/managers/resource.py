@@ -28,9 +28,6 @@ class ResourceManager(Manager):
 
         self._recent_commands = ExpiringList()
 
-        # Townhall tag -> Queen tag mapping of what queens belong to what townhalls
-        self._townhall_queens = {}
-
         # Sets the number of workers to mine vespene gas per geyser
         self._ideal_vespene_worker_count: Optional[int] = None
 
@@ -195,14 +192,14 @@ class ResourceManager(Manager):
 
         if queens.exists:
             for townhall in townhalls:
-                queen_tag = self._townhall_queens.get(townhall.tag)
+                queen_tag = self.bot.townhall_queens.get(townhall.tag)
 
                 if queen_tag is None:
                     # Tag a queen to the townhall
-                    untagged_queens = queens.tags_not_in(self._townhall_queens.values())
+                    untagged_queens = queens.tags_not_in(self.bot.townhall_queens.values())
                     if untagged_queens:
                         queen = untagged_queens[0]
-                        self._townhall_queens[townhall.tag] = queen.tag
+                        self.bot.townhall_queens[townhall.tag] = queen.tag
                     else:
                         # No queens available for this townhall. Continue to next townhall
                         continue
@@ -211,7 +208,7 @@ class ResourceManager(Manager):
 
                     if queen is None:
                         # Queen died! Untag it
-                        del self._townhall_queens[townhall.tag]
+                        del self.bot.townhall_queens[townhall.tag]
                     else:
                         if queen.is_idle:
                             # Move queen to its townhall

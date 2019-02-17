@@ -57,6 +57,9 @@ class LambdaBot(sc2.BotAI):
         # This is cleared every time an attack ends
         self.occupied_units = set()
 
+        # Townhall tag -> Queen tag mapping of what queens belong to what townhalls
+        self.townhall_queens = {}
+
         # Map of all our unit's tags to UnitCached objects with their remembered
         # properties (Last health, shields, location, etc)
         self.unit_cache = {}

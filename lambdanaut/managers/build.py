@@ -264,7 +264,7 @@ class BuildManager(Manager):
             unit = at_least.unit_type
             amount_required = at_least.n
 
-            if existing_unit_counts[unit] < amount_required:
+            if build_order_counts[unit] < amount_required:
                 if isinstance(unit, builds.SpecialBuildTarget):
                     return self.parse_special_build_target(unit, existing_unit_counts, build_order_counts)
                 else:
