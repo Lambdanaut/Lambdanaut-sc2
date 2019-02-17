@@ -230,9 +230,9 @@ class ForceManager(StatefulManager):
         """
 
         for th in self.bot.townhalls:
-            enemies_nearby = self.bot.known_enemy_units.closer_than(35, th.position)
+            enemies_nearby = [u.snapshot for u in self.bot.enemy_cache if u.distance_to(th) < 35]
 
-            if enemies_nearby.exists:
+            if enemies_nearby:
                 # Publish message if there are multiple enemies
                 if not self.published_defending_against_multiple_enemies and \
                         len(enemies_nearby) > 4:
@@ -240,9 +240,9 @@ class ForceManager(StatefulManager):
                     self.published_defending_against_multiple_enemies = True
 
                 # Workers attack enemy
-                ground_enemies = enemies_nearby.not_flying
+                ground_enemies = [enemy for enemy in enemies_nearby if enemy.not_flying]
                 workers = self.bot.workers.closer_than(15, enemies_nearby.random.position)
-                if workers and ground_enemies.exists and \
+                if workers and ground_enemies and \
                         len(workers) > len(ground_enemies):
                     for worker in workers:
                         if worker.tag in self.workers_defending:
@@ -264,10 +264,10 @@ class ForceManager(StatefulManager):
                 queens = self.bot.units(const.QUEEN)
                 if queens and len(enemies_nearby) > 2:
                     # Only send the closest queen if the enemy is only a couple units
-                    queen = queens.closest_to(enemies_nearby.random.position)
+                    queen = queens.closest_to(enemies_nearby[0].position)
                     target = self.bot.closest_and_most_damaged(enemies_nearby, queen)
 
-                    if target and queen.distance_to(target) > 18 and not queen.weapon_cooldown:
+                    if target and queen.distance_to(target) > 8 and not queen.weapon_cooldown:
                         if target.distance_to(queen) < queen.ground_range:
                             # Target
                             self.bot.actions.append(queen.attack(target))
@@ -315,8 +315,6 @@ class ForceManager(StatefulManager):
                             # If enemy is greater regroup to center of cluster towards friendly townhall
                             for unit in army_cluster:
                                 if unit.type_id not in const2.NON_COMBATANTS:
-                                    closest_enemy = enemies_nearby.closest_to(unit.position)
-                                    # if closest_enemy.distance_to(unit) < 8:
                                     nearest_townhall = self.bot.townhalls.closest_to(unit.position)
                                     if unit.distance_to(nearest_townhall) > 6:
                                         towards_townhall = army_cluster.position.towards(nearest_townhall, +2)
