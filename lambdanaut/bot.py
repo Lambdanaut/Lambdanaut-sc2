@@ -24,8 +24,8 @@ from lambdanaut.const2 import Messages
 from lambdanaut.builds import Builds
 
 
-VERSION = '2.6.1'
-DEBUG = True
+VERSION = '2.6.2'
+DEBUG = False
 BUILD = Builds.EARLY_GAME_DEFAULT_OPENER
 
 
@@ -48,7 +48,7 @@ class LambdaBot(sc2.BotAI):
         self.actions = []
 
         # Message subscriptions
-        self._message_subscriptions: Dict[const2.Messages, Manager] = defaultdict(list)
+        self._message_subscriptions: Dict[const2.Messages, List[Manager]] = defaultdict(list)
 
         # Global Intel
         self.enemy_start_location = None
@@ -67,10 +67,10 @@ class LambdaBot(sc2.BotAI):
         self.enemy_cache = {}
 
         # Our army clusters
-        self.army_clusters = clustering.get_fresh_clusters([], n=6)
+        self.army_clusters = clustering.get_fresh_clusters([], n=8)
 
         # Our enemy clusters
-        self.enemy_clusters = clustering.get_fresh_clusters([], n=5)
+        self.enemy_clusters = clustering.get_fresh_clusters([], n=8)
 
     async def on_step(self, iteration):
         self.iteration = iteration
@@ -256,16 +256,16 @@ class LambdaBot(sc2.BotAI):
         Updates the position of k-means clusters we keep of units
         """
 
-        our_army_types = const2.ZERG_ARMY_UNITS | {const.SPINECRAWLER, const.QUEEN}
+        types_to_exclude = {const.OVERLORD}
 
-        our_army = self.units(our_army_types)
-        enemy_units = self.known_enemy_units
+        our_army = [u for u in self.unit_cache.values() if u.type_id not in types_to_exclude]
+        enemy_army = [u for u in self.enemy_cache.values() if u.type_id not in types_to_exclude]
 
         if our_army:
             clustering.k_means_update(self.army_clusters, our_army)
 
-        if enemy_units:
-            clustering.k_means_update(self.enemy_clusters, enemy_units)
+        if enemy_army:
+            clustering.k_means_update(self.enemy_clusters, enemy_army)
 
     def update_unit_caches(self):
         """

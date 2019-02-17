@@ -392,7 +392,7 @@ class MicroManager(Manager):
             enemy_army_center = nearest_enemy_cluster.position
 
             types_not_to_move = {const.LURKERMP}
-            nearby_army = [u for u in army_cluster if u.type_id not in types_not_to_move]
+            nearby_army = [u.snapshot for u in army_cluster if u.type_id not in types_not_to_move]
             if army_center.distance_to(enemy_army_center) < 17:
                 # Micro against enemy clusters
                 if nearby_army and nearest_enemy_cluster:
@@ -430,7 +430,7 @@ class MicroManager(Manager):
                                     self.bot.actions.append(unit.move(towards_enemy))
 
                             # Handle combat priority targeting
-                            elif not unit.weapon_cooldown:
+                            elif not unit.weapon_cooldown or unit.is_attacking:
                                 priorities = const2.WORKERS | {const.SIEGETANK, const.SIEGETANKSIEGED, const.QUEEN,
                                                                const.COLOSSUS, const.MEDIVAC, const.WARPPRISM}
                                 await self.manage_priority_targeting(unit, attack_priorities=priorities)

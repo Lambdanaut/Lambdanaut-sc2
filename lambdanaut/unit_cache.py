@@ -13,6 +13,7 @@ class UnitCached(object):
 
     def __init__(self, unit: sc2.unit.Unit):
         self.snapshot = unit
+        self.tag = unit.tag
 
         self.last_positions: List[sc2.position.Point2] = deque(maxlen=self.last_positions_maxlen)
         self.last_positions.append(unit.position)
@@ -30,6 +31,7 @@ class UnitCached(object):
 
         # Update snapshot
         self.snapshot = unit
+        self.tag = unit.tag
 
     def __getattr__(self, item):
         """Passes calls down to the snapshot"""
