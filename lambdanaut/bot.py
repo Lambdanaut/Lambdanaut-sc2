@@ -8,6 +8,7 @@ import sc2.units
 import sc2.constants as const
 from sc2.position import Point2, Point3
 
+from lambdanaut import VERSION, DEBUG
 import lambdanaut.builds as builds
 import lambdanaut.const2 as const2
 import lambdanaut.clustering as clustering
@@ -24,8 +25,6 @@ from lambdanaut.const2 import Messages
 from lambdanaut.builds import Builds
 
 
-VERSION = '2.6.2'
-DEBUG = False
 BUILD = Builds.EARLY_GAME_DEFAULT_OPENER
 
 
@@ -422,7 +421,7 @@ class LambdaBot(sc2.BotAI):
 
         return p1, p2, p3, p4
 
-    def adjacent_corners(self, rect, corner: sc2.position.Point2) -> Tuple[sc2.position.Point2]:
+    def adjacent_corners(self, rect, corner: Point2) -> Tuple[Point2, Point2]:
         """
         Returns the points of the adjacent corners of the given point in a rec
         """

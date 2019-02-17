@@ -15,8 +15,6 @@
   
   * Write mutalisk micro and re-add mutalisk to ling-bane-muta build
   
-  * Integrate remembered enemy units into clusters
-  
   * Better defending micro. Need to beat cheezerg's cheezy cheese 
 
 ## MEDIUM PRIORITY
@@ -189,3 +187,5 @@
 
   * Write a better heuristic for determining stronger army compositions
  
+  * Integrate remembered enemy units into clusters
+  
