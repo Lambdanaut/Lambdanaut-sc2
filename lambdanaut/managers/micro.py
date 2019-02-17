@@ -305,7 +305,7 @@ class MicroManager(Manager):
             if townhalls.exists:
                 townhall = townhalls.closest_to(self.bot.enemy_start_location)
 
-                nearby_spine_crawlers = rooted_spine_crawlers.closer_than(18, townhall).filter(
+                nearby_spine_crawlers = spine_crawlers.closer_than(18, townhall).filter(
                     lambda sc: sc.position3d.z <= townhall.position3d.z)
 
                 # Unroot spine crawlers that are far away from the front expansions
@@ -457,7 +457,6 @@ class MicroManager(Manager):
         for message, val in self.messages.items():
 
             # Messages indicating that we should unroot and reposition spine crawlers
-            # Reposition spine crawlers when a hatchery is completed
             if message is Messages.UNROOT_ALL_SPINECRAWLERS:
                 self.ack(message)
 
