@@ -247,8 +247,7 @@ EARLY_GAME_POOL_FIRST_DEFENSIVE = [
     IfHasThenDontBuild(ROACHWARREN, BANELING, 4),  # Build 4 banelings until we get a roach warren
     CanAfford(ZERGLINGMOVEMENTSPEED),
     IfHasThenDontBuild(ROACHWARREN, BANELING, 5),
-    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 8),
-    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 10),
+    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 12),
     PublishMessage(Messages.UNROOT_ALL_SPINECRAWLERS),  # Unroot all spine crawlers
 ]
 

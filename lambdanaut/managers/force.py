@@ -230,7 +230,8 @@ class ForceManager(StatefulManager):
         """
 
         for th in self.bot.townhalls:
-            enemies_nearby = [u.snapshot for u in self.bot.enemy_cache if u.distance_to(th) < 35]
+            enemies_nearby = [u.snapshot for u in self.bot.enemy_cache.values()
+                              if u.distance_to(th) < 35]
 
             if enemies_nearby:
                 # Publish message if there are multiple enemies
@@ -240,7 +241,7 @@ class ForceManager(StatefulManager):
                     self.published_defending_against_multiple_enemies = True
 
                 # Workers attack enemy
-                ground_enemies = [enemy for enemy in enemies_nearby if enemy.not_flying]
+                ground_enemies = [enemy for enemy in enemies_nearby if not enemy.is_flying]
                 workers = self.bot.workers.closer_than(15, enemies_nearby.random.position)
                 if workers and ground_enemies and \
                         len(workers) > len(ground_enemies):
