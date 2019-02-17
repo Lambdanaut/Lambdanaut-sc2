@@ -399,7 +399,6 @@ class MicroManager(Manager):
                     army_strength = self.bot.relative_army_strength(army_cluster, nearest_enemy_cluster)
 
                     for unit in nearby_army:
-                        unit = unit.snapshot  # Extract snapshot from cache object
                         if unit.movement_speed > 0 and \
                                 not unit.is_moving:
                             nearest_enemy_unit = unit.position.closest(nearest_enemy_cluster)
