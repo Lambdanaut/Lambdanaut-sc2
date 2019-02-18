@@ -194,7 +194,7 @@ class ResourceManager(Manager):
             for townhall in townhalls:
                 queen_tag = self.bot.townhall_queens.get(townhall.tag)
 
-                if queen_tag is None:
+                if queen_tag is None and len(self.bot.townhall_queens) < 5:
                     # Tag a queen to the townhall
                     untagged_queens = queens.tags_not_in(self.bot.townhall_queens.values())
                     if untagged_queens:
