@@ -187,6 +187,7 @@ EARLY_GAME_DEFAULT_OPENER = [
 
 # Ravager all-in
 RAVAGER_ALL_IN = [
+    PublishMessage(Messages.DONT_DEFEND),  # Publish a message saying we shouldn't switch to DEFENDING
     PullWorkersOffVespeneUntil(ROACH, n=2),  # Mine with only 2 workers until we have a roach
     HATCHERY,  # 1
     OVERLORD,  # 1

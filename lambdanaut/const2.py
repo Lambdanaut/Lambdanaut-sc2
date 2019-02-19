@@ -159,9 +159,10 @@ class Messages(enum.Enum):
     PULL_WORKERS_OFF_VESPENE = 25  # Value is int of workers to mine vespene. None if return to default.
     UNROOT_ALL_SPINECRAWLERS = 26  # Message indicating we should uproot and reposition spinecrawlers
 
-    # STATE MACHINE CHANGE MESSAGES
+    # STATE MACHINE
     STATE_ENTERED = 27  # Value is State being left
     STATE_EXITED = 28  # Value is State entered
+    DONT_DEFEND = 28  # Indicates that we shouldn't ever enter DEFENDING forces state
 
 
 # Build Manager Commands

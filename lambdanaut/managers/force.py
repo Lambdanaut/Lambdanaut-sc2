@@ -1,3 +1,5 @@
+from typing import List
+
 import sc2.constants as const
 
 from lambdanaut.builds import BuildStages
@@ -84,8 +86,12 @@ class ForceManager(StatefulManager):
         # Set of roaches attacking mineral lines
         self.roaches_harassing = set()
 
+        # If this flag is false, we wont switch to DEFENDING state
+        self.allow_defending = True
+
         # Subscribe to messages
         self.subscribe(Messages.NEW_BUILD_STAGE)
+        self.subscribe(Messages.DONT_DEFEND)
         self.subscribe(Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION)
         self.subscribe(Messages.DRONE_LEAVING_TO_CREATE_HATCHERY)
 
@@ -93,7 +99,7 @@ class ForceManager(StatefulManager):
         """Given a build stage, returns the army value needed to begin an attack"""
         return {
             BuildStages.OPENING: 2,  # Assume rush. Attack with whatever we've got.
-            BuildStages.EARLY_GAME: 24,  # Only attack if we banked up some units early on
+            BuildStages.EARLY_GAME: 22,  # Only attack if we banked up some units early on
             BuildStages.MID_GAME: 55,  # Attack when a sizeable army is gained
             BuildStages.LATE_GAME: 75,  # Attack when a sizeable army is gained
         }[build_stage]
@@ -381,9 +387,9 @@ class ForceManager(StatefulManager):
             # Take 4 banelings if we have 4, otherwise just don't harass
             # This returns a list (not a Units Group)
             try:
-                harass_banelings: List = banelings.take(4, True)
+                harass_banelings: List = banelings.take(4)
             except AssertionError:
-                # This SHOULD only happen if we don't have 4 banelings
+                # Backwards compatibility with older python-sc2 versions
                 harass_banelings = []
             if harass_banelings:
                 enemy_structures = self.bot.known_enemy_structures
@@ -621,6 +627,11 @@ class ForceManager(StatefulManager):
                 new_distance_to_moving_to_attack = self.get_army_center_distance_to_attack(val)
                 self.distance_to_moving_to_attack = new_distance_to_moving_to_attack
 
+            if message in {Messages.DONT_DEFEND}:
+                self.ack(message)
+
+                self.allow_defending = False
+
         # HOUSEKEEPING
         if self.state == ForcesStates.HOUSEKEEPING:
 
@@ -697,7 +708,7 @@ class ForceManager(StatefulManager):
                     return await self.change_state(ForcesStates.HOUSEKEEPING)
 
                 # Retreat if our entire army is weaker than the army we see from them.
-                enemy = self.bot.known_enemy_units().exclude_type(const2.WORKERS).not_structure
+                enemy = self.bot.known_enemy_units.exclude_type(const2.WORKERS).not_structure
                 if enemy:
                     relative_army_strength = self.bot.relative_army_strength(army, enemy)
                     if relative_army_strength < -4:
@@ -732,7 +743,7 @@ class ForceManager(StatefulManager):
                 self.publish(Messages.ARMY_COULDNT_FIND_ENEMY_BASE)
 
         # Switching to DEFENDING from any other state
-        if self.state != ForcesStates.DEFENDING:
+        if self.state != ForcesStates.DEFENDING and self.allow_defending:
             for th in self.bot.townhalls:
                 enemies_nearby = self.bot.known_enemy_units.closer_than(
                     30, th.position).exclude_type(const2.ENEMY_NON_ARMY)

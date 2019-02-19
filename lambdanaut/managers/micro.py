@@ -129,7 +129,7 @@ class MicroManager(Manager):
         # Unburrow banelings if enemy nearby
         for baneling in burrowed_banelings:
             nearby_enemy_units = self.bot.known_enemy_units.closer_than(2, baneling)
-            if len(nearby_enemy_units) > 3:
+            if len(nearby_enemy_units) > 4:
                 # Unburrow baneling
                 self.bot.actions.append(baneling(const.BURROWUP_BANELING))
 
@@ -365,17 +365,14 @@ class MicroManager(Manager):
         """Avoid incoming bile attacks"""
         for bile in filter(lambda e: e.id == const.EffectId.RAVAGERCORROSIVEBILECP,
                            self.bot.state.effects):
-            try:
-                position = bile.positions[0]
-            except IndexError:
-                pass
 
-            units = self.bot.units.closer_than(1.5, position)
+            for position in bile.positions:
+                units = self.bot.units.closer_than(1.5, position)
 
-            if units.exists:
-                for unit in units:
-                    target = position.towards(unit.position, 2)
-                    self.bot.actions.append(unit.move(target))
+                if units.exists:
+                    for unit in units:
+                        target = position.towards(unit.position, 2)
+                        self.bot.actions.append(unit.move(target))
 
     async def manage_priority_targeting(self, unit, attack_priorities=None):
         """Handles combat priority targeting for the given unit"""

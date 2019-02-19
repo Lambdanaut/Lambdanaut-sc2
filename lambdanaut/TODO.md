@@ -24,6 +24,9 @@
 
   * Make midgame rush to brood lords not sucky
   
+  * Create an influence map to use for strategizing and micro
+    * https://aigamedev.com/open/tutorial/influence-map-mechanics/
+  
   * Build a recurrent neural net that learns to micro Mutalisks
     * Goal: Kill as many enemy units as possible before losing all mutalisks
 

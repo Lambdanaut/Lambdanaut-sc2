@@ -15,6 +15,13 @@ import lambdanaut.bot as bot
 datetime_str = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M")
 
 
+BUILDS = [
+    sc2.AIBuild.RandomBuild,
+    sc2.AIBuild.Rush,
+    sc2.AIBuild.Timing,
+    sc2.AIBuild.Power,
+    sc2.AIBuild.Macro,
+    sc2.AIBuild.Air, ]
 MAPS = [
     'AutomatonLE',
     'DarknessSanctuaryLE',
@@ -22,24 +29,34 @@ MAPS = [
     'ParaSiteLE',
     'CeruleanFallLE',
     'BlueshiftLE',
-    'PortAleksanderLE',]
+    'PortAleksanderLE', ]
 
 MAP_NAME = ""
 REALTIME = False
 DIFFICULTY = sc2.Difficulty.CheatInsane
+
+# BUILD = sc2.AIBuild.RandomBuild
+BUILD = sc2.AIBuild.Rush
+# BUILD = sc2.AIBuild.Timing
+# BUILD = sc2.AIBuild.Power
+# BUILD = sc2.AIBuild.Macro
+# BUILD = sc2.AIBuild.Air
+
 # DIFFICULTY = sc2.Difficulty.CheatMoney
 # DIFFICULTY = sc2.Difficulty.CheatVision
 # DIFFICULTY = sc2.Difficulty.VeryHard
 # DIFFICULTY = sc2.Difficulty.Hard
 # DIFFICULTY = sc2.Difficulty.Medium
 # DIFFICULTY = sc2.Difficulty.Easy
+
 RACE = sc2.Race.Zerg
 ENEMY_RACE = sc2.Race.Zerg
 REPLAY_NAME = os.path.join("replays", "last_lambdanaut_replay{}.*.sc2replay".format(datetime_str))
 
-
 if not MAP_NAME:
     MAP_NAME = random.choice(MAPS)
+if not BUILD:
+    BUILD = random.choice(BUILDS)
 
 
 # Start game
@@ -57,7 +74,7 @@ if __name__ == '__main__':
 
         player_config = [
             sc2.player.Bot(RACE, bot.LambdaBot()),
-            sc2.player.Computer(ENEMY_RACE, DIFFICULTY)
+            sc2.player.Computer(ENEMY_RACE, DIFFICULTY, BUILD)
         ]
 
         gen = sc2.main._host_game_iter(
