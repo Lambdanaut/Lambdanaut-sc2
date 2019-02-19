@@ -268,19 +268,20 @@ class ForceManager(StatefulManager):
                                         self.workers_defending.add(worker.tag)
 
                 # Have nearest queen defend
-                queens = self.bot.units(const.QUEEN)
-                if queens and len(enemies_nearby) < 3:
-                    # Only send the closest queen if the enemy is only a couple units
-                    queen = queens.closest_to(enemies_nearby[0].position)
-                    target = self.bot.closest_and_most_damaged(enemies_nearby, queen)
+                queen_tag = self.bot.townhall_queens.get(th.tag)
+                if queen_tag is not None:
+                    queen = self.bot.units.find_by_tag(queen_tag)
+                    if queen is not None and len(enemies_nearby) < 3:
+                        # Only send the closest queen if the enemy is only a couple units
+                        target = self.bot.closest_and_most_damaged(enemies_nearby, queen)
 
-                    if target and queen.distance_to(target) > 8 and not queen.weapon_cooldown:
-                        if target.distance_to(queen) < queen.ground_range:
-                            # Target
-                            self.bot.actions.append(queen.attack(target))
-                        else:
-                            # Position
-                            self.bot.actions.append(queen.attack(target.position))
+                        if target and 8 < queen.distance_to(target) < 15 and not queen.weapon_cooldown:
+                            if target.distance_to(queen) < queen.ground_range:
+                                self.bot.actions.append(queen.attack(target))
+                            else:
+                                self.bot.actions.append(queen.attack(target.position))
+                        elif queen.distance_to(th) > 10:
+                            self.bot.actions.append(queen.attack(th.position))
 
                 # # Have army defend
                 # army = self.bot.units(const2.ZERG_ARMY_UNITS)
@@ -711,11 +712,11 @@ class ForceManager(StatefulManager):
                 if army_value < self.army_value_to_attack * 0.4:
                     return await self.change_state(ForcesStates.HOUSEKEEPING)
 
-                # Retreat if our entire army is weaker than the army we see from them.
+                # Retreat if our entire army is weaker than the army we see from them and we're not near max
                 enemy = self.bot.known_enemy_units.exclude_type(const2.WORKERS).not_structure
                 if enemy:
                     relative_army_strength = self.bot.relative_army_strength(army, enemy, ignore_workers=True)
-                    if relative_army_strength < -3:
+                    if relative_army_strength < -3 and self.bot.supply_used < 170:
                         return await self.change_state(ForcesStates.RETREATING)
 
                 enemy_start_location = self.bot.enemy_start_location.position
