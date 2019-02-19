@@ -518,8 +518,9 @@ class LambdaBot(sc2.BotAI):
 
     def relative_army_strength(
             self,
-            u1: Union[clustering.Cluster, sc2.units.Units],
-            u2: Union[clustering.Cluster, sc2.units.Units]) -> float:
+            units_1: Union[clustering.Cluster, sc2.units.Units],
+            units_2: Union[clustering.Cluster, sc2.units.Units],
+            ignore_workers=False) -> float:
         """
         Returns a positive value if u1 is stronger, and negative if u2 is stronger.
         A value of +12 would be very good and a value of -12 would be very bad.
@@ -528,18 +529,28 @@ class LambdaBot(sc2.BotAI):
         https://en.wikipedia.org/wiki/Lanchester%27s_laws
         """
 
-        # Add in our nearby workers as army
-        u1_nearby_workers = self.units(const2.WORKERS).closer_than(14, u1.center)
-        # u2_nearby_workers = self.known_enemy_units(const2.WORKERS).closer_than(14, u2.center)
-
-        u1_nearby_workers_dps = sum(self.adjusted_dps(u) for u in u1_nearby_workers)
-        # u2_nearby_workers_dps = sum(self.adjusted_dps(u) for u in u2_nearby_drones)
+        # Filter out structures that can't attack
+        # Also filter out workers if ignore_workers is True
+        u1 = [u for u in units_1 if
+              (not u.is_structure or u.can_attack_ground or u.can_attack_air)
+              and (ignore_workers or u.type_id not in const2.WORKERS)]
+        u2 = [u for u in units_2
+              if (not u.is_structure or u.can_attack_ground or u.can_attack_air)
+              and (ignore_workers or u.type_id not in const2.WORKERS)]
 
         u1_dps = sum(self.adjusted_dps(u) for u in u1)
         u2_dps = sum(self.adjusted_dps(u) for u in u2)
 
-        u1_dps += u1_nearby_workers_dps
-        # u2_dps += u2_nearby_workers_dps
+        if not ignore_workers:
+            # Add in our nearby workers as army
+            u1_nearby_workers = self.units(const2.WORKERS).closer_than(14, units_1.center)
+            # u2_nearby_workers = self.known_enemy_units(const2.WORKERS).closer_than(14, u2.center)
+
+            u1_nearby_workers_dps = sum(self.adjusted_dps(u) for u in u1_nearby_workers)
+            # u2_nearby_workers_dps = sum(self.adjusted_dps(u) for u in u2_nearby_drones)
+
+            u1_dps += u1_nearby_workers_dps
+            # u2_dps += u2_nearby_workers_dps
 
         if u1_dps == 0 and u2_dps == 0:
             return 0

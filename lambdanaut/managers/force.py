@@ -124,7 +124,7 @@ class ForceManager(StatefulManager):
         if self.last_enemy_army_position is not None:
             # Use the location of the last seen enemy army, and group up away from that position
             target = self.last_enemy_army_position
-        elif enemy_structures.exists:
+        elif enemy_structures:
             # Use enemy structure
             target = enemy_structures.closest_to(self.bot.start_location).position
         else:
@@ -361,7 +361,7 @@ class ForceManager(StatefulManager):
         army = self.bot.units(army_units). \
             tags_not_in(self.bot.occupied_units)
 
-        if not army.exists:
+        if not army:
             return
 
         main_target = self.get_target()
@@ -383,7 +383,7 @@ class ForceManager(StatefulManager):
         # Do Baneling harass during attack
         banelings = self.bot.units(const.BANELING) \
             .tags_not_in(self.bot.occupied_units)
-        if banelings.exists:
+        if banelings:
             # Take 4 banelings if we have 4, otherwise just don't harass
             # This returns a list (not a Units Group)
             try:
@@ -394,12 +394,12 @@ class ForceManager(StatefulManager):
             if harass_banelings:
                 enemy_structures = self.bot.known_enemy_structures
 
-                if enemy_structures.exists:
+                if enemy_structures:
                     # Get expansion locations starting from enemy start location
                     enemy_townhalls = enemy_structures.of_type(
                         const2.TOWNHALLS)
 
-                    if enemy_townhalls.exists:
+                    if enemy_townhalls:
                         # Get the enemy townhall that we know of that is the furthest away from
                         # the closest enemy structure we know of. Hopefully this means they attack
                         # far away from where the main army will be attacking
@@ -415,7 +415,7 @@ class ForceManager(StatefulManager):
             burrowed_banelings = self.bot.units(const.BANELINGBURROWED)
             # Only burrow up to six banelings at a time
             if const.BURROW in self.bot.state.upgrades and \
-                    (not burrowed_banelings.exists or len(burrowed_banelings) < 4):
+                    (not burrowed_banelings or len(burrowed_banelings) < 4):
                 # Get the banelings that aren't harassing mineral lines
                 banelings = banelings.tags_not_in(self.banelings_harassing)
 
@@ -424,7 +424,7 @@ class ForceManager(StatefulManager):
                     banelings = banelings[:2]
 
                     army = self.bot.units(const2.ZERG_ARMY_UNITS)
-                    if army.exists:
+                    if army:
                         for baneling in banelings:
                             # Consider them harassing banelings for the moment
                             self.banelings_harassing.add(baneling.tag)
@@ -444,7 +444,7 @@ class ForceManager(StatefulManager):
 
         # Do burrow roach harass during attack
         roaches = self.bot.units(const.ROACH)
-        if roaches.exists and const.BURROW in self.bot.state.upgrades and \
+        if roaches and const.BURROW in self.bot.state.upgrades and \
                 const.UpgradeId.TUNNELINGCLAWS in self.bot.state.upgrades:
             # Get the roaches that aren't harassing mineral lines
             roaches = roaches.tags_not_in(self.roaches_harassing)
@@ -454,12 +454,12 @@ class ForceManager(StatefulManager):
                 roaches = roaches[:2]
 
                 enemy_structures = self.bot.known_enemy_structures
-                if enemy_structures.exists:
+                if enemy_structures:
                     # Get expansion locations starting from enemy start location
                     enemy_townhalls = enemy_structures.of_type(
                         const2.TOWNHALLS)
 
-                    if enemy_townhalls.exists:
+                    if enemy_townhalls:
                         # Get the enemy townhall that we know of that is the furthest away from
                         # the closest enemy structure we know of. Hopefully this means they attack
                         # far away from where the main army will be attacking
@@ -480,19 +480,19 @@ class ForceManager(StatefulManager):
 
         # Do Mutalisk harass during attack
         mutalisks = self.bot.units(const.MUTALISK)
-        if mutalisks.exists:
+        if mutalisks:
             dangerous_enemy_units = {const.PHOTONCANNON, const.SPORECRAWLER, const.MISSILETURRET}
 
             enemy_structures = self.bot.known_enemy_structures
 
-            if enemy_structures.exists:
+            if enemy_structures:
                 # Get expansion locations starting from enemy start location
                 enemy_townhalls = enemy_structures.of_type(
                     const2.TOWNHALLS).filter(
                     lambda th: enemy_structures.of_type(
                         dangerous_enemy_units).closer_than(7, th).empty)
 
-                if enemy_townhalls.exists:
+                if enemy_townhalls:
                     for mutalisk in mutalisks:
                         enemy_expansion = enemy_townhalls.random
                         self.bot.actions.append(mutalisk.move(enemy_expansion))
@@ -545,11 +545,11 @@ class ForceManager(StatefulManager):
         backline_army = army.exclude_type(frontline_army_units)
         frontline_army = army.of_type(frontline_army_units)
 
-        if not army.exists:
+        if not army:
             return
 
         enemy_structures = self.bot.known_enemy_structures
-        if enemy_structures.exists:
+        if enemy_structures:
             target = enemy_structures.closest_to(army.center).position
         else:
             target = self.bot.enemy_start_location
@@ -637,13 +637,14 @@ class ForceManager(StatefulManager):
 
             army = self.bot.units(const2.ZERG_ARMY_UNITS)
 
-            if army.exists:
+            if army:
                 # Value of the army
                 army_value = sum(const2.ZERG_ARMY_VALUE[unit.type_id] for unit in army)
 
-                relative_army_strength = self.bot.relative_army_strength(army, self.bot.enemy_cache.values())
+                relative_army_strength = self.bot.relative_army_strength(
+                    army, self.bot.enemy_cache.values(), ignore_workers=True)
 
-                if (relative_army_strength > 8 and len(army) > 4) \
+                if (relative_army_strength > 12 and len(army) > 4) \
                         or army_value > self.army_value_to_attack:
                     return await self.change_state(ForcesStates.MOVING_TO_ATTACK)
 
@@ -675,7 +676,7 @@ class ForceManager(StatefulManager):
                 enemies_nearby = self.bot.known_enemy_units.closer_than(
                     40, th.position).exclude_type(const2.ENEMY_NON_ARMY)
 
-                if enemies_nearby.exists:
+                if enemies_nearby:
                     # Enemies found, don't change state.
                     break
             else:
@@ -685,11 +686,11 @@ class ForceManager(StatefulManager):
         elif self.state == ForcesStates.MOVING_TO_ATTACK:
             army = self.bot.units(const2.ZERG_ARMY_UNITS)
 
-            if army.exists:
-                # Value of the army
-                army_value = sum(const2.ZERG_ARMY_VALUE[unit.type_id] for unit in army)
+            if army:
+                relative_army_strength = self.bot.relative_army_strength(
+                    army, self.bot.enemy_cache.values(), ignore_workers=True)
 
-                if army_value < self.army_value_to_attack:
+                if relative_army_strength < -1:
                     return await self.change_state(ForcesStates.HOUSEKEEPING)
 
                 # Start attacking when army has amassed
@@ -713,14 +714,14 @@ class ForceManager(StatefulManager):
                 # Retreat if our entire army is weaker than the army we see from them.
                 enemy = self.bot.known_enemy_units.exclude_type(const2.WORKERS).not_structure
                 if enemy:
-                    relative_army_strength = self.bot.relative_army_strength(army, enemy)
-                    if relative_army_strength < -4:
+                    relative_army_strength = self.bot.relative_army_strength(army, enemy, ignore_workers=True)
+                    if relative_army_strength < -3:
                         return await self.change_state(ForcesStates.RETREATING)
 
                 enemy_start_location = self.bot.enemy_start_location.position
                 # Start searching the map if we're at the enemy's base and can't find them.
                 if army.center.distance_to(enemy_start_location) < 25 and \
-                        not self.bot.known_enemy_structures.exists:
+                        not self.bot.known_enemy_structures:
 
                     self.publish(Messages.ARMY_COULDNT_FIND_ENEMY_BASE)
 
@@ -742,7 +743,7 @@ class ForceManager(StatefulManager):
             units_at_enemy_location = self.bot.units.closer_than(
                 6, self.bot.enemy_start_location)
 
-            if units_at_enemy_location.exists:
+            if units_at_enemy_location:
                 self.publish(Messages.ARMY_COULDNT_FIND_ENEMY_BASE)
 
         # Switching to DEFENDING from any other state
@@ -751,7 +752,7 @@ class ForceManager(StatefulManager):
                 enemies_nearby = self.bot.known_enemy_units.closer_than(
                     30, th.position).exclude_type(const2.ENEMY_NON_ARMY)
 
-                if enemies_nearby.exists:
+                if enemies_nearby:
                     return await self.change_state(ForcesStates.DEFENDING)
 
     async def run(self):

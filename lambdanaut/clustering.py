@@ -121,5 +121,5 @@ def k_means_update(clusters: List[Cluster], data):
         nearest_cluster = cluster.position.closest(clusters_excluding_this_cluster)
 
         if cluster and nearest_cluster and \
-                cluster.position.distance_to(nearest_cluster.position) < 13:
+                cluster.position.distance_to(nearest_cluster.position) < 11:
             cluster.merge(nearest_cluster)

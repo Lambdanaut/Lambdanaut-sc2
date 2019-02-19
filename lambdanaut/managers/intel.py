@@ -128,17 +128,12 @@ class IntelManager(Manager):
     def greater_enemy_force_scouted(self):
         if not self.has_scouted_enemy_greater_force.contains(
                 True, self.bot.state.game_loop):
-            units = self.bot.units(const2.ARMY_UNITS)
-            enemy_units = self.bot.known_enemy_units
 
-            units_strength = 0
-            for unit in units:
-                units_strength += self.bot.strength_of(unit)
-            enemy_strength = 0
-            for unit in enemy_units:
-                enemy_strength += self.bot.strength_of(unit)
+            relative_army_strength = self.bot.relative_army_strength(
+                self.bot.unit_cache.values(), self.bot.enemy_cache.values(),
+                ignore_workers=True)
 
-            if enemy_strength > units_strength * 1.3:
+            if relative_army_strength < -5:
                 self.has_scouted_enemy_greater_force.add(
                     True, self.bot.state.game_loop, expiry=30)
                 return True
