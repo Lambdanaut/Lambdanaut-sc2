@@ -111,8 +111,6 @@ class OverlordManager(StatefulManager):
                 overlord = overlords.filter(lambda ov: ov.tag not in self.scouting_overlord_tags).first
                 self.proxy_scouting_overlord_tag = overlord.tag
 
-                expansion_location = await self.bot.get_next_expansion()
-
                 # Move Overlord around different expansion locations
                 expansion_locations = self.bot.get_expansion_positions()
                 for expansion_location in expansion_locations[1:5]:
