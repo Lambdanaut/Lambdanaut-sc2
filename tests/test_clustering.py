@@ -5,7 +5,7 @@ import functools
 import unittest
 import random
 
-from sc2.position import Point2
+from lib.sc2.position import Point2
 
 import lambdanaut.clustering as clustering
 
