@@ -113,16 +113,9 @@ class OverlordManager(StatefulManager):
 
                 expansion_location = await self.bot.get_next_expansion()
 
-                overlord_mov_pos_1 = expansion_location.towards(self.bot.enemy_start_location, +12)
-                overlord_mov_pos_2 = expansion_location.towards(self.bot.enemy_start_location, -4)
-
-                # Move Overlord around the natural expansion
-                self.bot.actions.append(overlord.move(overlord_mov_pos_1, queue=True))
-                self.bot.actions.append(overlord.move(overlord_mov_pos_2, queue=True))
-
                 # Move Overlord around different expansion locations
                 expansion_locations = self.bot.get_expansion_positions()
-                for expansion_location in expansion_locations[2:5]:
+                for expansion_location in expansion_locations[1:5]:
                     self.bot.actions.append(overlord.move(expansion_location, queue=True))
 
                 try:
