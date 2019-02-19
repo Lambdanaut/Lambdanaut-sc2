@@ -641,7 +641,10 @@ class ForceManager(StatefulManager):
                 # Value of the army
                 army_value = sum(const2.ZERG_ARMY_VALUE[unit.type_id] for unit in army)
 
-                if army_value > self.army_value_to_attack:
+                relative_army_strength = self.bot.relative_army_strength(army, self.bot.enemy_cache.values())
+
+                if (relative_army_strength > 8 and len(army) > 4) \
+                        or army_value > self.army_value_to_attack:
                     return await self.change_state(ForcesStates.MOVING_TO_ATTACK)
 
         # ESCORTING

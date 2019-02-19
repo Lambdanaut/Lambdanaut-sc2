@@ -240,20 +240,19 @@ EARLY_GAME_POOL_FIRST_DEFENSIVE = [
     ZERGLING, ZERGLING,
     CanAfford(SPINECRAWLER),
     QUEEN,
-    BANELING, BANELING, BANELING,
     HATCHERY,
-    BANELING,
-    QUEEN,
+    BANELING, BANELING, BANELING, BANELING,
     CanAfford(SPINECRAWLER),
-    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 8),  # Build 8 zerglings until we get a roach warren
+    QUEEN,
+    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 4),  # Build 4 zerglings until we get a roach warren
     IfHasThenDontBuild(ROACHWARREN, BANELING, 4),  # Build 4 banelings until we get a roach warren
-    EXTRACTOR,
     DRONE,
     CanAfford(ZERGLINGMOVEMENTSPEED),
     DRONE, DRONE,
     QUEEN,
-    IfHasThenDontBuild(ROACHWARREN, BANELING, 6),
-    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 14),
+    IfHasThenDontBuild(ROACHWARREN, BANELING, 10),
+    EXTRACTOR,
+    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 10),
 ]
 
 # Get a spawning pool first with Zerglings for an all-in rush

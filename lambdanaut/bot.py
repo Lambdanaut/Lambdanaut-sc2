@@ -495,12 +495,12 @@ class LambdaBot(sc2.BotAI):
         """
 
         default_dps_map = {
-            const.BANELING: 15,
+            const.BANELING: 24,
             const.BUNKER: 30,
-            const.HIGHTEMPLAR: 22,
-            const.INFESTOR: 22,
-            const.DISRUPTOR: 25,
-            const.VIPER: 20,
+            const.HIGHTEMPLAR: 30,
+            const.INFESTOR: 30,
+            const.DISRUPTOR: 30,
+            const.VIPER: 30,
         }
 
         default_dps = default_dps_map.get(unit.type_id)
