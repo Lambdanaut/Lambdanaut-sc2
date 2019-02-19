@@ -1,6 +1,6 @@
 import math
 
-import sc2.constants as const
+import lib.sc2.constants as const
 
 import lambdanaut.const2 as const2
 from lambdanaut.const2 import Messages, OverlordStates

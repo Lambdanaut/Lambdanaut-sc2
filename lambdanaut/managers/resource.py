@@ -2,9 +2,8 @@ import math
 import random
 from typing import Optional
 
-import sc2.constants as const
+import lib.sc2.constants as const
 
-import lambdanaut.builds as builds
 from lambdanaut.builds import Builds
 from lambdanaut.expiringlist import ExpiringList
 from lambdanaut.const2 import Messages, ResourceManagerCommands

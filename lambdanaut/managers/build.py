@@ -4,8 +4,8 @@ from collections import Counter
 from itertools import takewhile
 from typing import List, Union
 
-import sc2
-import sc2.constants as const
+import lib.sc2 as sc2
+import lib.sc2.constants as const
 
 import lambdanaut.builds as builds
 import lambdanaut.const2 as const2

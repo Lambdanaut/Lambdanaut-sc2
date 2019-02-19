@@ -1,6 +1,6 @@
 from typing import List
 
-import sc2.constants as const
+import lib.sc2.constants as const
 
 from lambdanaut.builds import BuildStages
 import lambdanaut.const2 as const2

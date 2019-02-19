@@ -1,4 +1,4 @@
-import sc2.constants as const
+import lib.sc2.constants as const
 
 from lambdanaut.expiringlist import ExpiringList
 import lambdanaut.const2 as const2

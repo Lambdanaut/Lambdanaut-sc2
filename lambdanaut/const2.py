@@ -4,8 +4,8 @@ Class to add further constants from data_pb2
 
 import enum
 
-import sc2
-import sc2.constants as const
+import lib.sc2 as sc2
+import lib.sc2.constants as const
 from s2clientprotocol import data_pb2
 
 # About number of frames per second on faster speed

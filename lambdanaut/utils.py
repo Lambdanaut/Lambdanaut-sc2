@@ -1,8 +1,8 @@
 from typing import Union
 import math
 
-from sc2.unit import Unit
-from sc2.position import Point2
+from lib.sc2.unit import Unit
+from lib.sc2.position import Point2
 
 
 def ramp_point_nearest_point(ramps, p):

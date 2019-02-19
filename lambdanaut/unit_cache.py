@@ -1,7 +1,6 @@
 from typing import List
 
-import sc2.unit
-import sc2.position
+import lib.sc2 as sc2
 
 from collections import deque
 

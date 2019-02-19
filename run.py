@@ -7,7 +7,7 @@ import sys
 # Add lib to our path (which holds our sc2-python installation)
 sys.path.append('./lib/')
 
-import sc2
+import lib.sc2 as sc2
 from __init__ import run_ladder_game
 
 import lambdanaut.bot as bot

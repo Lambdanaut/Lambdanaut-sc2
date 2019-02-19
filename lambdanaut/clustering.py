@@ -2,8 +2,8 @@ from functools import reduce
 import random
 from typing import List, Union
 
-from sc2.units import Units
-from sc2.position import Point2
+from lib.sc2.units import Units
+from lib.sc2.position import Point2
 
 
 class Cluster(list):

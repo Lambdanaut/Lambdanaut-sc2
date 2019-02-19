@@ -1,8 +1,7 @@
-import enum
 import uuid
 
-import sc2
-from sc2.constants import *
+import lib.sc2 as sc2
+from lib.sc2.constants import *
 
 from lambdanaut.const2 import Messages
 

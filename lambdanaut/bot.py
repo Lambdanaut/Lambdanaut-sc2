@@ -2,11 +2,9 @@ from collections import defaultdict
 import math
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import sc2
-import sc2.unit
-import sc2.units
-import sc2.constants as const
-from sc2.position import Point2, Point3
+import lib.sc2 as sc2
+import lib.sc2.constants as const
+from lib.sc2.position import Point2, Point3
 
 from lambdanaut import VERSION, DEBUG
 import lambdanaut.builds as builds
