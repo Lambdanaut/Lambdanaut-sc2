@@ -7,10 +7,10 @@ import random
 import sys
 from typing import List, Tuple
 
-import sc2
-from sc2.unit import Unit
-from sc2.position import Point2
-import sc2.constants as const
+import lib.sc2 as sc2
+from lib.sc2.unit import Unit
+from lib.sc2.position import Point2
+import lib.sc2.constants as const
 
 datetime_str = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M")
 

@@ -8,13 +8,16 @@ Output = [0, 1, 0] Where [DRAW, PLAYER1 VICTORY, PLAYER2 VICTORY]
 
 import json
 import os
-import sys
 from typing import List, Tuple
+import sys
 
-import sc2
-import sc2.constants as const
 import torch
 import torch.nn as nn
+
+# Add lib to our path (which holds our sc2-python installation)
+sys.path.append('./lib/')
+
+import lib.sc2.constants as const
 
 
 DATA_DIR = 'data'

@@ -8,12 +8,8 @@ import aiohttp
 # Add lib to our path (which holds our sc2-python installation)
 sys.path.append('./lib/')
 
-import sc2
-from sc2 import Race, Difficulty
-from sc2.player import Bot, Computer
-
-from sc2.sc2process import SC2Process
-from sc2.client import Client
+import lib.sc2 as sc2
+from lib.sc2.client import Client
 
 # Run ladder game
 # This lets python-sc2 connect to a LadderManager game: https://github.com/Cryptyc/Sc2LadderServer
