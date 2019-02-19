@@ -60,3 +60,7 @@ target/
 .DS_Store
 
 .pytest_cache/
+
+# PROJECT SPECIFIC FILES
+lib/sc2-old
+lib/sc2old
