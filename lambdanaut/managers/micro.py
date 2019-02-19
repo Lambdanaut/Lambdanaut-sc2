@@ -303,7 +303,7 @@ class MicroManager(Manager):
 
         if spine_crawlers.exists:
             if townhalls.exists:
-                townhall = townhalls.furthest_to(self.bot.enemy_start_location)
+                townhall = townhalls.furthest_to(self.bot.start_location)
 
                 nearby_spine_crawlers = spine_crawlers.closer_than(18, townhall).filter(
                     lambda sc: sc.position3d.z <= townhall.position3d.z)
