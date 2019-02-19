@@ -217,35 +217,31 @@ class ResourceManager(Manager):
                                     queen.attack(townhall.position))
 
                             if queen.energy >= 25:
-                                abilities = await self.bot.get_available_abilities(queen)
-
                                 creep_tumors = self.bot.units({const.CREEPTUMOR, const.CREEPTUMORBURROWED})
 
                                 # Get creep tumors nearby the closest townhall
                                 nearby_creep_tumors = creep_tumors.closer_than(17, townhall)
 
                                 # If there are no nearby creep tumors or any at all, then spawn a creep tumor
-                                if not nearby_creep_tumors.exists and \
+                                if not nearby_creep_tumors and \
                                         not self._recent_commands.contains(
                                             ResourceManagerCommands.QUEEN_SPAWN_TUMOR,
                                             self.bot.state.game_loop):
 
                                     # Spawn creep tumor if we have none
-                                    if const.BUILD_CREEPTUMOR_QUEEN in abilities:
-                                        position = townhall.position.towards_with_random_angle(
-                                            self.bot.enemy_start_location, random.randint(5, 7))
+                                    position = townhall.position.towards_with_random_angle(
+                                        self.bot.enemy_start_location, random.randint(5, 7))
 
-                                        self._recent_commands.add(
-                                            ResourceManagerCommands.QUEEN_SPAWN_TUMOR,
-                                            self.bot.state.game_loop, expiry=50)
+                                    self._recent_commands.add(
+                                        ResourceManagerCommands.QUEEN_SPAWN_TUMOR,
+                                        self.bot.state.game_loop, expiry=50)
 
-                                        self.bot.actions.append(queen(const.BUILD_CREEPTUMOR_QUEEN, position))
+                                    self.bot.actions.append(queen(const.BUILD_CREEPTUMOR_QUEEN, position))
 
                                 else:
                                     # Inject larvae
-                                    if const.EFFECT_INJECTLARVA in abilities:
-                                        if not townhall.has_buff(const.QUEENSPAWNLARVATIMER):
-                                            self.bot.actions.append(queen(const.EFFECT_INJECTLARVA, townhall))
+                                    if not townhall.has_buff(const.QUEENSPAWNLARVATIMER):
+                                        self.bot.actions.append(queen(const.EFFECT_INJECTLARVA, townhall))
 
     async def manage_creep_tumors(self):
         creep_tumors = self.bot.units({const.CREEPTUMORBURROWED})

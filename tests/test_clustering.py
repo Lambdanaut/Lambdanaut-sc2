@@ -1,5 +1,6 @@
 import sys, os
 sys.path.append(os.path.realpath(os.path.dirname(__file__)+"/.."))
+sys.path.append(os.path.realpath(os.path.dirname(__file__)+"/../lib/"))
 
 import functools
 import unittest

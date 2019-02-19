@@ -7,9 +7,9 @@ from s2clientprotocol import debug_pb2 as debug_pb
 from s2clientprotocol import query_pb2 as query_pb
 from s2clientprotocol import raw_pb2 as raw_pb
 from s2clientprotocol import sc2api_pb2 as sc_pb
-from sc2.ids.ability_id import AbilityId
-from sc2.ids.unit_typeid import UnitTypeId
-from sc2.renderer import Renderer
+from .ids.ability_id import AbilityId
+from .ids.unit_typeid import UnitTypeId
+from .renderer import Renderer
 
 from .action import combine_actions
 from .data import ActionResult, ChatChannel, Race, Result, Status
