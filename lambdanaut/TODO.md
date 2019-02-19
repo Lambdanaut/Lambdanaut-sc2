@@ -8,9 +8,6 @@
     * 4th expansion on Stasis LE
     * Kept getting this error in the log over a hundred times in a row:
     * `Build Manager: Couldn't build expansion. All spots are taken.`
-    
-  * Workers ran to enemy base and hid behind their mineral line what the actual fucking fuck.
-    * Has to have something to do with clustering, possibly the DEFENDING state. Perhaps something about moving to the center of a cluster
 
 ## HIGH PRIORITY
 
@@ -195,3 +192,5 @@
  
   * Integrate remembered enemy units into clusters
   
+  * Workers ran to enemy base and hid behind their mineral line what the actual fucking fuck.
+    * Has to have something to do with clustering, possibly the DEFENDING state. Perhaps something about moving to the center of a cluster

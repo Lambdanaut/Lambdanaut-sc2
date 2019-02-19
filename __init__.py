@@ -1,14 +1,18 @@
+import aiohttp
 import argparse
-
-import sys
 import asyncio
 import logging
-import aiohttp
+import os
+import sys
 
 # Add lib to our path (which holds our sc2-python installation)
-sys.path.append('./lib/')
+sys.path.append(os.path.join('.', 'lib/'))
 
 import lib.sc2 as sc2
+from lib.sc2 import Race, Difficulty
+from lib.sc2.player import Bot, Computer
+
+from lib.sc2.sc2process import SC2Process
 from lib.sc2.client import Client
 
 # Run ladder game

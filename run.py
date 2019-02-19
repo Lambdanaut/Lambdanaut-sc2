@@ -5,7 +5,7 @@ import random
 import sys
 
 # Add lib to our path (which holds our sc2-python installation)
-sys.path.append('./lib/')
+sys.path.append(os.path.join('.', 'lib/'))
 
 import lib.sc2 as sc2
 from __init__ import run_ladder_game
