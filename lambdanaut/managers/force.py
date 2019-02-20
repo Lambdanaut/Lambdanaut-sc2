@@ -311,26 +311,15 @@ class ForceManager(StatefulManager):
                 if len(enemies_nearby) < 5:
                     army_clusters = [self.bot.start_location.closest(army_clusters)]
 
-                if len(army_clusters) > 1:
+                if army_clusters:
                     nearest_enemy_cluster = self.bot.start_location.closest(self.bot.enemy_clusters)
-
-                    clusters_by_distance = self.bot.start_location.sort_by_distance(self.bot.enemy_clusters)
-                    nearest_army_cluster = clusters_by_distance[0]
-                    second_nearest_army_cluster = clusters_by_distance[1]
 
                     if nearest_enemy_cluster:
                         for army_cluster in army_clusters:
                             if army_cluster:
 
-                                # Combine the army cluster with the cluster nearest the enemy because we want
-                                # them to attack together if they're strong enough.
-                                if army_cluster.position == nearest_enemy_cluster.position:
-                                    combined_clusters = army_cluster | second_nearest_army_cluster
-                                else:
-                                    combined_clusters = army_cluster | nearest_army_cluster
-
                                 army_strength = self.bot.relative_army_strength(
-                                    combined_clusters, nearest_enemy_cluster)
+                                    army_cluster, nearest_enemy_cluster)
 
                                 if army_strength >= 0:
                                     # Attack enemy if we stand a chance
