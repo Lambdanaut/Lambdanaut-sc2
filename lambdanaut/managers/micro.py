@@ -307,8 +307,9 @@ class MicroManager(Manager):
             if townhalls:
                 townhall = townhalls.furthest_to(self.bot.start_location)
 
-                nearby_spine_crawlers = spine_crawlers.closer_than(18, townhall).filter(
-                    lambda sc: sc.position3d.z <= townhall.position3d.z)
+                # Get nearby spinecrawlers that are at our elevation
+                nearby_spine_crawlers = spine_crawlers.closer_than(22, townhall).filter(
+                    lambda sc: math.floor(sc.position3d.z) <= math.floor(townhall.position3d.z))
 
                 # Get nearby ramp
                 nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
@@ -327,16 +328,17 @@ class MicroManager(Manager):
 
                 ramp_distance_to_sc = nearby_ramp.distance_to_closest(spine_crawlers)
 
-                ramp_lower_than_townhall = ramp_height is not None and ramp_height <= townhall.position3d.z
+                ramp_lower_than_townhall = ramp_height is not None \
+                                           and math.floor(ramp_height) <= math.floor(townhall.position3d.z)
 
-                ramp_close_to_townhall = nearby_ramp.distance_to(townhall) < 16
+                ramp_close_to_townhall = nearby_ramp.distance_to(townhall) < 20
 
                 # Unroot spine crawlers that are far away from the front expansions
                 # Also unroot spine crawlers if a nearby ramp gets creep on it.
                 if not nearby_spine_crawlers \
                         or (len(nearby_spine_crawlers) < len(spine_crawlers) / 2) \
                         or (ramp_close_to_townhall and ramp_lower_than_townhall and ramp_creep
-                            and ramp_distance_to_sc < 4):
+                            and ramp_distance_to_sc > 3):
 
                     for sc in rooted_spine_crawlers.idle:
                         self.bot.actions.append(sc(

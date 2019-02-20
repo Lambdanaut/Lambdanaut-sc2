@@ -223,9 +223,10 @@ EARLY_GAME_POOL_FIRST_CAUTIOUS = [
     CanAfford(ZERGLINGMOVEMENTSPEED),
     CanAfford(SPINECRAWLER),
     ZERGLING, ZERGLING, ZERGLING, ZERGLING,
-    # If we don't yet have a lair but we have a baneling nest, build 6 cautionary banes
-    IfHasThenDontBuild(LAIR, IfHasThenBuild(BANELINGNEST, BANELING, 6)),
+    # If we don't yet have a lair but we have a baneling nest, build 7 cautionary banes
+    IfHasThenDontBuild(LAIR, IfHasThenBuild(BANELINGNEST, BANELING, 7)),
     DRONE, DRONE,
+    IfHasThenDontBuild(LAIR, IfHasThenBuild(BANELINGNEST, ZERGLING, 8)),
     QUEEN,
 ]
 

@@ -94,9 +94,9 @@ class BuildManager(Manager):
     def determine_opening_build(self):
         # Chance of cheese on smaller maps (2 player start locations)
         if len(self.bot.enemy_start_locations) < 3:
-            # Randomly do ravager all-ins against terran and protoss
-            if self.bot.enemy_race in {sc2.Race.Terran, sc2.Race.Protoss}:
-                if not random.randint(0, 7):
+            # Randomly do ravager all-ins against terran
+            if self.bot.enemy_race in {sc2.Race.Terran}:
+                if not random.randint(0, 4):
                     self.starting_build = Builds.RAVAGER_ALL_IN
 
     def add_build(self, build):

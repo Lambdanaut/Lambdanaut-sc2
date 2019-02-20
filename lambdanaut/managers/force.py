@@ -311,29 +311,45 @@ class ForceManager(StatefulManager):
                 if len(enemies_nearby) < 5:
                     army_clusters = [self.bot.start_location.closest(army_clusters)]
 
-                nearest_enemy_cluster = self.bot.start_location.closest(self.bot.enemy_clusters)
-                for army_cluster in army_clusters:
-                    if army_cluster and nearest_enemy_cluster:
-                        army_strength = self.bot.relative_army_strength(army_cluster, nearest_enemy_cluster)
+                if len(army_clusters) > 1:
+                    nearest_enemy_cluster = self.bot.start_location.closest(self.bot.enemy_clusters)
 
-                        if army_strength >= 0:
-                            # Attack enemy if we stand a chance
-                            for unit in army_cluster:
-                                if unit.type_id not in const2.NON_COMBATANTS \
-                                        and unit.tag not in self.bot.townhall_queens.values():
-                                    target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
+                    clusters_by_distance = self.bot.start_location.sort_by_distance(self.bot.enemy_clusters)
+                    nearest_army_cluster = clusters_by_distance[0]
+                    second_nearest_army_cluster = clusters_by_distance[1]
 
-                                    if target and unit.weapon_cooldown <= 0:
-                                        self.bot.actions.append(unit.attack(target.position))
+                    if nearest_enemy_cluster:
+                        for army_cluster in army_clusters:
+                            if army_cluster:
 
-                        elif army_strength < -1:
-                            # If enemy is greater regroup to center of cluster towards friendly townhall
-                            for unit in army_cluster:
-                                if unit.type_id not in const2.NON_COMBATANTS:
-                                    nearest_townhall = self.bot.townhalls.closest_to(unit.position)
-                                    if unit.distance_to(nearest_townhall) > 6:
-                                        towards_townhall = army_cluster.position.towards(nearest_townhall, +2)
-                                        self.bot.actions.append(unit.move(towards_townhall))
+                                # Combine the army cluster with the cluster nearest the enemy because we want
+                                # them to attack together if they're strong enough.
+                                if army_cluster.position == nearest_enemy_cluster.position:
+                                    combined_clusters = army_cluster | second_nearest_army_cluster
+                                else:
+                                    combined_clusters = army_cluster | nearest_army_cluster
+
+                                army_strength = self.bot.relative_army_strength(
+                                    combined_clusters, nearest_enemy_cluster)
+
+                                if army_strength >= 0:
+                                    # Attack enemy if we stand a chance
+                                    for unit in army_cluster:
+                                        if unit.type_id not in const2.NON_COMBATANTS \
+                                                and unit.tag not in self.bot.townhall_queens.values():
+                                            target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
+
+                                            if target and unit.weapon_cooldown <= 0:
+                                                self.bot.actions.append(unit.attack(target.position))
+
+                                elif army_strength < -1:
+                                    # If enemy is greater regroup to center of cluster towards friendly townhall
+                                    for unit in army_cluster:
+                                        if unit.type_id not in const2.NON_COMBATANTS:
+                                            nearest_townhall = self.bot.townhalls.closest_to(unit.position)
+                                            if unit.distance_to(nearest_townhall) > 6:
+                                                towards_townhall = army_cluster.position.towards(nearest_townhall, +2)
+                                                self.bot.actions.append(unit.move(towards_townhall))
 
             # Bring back defending workers that have drifted too far from town halls
             workers_defending_to_remove = set()
