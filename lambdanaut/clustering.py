@@ -74,17 +74,15 @@ class Cluster(list):
         self.update_position()
         cluster2.refresh()
 
-    def __or__(self, other, accurate_position=True):
+    def __or__(self, other):
         """
         Adds two clusters together with the `|` operator
 
         :param other:  Another cluster to sum with this one
-        :param accurate_position: If true, does slightly more calculations
         :return:
         """
         new_cluster = Cluster((self.position + other.position) / 2, self + other)
-        if accurate_position:
-            new_cluster.update_position()
+        new_cluster.update_position()
         return new_cluster
 
 def get_fresh_clusters(data, n=4) -> List[Cluster]:

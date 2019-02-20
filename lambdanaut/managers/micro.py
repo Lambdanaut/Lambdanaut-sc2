@@ -338,7 +338,7 @@ class MicroManager(Manager):
                 if not nearby_spine_crawlers \
                         or (len(nearby_spine_crawlers) < len(spine_crawlers) / 2) \
                         or (ramp_close_to_townhall and ramp_lower_than_townhall and ramp_creep
-                            and ramp_distance_to_sc > 3):
+                            and ramp_distance_to_sc > 2):
 
                     for sc in rooted_spine_crawlers.idle:
                         self.bot.actions.append(sc(
