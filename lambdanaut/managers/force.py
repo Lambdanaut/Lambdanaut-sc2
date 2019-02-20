@@ -265,8 +265,15 @@ class ForceManager(StatefulManager):
                                 self.bot.actions.append(worker.attack(target.position))
 
                         else:
+                            # Only attack with 1 worker if the enemy is 1 worker
+                            # Otherwise attack with 1 more worker than there are enemies
+                            need_more_workers = \
+                                len(self.workers_defending) < 1 if \
+                                len(ground_enemies) == 1 and ground_enemies[0].type_id in const2.WORKERS else \
+                                len(self.workers_defending) <= len(ground_enemies)
+
                             # Add workers to defending workers and attack nearby enemy
-                            if len(self.workers_defending) <= len(ground_enemies):
+                            if need_more_workers:
                                 target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
                                 if target:
                                     if target.type_id != const.BANELING:
