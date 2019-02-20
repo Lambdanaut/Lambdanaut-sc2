@@ -1,5 +1,7 @@
 import math
 
+import lib.sc2 as sc2
+from lib.sc2.position import Point2
 import lib.sc2.constants as const
 
 import lambdanaut.const2 as const2
@@ -301,15 +303,16 @@ class MicroManager(Manager):
         spine_crawlers = rooted_spine_crawlers | uprooted_spine_crawlers
         townhalls = self.bot.townhalls.ready
 
-        if spine_crawlers.exists:
-            if townhalls.exists:
+        if spine_crawlers:
+            if townhalls:
                 townhall = townhalls.furthest_to(self.bot.start_location)
 
                 nearby_spine_crawlers = spine_crawlers.closer_than(18, townhall).filter(
                     lambda sc: sc.position3d.z <= townhall.position3d.z)
 
+                # Get nearby ramp
                 nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
-                nearby_ramp = townhall.position.towards(
+                nearby_ramp: Point2 = townhall.position.towards(
                     self.bot.enemy_start_location, 2).closest(nearby_ramps)
 
                 try:
@@ -317,9 +320,17 @@ class MicroManager(Manager):
                 except:
                     ramp_height = None
 
+                try:
+                    ramp_creep = self.bot.state.creep.is_set(nearby_ramp)
+                except:
+                    ramp_creep = False
+
+                ramp_distance_to_sc = nearby_ramp.distance_to_closest(spine_crawlers)
+
                 # Unroot spine crawlers that are far away from the front expansions
-                if not nearby_spine_crawlers or (
-                        len(nearby_spine_crawlers) < len(spine_crawlers) / 2):
+                if not nearby_spine_crawlers \
+                        or (len(nearby_spine_crawlers) < len(spine_crawlers) / 2) \
+                        or (ramp_creep and ramp_distance_to_sc < 5):
 
                     for sc in rooted_spine_crawlers.idle:
                         self.bot.actions.append(sc(
