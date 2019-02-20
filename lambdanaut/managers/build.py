@@ -219,7 +219,7 @@ class BuildManager(Manager):
 
             # Stop townhall and worker production during defending
             large_defense = {
-                Messages.DEFENDING_AGAINST_MULTIPLE_ENEMIES,}
+                Messages.DEFENDING_AGAINST_MULTIPLE_ENEMIES, }
             if message in large_defense:
                 self.ack(message)
                 # Only stop non-army production if we have three or more townhalls
@@ -237,7 +237,7 @@ class BuildManager(Manager):
                     True, self.bot.state.game_loop, expiry=25)
 
             # Restart townhall and worker production when defending stops
-            exit_state = {Messages.STATE_EXITED,}
+            exit_state = {Messages.STATE_EXITED, }
             if message in exit_state:
                 self.ack(message)
                 if val == ForcesStates.DEFENDING:

@@ -329,8 +329,11 @@ class ForceManager(StatefulManager):
                                 army_strength = self.bot.relative_army_strength(
                                     army_cluster, nearest_enemy_cluster)
 
-                                if army_strength >= 0:
-                                    # Attack enemy if we stand a chance
+                                if army_strength >= 0 \
+                                    or (army_strength > -6 and
+                                        nearest_enemy_cluster.position.distance_to(army_cluster.position) < 10):
+                                    # Attack enemy if we stand a chance or if we hardly stand a change and they're
+                                    # in our face.
                                     for unit in army_cluster:
                                         if unit.type_id not in const2.NON_COMBATANTS \
                                                 and unit.tag not in self.bot.townhall_queens.values():
@@ -342,9 +345,9 @@ class ForceManager(StatefulManager):
                                 elif army_strength < -1:
                                     # If enemy is greater regroup to center of largest cluster towards friendly townhall
                                     largest_army_cluster = functools.reduce(
-                                        function=lambda c1, c2: c1 if len(c1) >= len(c2) else c2,
-                                        sequence=army_cluster[1:],
-                                        initial=army_cluster[0])
+                                        lambda c1, c2: c1 if len(c1) >= len(c2) else c2,
+                                        army_clusters[1:],
+                                        army_clusters[0])
 
                                     for unit in army_cluster:
                                         if unit.type_id not in const2.NON_COMBATANTS:

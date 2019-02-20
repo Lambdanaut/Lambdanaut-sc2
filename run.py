@@ -32,7 +32,7 @@ MAPS = [
     'PortAleksanderLE', ]
 
 MAP_NAME = "Micro"
-REALTIME = True
+REALTIME = False
 
 # BUILD = sc2.AIBuild.RandomBuild
 BUILD = sc2.AIBuild.Rush
@@ -76,6 +76,13 @@ if __name__ == '__main__':
             sc2.player.Bot(RACE, bot.LambdaBot()),
             sc2.player.Computer(ENEMY_RACE, DIFFICULTY, BUILD)
         ]
+
+        # ## USE HOST GAME ITER INSTEAD
+        # sc2.run_game(
+        #     sc2.maps.get(MAP_NAME),
+        #     player_config,
+        #     realtime=REALTIME,
+        #     save_replay_as=REPLAY_NAME)
 
         gen = sc2.main._host_game_iter(
             sc2.maps.get(MAP_NAME),

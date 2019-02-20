@@ -374,14 +374,13 @@ class MicroManager(Manager):
                 self.bot.actions.append(structure(const.CANCEL))
 
     async def manage_eggs(self):
-        # egg_types = {const.BROODLORDCOCOON, const.RAVAGERCOCOON, const.BANELINGCOCOON,
-        #              const.UnitTypeId.LURKERMPEGG, const.UnitTypeId.EGG}
-        egg_types = {const.UnitTypeId.EGG}
+        egg_types = {const.BROODLORDCOCOON, const.RAVAGERCOCOON, const.BANELINGCOCOON,
+                     const.LURKERMPEGG, const.UnitTypeId.EGG}
         eggs = self.bot.units(egg_types)
 
         # Cancel damaged not-ready structures
         for egg in eggs:
-            if egg.health_percentage < 0.4 and egg.build_progress < 0.9:
+            if egg.health_percentage < 0.1 and 0.03 < egg.build_progress < 0.95:
                 self.bot.actions.append(egg(const.CANCEL))
 
     async def avoid_biles(self):
