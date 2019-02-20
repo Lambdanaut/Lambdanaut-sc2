@@ -635,7 +635,6 @@ class ForceManager(StatefulManager):
                 self.distance_to_moving_to_attack = new_distance_to_moving_to_attack
 
             if message in {Messages.DONT_DEFEND}:
-                import pdb; pdb.set_trace()
                 self.ack(message)
 
                 self.allow_defending = False
