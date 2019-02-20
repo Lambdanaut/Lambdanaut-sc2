@@ -308,6 +308,15 @@ class MicroManager(Manager):
                 nearby_spine_crawlers = spine_crawlers.closer_than(18, townhall).filter(
                     lambda sc: sc.position3d.z <= townhall.position3d.z)
 
+                nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
+                nearby_ramp = townhall.position.towards(
+                    self.bot.enemy_start_location, 2).closest(nearby_ramps)
+
+                try:
+                    ramp_height = self.bot.game_info.terrain_height[nearby_ramp]
+                except:
+                    ramp_height = None
+
                 # Unroot spine crawlers that are far away from the front expansions
                 if not nearby_spine_crawlers or (
                         len(nearby_spine_crawlers) < len(spine_crawlers) / 2):
@@ -318,15 +327,6 @@ class MicroManager(Manager):
 
                 # Root unrooted spine crawlers near the front expansions
                 for sc in uprooted_spine_crawlers.idle:
-                    nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
-                    nearby_ramp = townhall.position.towards(
-                        self.bot.enemy_start_location, 2).closest(nearby_ramps)
-
-                    try:
-                        ramp_height = self.bot.game_info.terrain_height[nearby_ramp]
-                    except:
-                        ramp_height = None
-
                     if nearby_ramp.distance_to(townhall) < 17 \
                             and ramp_height is not None and ramp_height <= townhall.position3d.z:
                         target = nearby_ramp

@@ -168,6 +168,12 @@ class ForceManager(StatefulManager):
 
         army = self.bot.units(zerg_army_units).tags_not_in(self.bot.occupied_units)
 
+        # Army includes queens that aren't busy
+        busy_queen_tags = self.bot.townhall_queens.values()
+        queens = self.bot.units(const.QUEEN).filter(
+            lambda q: q.tag not in busy_queen_tags)
+        army |= queens
+
         townhalls = self.bot.townhalls
 
         if townhalls:
@@ -184,7 +190,7 @@ class ForceManager(StatefulManager):
                 number_of_units_to_townhall = round((len(army) / len(townhalls)) * 0.1)
                 if townhall.tag == closest_townhall.tag:
                     # The closest townhall to the enemy should have more army
-                    number_of_units_to_townhall = round((len(army) / len(townhalls)) * 3)
+                    number_of_units_to_townhall = round((len(army) / len(townhalls)) * 4)
 
                 nearby_army = army.closer_than(22, townhall.position)
 
