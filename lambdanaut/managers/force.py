@@ -270,7 +270,7 @@ class ForceManager(StatefulManager):
                                 target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
                                 if target:
                                     if target.type_id != const.BANELING:
-                                        self.bot.actions.append(worker.attack(target.position))
+                                        self.bot.actions.append(worker.attack(target))
                                         self.workers_defending.add(worker.tag)
 
                 # Have nearest queen defend

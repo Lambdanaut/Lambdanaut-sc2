@@ -401,7 +401,12 @@ class MicroManager(Manager):
 
         enemy_units = self.bot.known_enemy_units
         if enemy_units:
-            enemy_units = enemy_units.closer_than(unit.ground_range * 1.3, unit)
+            if 0 < self.bot.is_melee(unit) < 1:
+                # Search for further priorities if unit is melee
+                enemy_units = enemy_units.closer_than(4, unit)
+            else:
+                enemy_units = enemy_units.closer_than(unit.ground_range * 1.3, unit)
+
             if enemy_units:
                 target = self.bot.closest_and_most_damaged(
                     enemy_units, unit, priorities=attack_priorities)
@@ -442,7 +447,7 @@ class MicroManager(Manager):
                             elif 0 < nearest_enemy_unit.ground_range < 1.5 and len(army_cluster) < 8 \
                                     and unit.ground_range > 1 and nearest_enemy_unit.distance_to(unit) > 0.5 \
                                     and unit_is_combatant:
-                                how_far_to_move = -2
+                                how_far_to_move = -1.5
                                 away_from_enemy = unit.position.towards(
                                     nearest_enemy_unit, how_far_to_move)
                                 self.bot.actions.append(unit.move(away_from_enemy))

@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import lib.sc2 as sc2
 import lib.sc2.constants as const
 from lib.sc2.position import Point2, Point3
+from lib.sc2.unit import Unit
 
 from lambdanaut import VERSION, DEBUG
 import lambdanaut.builds as builds
@@ -151,7 +152,7 @@ class LambdaBot(sc2.BotAI):
         if unit_tag in self.enemy_cache:
             del self.enemy_cache[unit_tag]
 
-    async def on_building_construction_complete(self, unit: sc2.unit.Unit):
+    async def on_building_construction_complete(self, unit: Unit):
         self.publish(None, Messages.STRUCTURE_COMPLETE, unit)
 
     @property
@@ -344,6 +345,9 @@ class LambdaBot(sc2.BotAI):
         except IndexError:
             return None
 
+    def is_melee(self, unit: Unit) -> bool:
+        return 0 < unit.ground_range < 1.5
+
     async def get_open_expansions(self) -> List[Point2]:
         """Gets a sorted list of open expansions from the start location"""
 
@@ -488,7 +492,7 @@ class LambdaBot(sc2.BotAI):
 
         return strength
 
-    def adjusted_dps(self, unit: sc2.unit.Unit) -> float:
+    def adjusted_dps(self, unit: Unit) -> float:
         """
         Gets an average of a unit's dps, and returns alternative values if the
         unit doesn't have dps, but still does damage (like banelings)
@@ -555,7 +559,7 @@ class LambdaBot(sc2.BotAI):
         if u1_dps == 0 and u2_dps == 0:
             return 0
 
-        def calc_health(u: sc2.unit.Unit) -> int:
+        def calc_health(u: Unit) -> int:
             return u.health + u.shield
 
         u1_health = sum(calc_health(u) for u in u1)
