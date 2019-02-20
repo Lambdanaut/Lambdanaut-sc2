@@ -254,7 +254,7 @@ class ForceManager(StatefulManager):
 
                 # Workers attack enemy
                 ground_enemies = [enemy for enemy in enemies_nearby if not enemy.is_flying]
-                workers = self.bot.workers.closer_than(20, enemies_nearby.first.position)
+                workers = self.bot.workers.closer_than(20, enemies_nearby[0].position)
                 if workers and ground_enemies and \
                         len(workers) > len(ground_enemies):
                     for worker in workers:
@@ -277,7 +277,7 @@ class ForceManager(StatefulManager):
                                 target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
                                 if target:
                                     if target.type_id != const.BANELING:
-                                        self.bot.actions.append(worker.attack(target))
+                                        self.bot.actions.append(worker.attack(target.position))
                                         self.workers_defending.add(worker.tag)
 
                 # Have nearest queen defend
