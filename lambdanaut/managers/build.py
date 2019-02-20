@@ -567,6 +567,10 @@ class BuildManager(Manager):
                         if self.bot.units(first_tier_production_structures):
                             continue
 
+                    # Skip banelings if we don't have any idle zerglings
+                    if unit is const.BANELING and not self.bot.units(const.ZERGLING).idle:
+                        continue
+
                     if (tech_requirement is None or existing_unit_counts[tech_requirement]) > 0 and \
                             (idle_building_structure is None or idle_building_structure.exists):
 
@@ -811,16 +815,11 @@ class BuildManager(Manager):
                 return True
 
         elif build_target == const.BANELING:
-            # Get a zergling
-            zerglings = self.bot.units(const.ZERGLING)
+            # Get zerglings
+            zerglings = self.bot.units(const.ZERGLING).idle
 
             # Train the unit
-            if self.can_afford(build_target) and zerglings.exists:
-                # Prefer idle zerglings if they exist
-                idle_zerglings = zerglings.idle
-                if idle_zerglings.exists:
-                    zerglings = idle_zerglings
-
+            if self.can_afford(build_target) and zerglings:
                 zergling = zerglings.closest_to(self.bot.start_location)
                 self.bot.actions.append(zergling.train(build_target))
                 return True
