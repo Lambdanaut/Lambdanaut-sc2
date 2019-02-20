@@ -80,7 +80,7 @@ class MicroManager(Manager):
                     if nearby_friendly_units:
                         closest_friendly_unit_to_enemy = nearby_friendly_units.closest_to(closest_enemy_unit)
                         if len(nearby_friendly_units) >= 1 and \
-                                distance_to_enemy < 4.5 and \
+                                distance_to_enemy < 5.5 and \
                                 closest_friendly_unit_to_enemy.tag != zergling.tag:
                             away_from_enemy = zergling.position.towards(closest_enemy_unit, -1)
                             self.bot.actions.append(zergling.move(away_from_enemy))
