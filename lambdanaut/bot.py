@@ -125,7 +125,7 @@ class LambdaBot(sc2.BotAI):
             await self.overlord_manager.run()
 
         # Update the unit clusters
-        if iteration % 8 == 0:
+        if iteration % 12 == 0:
             self.update_clusters()
 
         if DEBUG:
