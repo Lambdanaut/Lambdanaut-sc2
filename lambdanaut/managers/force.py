@@ -254,7 +254,7 @@ class ForceManager(StatefulManager):
 
                 # Workers attack enemy
                 ground_enemies = [enemy for enemy in enemies_nearby if not enemy.is_flying]
-                workers = self.bot.workers.closer_than(15, enemies_nearby[0].position)
+                workers = self.bot.workers.closer_than(20, enemies_nearby.first.position)
                 if workers and ground_enemies and \
                         len(workers) > len(ground_enemies):
                     for worker in workers:
@@ -335,7 +335,7 @@ class ForceManager(StatefulManager):
                                                 and unit.tag not in self.bot.townhall_queens.values():
                                             target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
 
-                                            if target and unit.weapon_cooldown <= 0:
+                                            if target and unit.weapon_cooldown <= 0 and not unit.is_attacking:
                                                 self.bot.actions.append(unit.attack(target.position))
 
                                 elif army_strength < -1:

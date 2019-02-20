@@ -161,11 +161,11 @@ class BuildManager(Manager):
                     self.add_build(Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS)
 
             # Messages indicating we need to defend a rush
-            defensive_early_game = {
+            rush_detected = {
                 Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY,
                 Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH,
                 Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH}
-            if message in defensive_early_game:
+            if message in rush_detected:
                 self.ack(message)
                 #  TAKEN OUT BECAUSE THE HATCHERY WILL CANCEL ITSELF WHEN IT'S DAMAGED
                 # # Cancel constructing hatcheries that are not near completion
@@ -210,7 +210,7 @@ class BuildManager(Manager):
 
             # Messages indicating we need to rush up to brood lords in midgame asap
             broodlord_rush_mid_game = {
-                Messages.ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD,}
+                Messages.ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD}
             if message in broodlord_rush_mid_game:
                 self.ack(message)
             # # # TAKEN OUT FOR NOW BECAUSE THE RUSH SUCKS
@@ -222,8 +222,10 @@ class BuildManager(Manager):
                 Messages.DEFENDING_AGAINST_MULTIPLE_ENEMIES,}
             if message in large_defense:
                 self.ack(message)
-                # self.stop_townhall_production = True  # Commented out because of spine rushes
-                self.stop_worker_production = True
+                # Only stop non-army production if we have three or more townhalls
+                if len(self.bot.townhalls.ready) > 2:
+                    self.stop_townhall_production = True
+                    self.stop_worker_production = True
 
             # Stop townhall and worker production for a short duration
             stop_non_army_production = {
@@ -232,7 +234,7 @@ class BuildManager(Manager):
                 self.ack(message)
 
                 self._stop_nonarmy_production.add(
-                    True, self.bot.state.game_loop, expiry=20)
+                    True, self.bot.state.game_loop, expiry=25)
 
             # Restart townhall and worker production when defending stops
             exit_state = {Messages.STATE_EXITED,}
