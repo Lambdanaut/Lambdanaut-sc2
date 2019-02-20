@@ -70,7 +70,7 @@ class LambdaBot(sc2.BotAI):
         self.army_clusters = clustering.get_fresh_clusters([], n=8)
 
         # Our enemy clusters
-        self.enemy_clusters = clustering.get_fresh_clusters([], n=8)
+        self.enemy_clusters = clustering.get_fresh_clusters([], n=7)
 
     async def on_step(self, iteration):
         self.iteration = iteration
