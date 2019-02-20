@@ -635,6 +635,7 @@ class ForceManager(StatefulManager):
                 self.distance_to_moving_to_attack = new_distance_to_moving_to_attack
 
             if message in {Messages.DONT_DEFEND}:
+                import pdb; pdb.set_trace()
                 self.ack(message)
 
                 self.allow_defending = False
@@ -757,7 +758,7 @@ class ForceManager(StatefulManager):
         if self.state != ForcesStates.DEFENDING and self.allow_defending:
             for th in self.bot.townhalls:
                 enemies_nearby = self.bot.known_enemy_units.closer_than(
-                    30, th.position).exclude_type(const2.ENEMY_NON_ARMY)
+                    30, th).exclude_type(const2.ENEMY_NON_ARMY)
 
                 if enemies_nearby:
                     return await self.change_state(ForcesStates.DEFENDING)

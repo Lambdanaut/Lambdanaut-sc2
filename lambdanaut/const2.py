@@ -162,7 +162,7 @@ class Messages(enum.Enum):
     # STATE MACHINE
     STATE_ENTERED = 27  # Value is State being left
     STATE_EXITED = 28  # Value is State entered
-    DONT_DEFEND = 28  # Indicates that we shouldn't ever enter DEFENDING forces state
+    DONT_DEFEND = 29  # Indicates that we shouldn't ever enter DEFENDING forces state
 
 
 # Build Manager Commands
