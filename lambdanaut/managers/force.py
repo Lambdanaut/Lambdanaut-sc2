@@ -1,3 +1,4 @@
+import functools
 from typing import List
 
 import lib.sc2.constants as const
@@ -254,7 +255,7 @@ class ForceManager(StatefulManager):
 
                 # Workers attack enemy
                 ground_enemies = [enemy for enemy in enemies_nearby if not enemy.is_flying]
-                workers = self.bot.workers.closer_than(20, enemies_nearby[0].position)
+                workers = self.bot.workers.closer_than(18, enemies_nearby[0].position)
                 if workers and ground_enemies and \
                         len(workers) > len(ground_enemies):
                     for worker in workers:
@@ -339,12 +340,17 @@ class ForceManager(StatefulManager):
                                                 self.bot.actions.append(unit.attack(target.position))
 
                                 elif army_strength < -1:
-                                    # If enemy is greater regroup to center of cluster towards friendly townhall
+                                    # If enemy is greater regroup to center of largest cluster towards friendly townhall
+                                    largest_army_cluster = functools.reduce(
+                                        function=lambda c1, c2: c1 if len(c1) >= len(c2) else c2,
+                                        sequence=army_cluster[1:],
+                                        initial=army_cluster[0])
+
                                     for unit in army_cluster:
                                         if unit.type_id not in const2.NON_COMBATANTS:
                                             nearest_townhall = self.bot.townhalls.closest_to(unit.position)
                                             if unit.distance_to(nearest_townhall) > 6:
-                                                towards_townhall = army_cluster.position.towards(nearest_townhall, +2)
+                                                towards_townhall = largest_army_cluster.position.towards(nearest_townhall, +2)
                                                 self.bot.actions.append(unit.move(towards_townhall))
 
             # Bring back defending workers that have drifted too far from town halls

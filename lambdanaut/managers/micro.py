@@ -345,7 +345,11 @@ class MicroManager(Manager):
                             const.AbilityId.SPINECRAWLERUPROOT_SPINECRAWLERUPROOT))
 
                 # Root unrooted spine crawlers near the front expansions
-                for sc in uprooted_spine_crawlers.idle:
+                idle_uprooted_spine_crawlers = uprooted_spine_crawlers.idle
+                if idle_uprooted_spine_crawlers:
+                    # We do this one by one rather than in a for-loop so that they don't
+                    # try to root at the same place as each other
+                    sc = idle_uprooted_spine_crawlers.first
                     if ramp_close_to_townhall \
                             and ramp_lower_than_townhall:
                         target = nearby_ramp
@@ -366,7 +370,7 @@ class MicroManager(Manager):
         # Cancel damaged not-ready structures
         for structure in structures.not_ready:
             if structure.health_percentage < 0.05 or \
-                    (structure.build_progress > 0.9 and structure.health_percentage < 0.4):
+                    (structure.build_progress > 0.98 and structure.health_percentage < 0.4):
                 self.bot.actions.append(structure(const.CANCEL))
 
     async def manage_eggs(self):
