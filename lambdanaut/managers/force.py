@@ -256,30 +256,39 @@ class ForceManager(StatefulManager):
                 # Workers attack enemy
                 ground_enemies = [enemy for enemy in enemies_nearby if not enemy.is_flying]
                 workers = self.bot.workers.closer_than(18, enemies_nearby[0].position)
+                workers_defending_to_remove = set()
+                for worker_tag in self.workers_defending:
+                    worker = self.bot.units.find_by_tag(worker_tag)
+                    if worker:
+                        if worker.is_idle or worker.is_collecting:
+                            # Defending workers gone idle, attack enemy
+                            target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
+                            if target and target.type_id != const.BANELING:
+                                self.bot.actions.append(worker.attack(target.position))
+                    else:
+                        # Worker died, remove his tag
+                        workers_defending_to_remove.add(worker_tag)
+
+                self.workers_defending -= workers_defending_to_remove
+
                 if workers and ground_enemies and \
                         len(workers) > len(ground_enemies):
                     for worker in workers:
-                        if worker.tag in self.workers_defending:
-                            # Defending workers gone idle, attack enemy
-                            if worker.is_idle:
-                                target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
+                        # Only attack with 1 worker if the enemy is 1 worker
+                        # Otherwise attack with 1 more worker than there are enemies
+                        need_more_workers = \
+                            len(self.workers_defending) < 1 if \
+                            len(ground_enemies) == 1 and ground_enemies[0].type_id in const2.WORKERS else \
+                            len(self.workers_defending) <= len(ground_enemies)
+
+                        # Add workers to defending workers and attack nearby enemy
+                        if need_more_workers:
+                            target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
+                            if target and target.type_id != const.BANELING:
                                 self.bot.actions.append(worker.attack(target.position))
-
+                                self.workers_defending.add(worker.tag)
                         else:
-                            # Only attack with 1 worker if the enemy is 1 worker
-                            # Otherwise attack with 1 more worker than there are enemies
-                            need_more_workers = \
-                                len(self.workers_defending) < 1 if \
-                                len(ground_enemies) == 1 and ground_enemies[0].type_id in const2.WORKERS else \
-                                len(self.workers_defending) <= len(ground_enemies)
-
-                            # Add workers to defending workers and attack nearby enemy
-                            if need_more_workers:
-                                target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
-                                if target:
-                                    if target.type_id != const.BANELING:
-                                        self.bot.actions.append(worker.attack(target.position))
-                                        self.workers_defending.add(worker.tag)
+                            break
 
                 # Have nearest queen defend
                 queen_tag = self.bot.townhall_queens.get(th.tag)
@@ -343,20 +352,20 @@ class ForceManager(StatefulManager):
                                                 towards_townhall = largest_army_cluster.position.towards(nearest_townhall, +2)
                                                 self.bot.actions.append(unit.move(towards_townhall))
 
-            # Bring back defending workers that have drifted too far from town halls
-            workers_defending_to_remove = set()
-            for worker_id in self.workers_defending:
-                worker = self.bot.workers.find_by_tag(worker_id)
-                if worker:
-                    nearest_townhall = self.bot.townhalls.closest_to(worker.position)
-                    if worker.distance_to(nearest_townhall.position) > 45:
-                        workers_defending_to_remove.add(worker_id)
-                        self.bot.actions.append(worker.move(nearest_townhall.position))
-                else:
+        # Bring back defending workers that have drifted too far from town halls
+        workers_defending_to_remove = set()
+        for worker_id in self.workers_defending:
+            worker = self.bot.workers.find_by_tag(worker_id)
+            if worker:
+                nearest_townhall = self.bot.townhalls.closest_to(worker.position)
+                if worker.distance_to(nearest_townhall.position) > 35:
                     workers_defending_to_remove.add(worker_id)
+                    self.bot.actions.append(worker.move(nearest_townhall.position))
+            else:
+                workers_defending_to_remove.add(worker_id)
 
-            # Remove workers from defending set
-            self.workers_defending -= workers_defending_to_remove
+        # Remove workers from defending set
+        self.workers_defending -= workers_defending_to_remove
 
     async def stop_defending(self):
         # Cleanup workers that were defending and send them back to their townhalls
