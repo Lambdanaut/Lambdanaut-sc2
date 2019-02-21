@@ -39,22 +39,17 @@ class MicroManager(Manager):
         WOULD THEORETICALLY BE USED BY WORKERS AND ZERGLINGS
         """
         if unit.health_percentage < 0.25:
-            cached_unit = self.bot.unit_cache.get(unit.tag)
-            if cached_unit and cached_unit.is_taking_damage:
-                if self.bot.known_enemy_units:
-                    nearest_enemy = self.bot.known_enemy_units.closest_to(unit)
-                    nearby_friendly_units = self.bot.units.closer_than(8, nearest_enemy)
-                    if len(nearby_friendly_units) > 8 and \
-                            nearest_enemy.distance_to(unit) < 6 and \
-                            nearest_enemy.can_attack_ground and \
-                            nearest_enemy.ground_range < 1:
-                        away_from_enemy = unit.position.towards(nearest_enemy, -3)
-                        self.bot.actions.append(unit.move(away_from_enemy))
-                        return True
+            if self.bot.known_enemy_units:
+                nearest_enemy = self.bot.known_enemy_units.closest_to(unit)
+                if nearest_enemy.distance_to(unit) < 12 and self.bot.is_melee(nearest_enemy):
+                    away_from_enemy = unit.position.towards(nearest_enemy, -1)
+                    self.bot.actions.append(unit.move(away_from_enemy))
+                    return True
         return False
 
     async def manage_workers(self):
-        pass
+        for worker in self.bot.workers.filter(lambda w: not w.is_collecting):
+            self.micro_back_melee(worker)
 
     async def manage_zerglings(self):
         zerglings = self.bot.units(const.ZERGLING)
@@ -63,6 +58,9 @@ class MicroManager(Manager):
 
         # Micro zerglings
         for zergling in zerglings:
+
+            if self.micro_back_melee(zergling):
+                continue
 
             nearby_enemy_units = self.bot.known_enemy_units.closer_than(8, zergling)
             if nearby_enemy_units:
