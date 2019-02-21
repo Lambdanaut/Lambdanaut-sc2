@@ -346,7 +346,7 @@ class LambdaBot(sc2.BotAI):
             return None
 
     def is_melee(self, unit: Unit) -> bool:
-        return 0 < unit.ground_range < 1.5
+        return unit.ground_range < 1.5 and unit.can_attack_ground
 
     async def get_open_expansions(self) -> List[Point2]:
         """Gets a sorted list of open expansions from the start location"""

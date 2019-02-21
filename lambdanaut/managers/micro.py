@@ -446,15 +446,24 @@ class MicroManager(Manager):
 
                             # Back off from enemy if our cluster is much weaker
                             if army_strength < -5 and unit_is_combatant:
-                                away_from_enemy = army_center.towards(
-                                    nearest_enemy_unit, -7)
-                                self.bot.actions.append(unit.move(away_from_enemy))
+                                if self.bot.is_melee(unit):
+                                    away_from_enemy = unit.position.towards(
+                                        nearest_enemy_unit, -2)
+                                    self.bot.actions.append(unit.move(away_from_enemy))
+                                    # away_from_enemy = army_center.towards(
+                                    #     nearest_enemy_unit, -7)
+                                    # self.bot.actions.append(unit.move(away_from_enemy))
+                                elif unit.weapon_cooldown:
+                                    # Ranged units only move back while we're on cooldown
+                                    away_from_enemy = unit.position.towards(
+                                        nearest_enemy_unit, -2)
+                                    self.bot.actions.append(unit.move(away_from_enemy))
 
                             # If nearest enemy unit is melee and our cluster is small, back off
                             elif 0 < nearest_enemy_unit.ground_range < 1.5 and len(army_cluster) < 8 \
                                     and unit.ground_range > 1 and nearest_enemy_unit.distance_to(unit) > 0.5 \
                                     and unit_is_combatant:
-                                how_far_to_move = -1.5
+                                how_far_to_move = -1
                                 away_from_enemy = unit.position.towards(
                                     nearest_enemy_unit, how_far_to_move)
                                 self.bot.actions.append(unit.move(away_from_enemy))

@@ -102,6 +102,8 @@ class OverlordManager(StatefulManager):
             lambda o: o.tag not in self.scouting_overlord_tags).idle
 
         if overlords:
+            overlord = overlords.first
+
             # Get a list of expansion positions that
             # * We don't have overlords at already
             # * There aren't any enemies there
@@ -117,24 +119,23 @@ class OverlordManager(StatefulManager):
             else:
                 expansion_locations = []
 
-            for overlord in overlords:
-                if expansion_locations:
-                    # There's an expansion location we aren't scouting. Check it out
-                    expansion = overlord.position.closest(expansion_locations)
+            if expansion_locations:
+                # There's an expansion location we aren't scouting. Check it out
+                expansion = overlord.position.closest(expansion_locations)
 
-                    # Add expansion to expiring list so we don't check it again soon
-                    self._recent_expansions_visited.add(expansion, self.bot.state.game_loop, expiry=45)
+                # Add expansion to expiring list so we don't check it again soon
+                self._recent_expansions_visited.add(expansion, self.bot.state.game_loop, expiry=45)
 
-                    target = expansion.towards_with_random_angle(
-                        self.bot.start_location, 9)
-                    self.bot.actions.append(overlord.move(target))
+                target = expansion.towards_with_random_angle(
+                    self.bot.start_location, 9)
+                self.bot.actions.append(overlord.move(target))
 
-                else:
-                    # There's an expansion location we aren't scouting. Check it out
-                    distance = self.bot.start_location_to_enemy_start_location_distance * 0.5
-                    target = self.bot.start_location.towards_with_random_angle(
-                        self.bot.enemy_start_location, distance, max_difference=(math.pi / 1.0))
-                    self.bot.actions.append(overlord.move(target))
+            else:
+                # Just disperse randomly at angle around center of map
+                distance = self.bot.start_location_to_enemy_start_location_distance * 0.5
+                target = self.bot.start_location.towards_with_random_angle(
+                    self.bot.enemy_start_location, distance, max_difference=(math.pi / 1.0))
+                self.bot.actions.append(overlord.move(target))
 
     async def proxy_scout_with_second_overlord(self):
         overlords = self.bot.units(const.OVERLORD)
