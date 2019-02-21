@@ -303,65 +303,66 @@ class MicroManager(Manager):
         spine_crawlers = rooted_spine_crawlers | uprooted_spine_crawlers
         townhalls = self.bot.townhalls.ready
 
-        if spine_crawlers:
-            if townhalls:
-                townhall = townhalls.furthest_to(self.bot.start_location)
+        if spine_crawlers and townhalls:
+            townhall = townhalls.furthest_to(self.bot.start_location)
 
-                # Get nearby spinecrawlers that are at our elevation
-                nearby_spine_crawlers = spine_crawlers.closer_than(22, townhall).filter(
-                    lambda sc: math.floor(sc.position3d.z) <= math.floor(townhall.position3d.z))
+            # Get nearby spinecrawlers that are at our elevation
+            nearby_spine_crawlers = spine_crawlers.closer_than(22, townhall).filter(
+                lambda sc: math.floor(sc.position3d.z) <= math.floor(townhall.position3d.z))
 
-                # Get nearby ramp
-                nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
-                nearby_ramp: Point2 = townhall.position.towards(
-                    self.bot.enemy_start_location, 2).closest(nearby_ramps)
+            # Get nearby ramp
+            nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
+            nearby_ramp: Point2 = townhall.position.towards(
+                self.bot.enemy_start_location, 2).closest(nearby_ramps)
 
-                try:
-                    ramp_height = self.bot.game_info.terrain_height[nearby_ramp]
-                except:
-                    ramp_height = None
+            try:
+                ramp_height = self.bot.game_info.terrain_height[nearby_ramp]
+            except:
+                ramp_height = None
 
-                try:
-                    ramp_creep = self.bot.state.creep.is_set(nearby_ramp)
-                except:
-                    ramp_creep = False
+            try:
+                ramp_creep = self.bot.state.creep.is_set(nearby_ramp)
+            except:
+                ramp_creep = False
 
-                ramp_distance_to_sc = nearby_ramp.distance_to_closest(spine_crawlers)
+            ramp_distance_to_sc = nearby_ramp.distance_to_closest(spine_crawlers)
 
-                ramp_lower_than_townhall = ramp_height is not None \
-                                           and math.floor(ramp_height) <= math.floor(townhall.position3d.z)
+            ramp_lower_than_townhall = ramp_height is not None \
+                and math.floor(ramp_height) <= math.floor(townhall.position3d.z)
 
-                ramp_close_to_townhall = nearby_ramp.distance_to(townhall) < 20
+            ramp_close_to_townhall = nearby_ramp.distance_to(townhall) < 20
 
-                # Unroot spine crawlers that are far away from the front expansions
-                # Also unroot spine crawlers if a nearby ramp gets creep on it.
-                if len(nearby_spine_crawlers) < len(spine_crawlers) \
-                        or (ramp_close_to_townhall and ramp_lower_than_townhall and ramp_creep
-                            and ramp_distance_to_sc > 2):
+            # Unroot spine crawlers that are far away from the front expansions
+            # Also unroot spine crawlers if a nearby ramp gets creep on it.
+            if len(nearby_spine_crawlers) < len(spine_crawlers) \
+                    or (ramp_close_to_townhall and ramp_lower_than_townhall and ramp_creep
+                        and ramp_distance_to_sc > 2):
 
-                    for sc in rooted_spine_crawlers.idle:
-                        self.bot.actions.append(sc(
-                            const.AbilityId.SPINECRAWLERUPROOT_SPINECRAWLERUPROOT))
+                far_rooted_spine_crawlers = (sc for sc in rooted_spine_crawlers.idle
+                                             if sc not in nearby_spine_crawlers)
+                for sc in far_rooted_spine_crawlers:
+                    self.bot.actions.append(sc(
+                        const.AbilityId.SPINECRAWLERUPROOT_SPINECRAWLERUPROOT))
 
-                # Root unrooted spine crawlers near the front expansions
-                idle_uprooted_spine_crawlers = uprooted_spine_crawlers.idle
-                if idle_uprooted_spine_crawlers:
-                    # We do this one by one rather than in a for-loop so that they don't
-                    # try to root at the same place as each other
-                    sc = idle_uprooted_spine_crawlers.first
-                    if ramp_close_to_townhall \
-                            and ramp_lower_than_townhall:
-                        target = nearby_ramp
-                    else:
-                        near_townhall = townhall.position.towards_with_random_angle(
-                            self.bot.enemy_start_location, 10)
-                        target = near_townhall
+            # Root unrooted spine crawlers near the front expansions
+            idle_uprooted_spine_crawlers = uprooted_spine_crawlers.idle
+            if idle_uprooted_spine_crawlers:
+                # We do this one by one rather than in a for-loop so that they don't
+                # try to root at the same place as each other
+                sc = idle_uprooted_spine_crawlers.first
+                if ramp_close_to_townhall \
+                        and ramp_lower_than_townhall:
+                    target = nearby_ramp
+                else:
+                    near_townhall = townhall.position.towards_with_random_angle(
+                        self.bot.enemy_start_location, 10)
+                    target = near_townhall
 
-                    position = await self.bot.find_placement(
-                        const.SPINECRAWLER, target, max_distance=25)
+                position = await self.bot.find_placement(
+                    const.SPINECRAWLER, target, max_distance=25)
 
-                    self.bot.actions.append(
-                        sc(const.AbilityId.SPINECRAWLERROOT_SPINECRAWLERROOT, position))
+                self.bot.actions.append(
+                    sc(const.AbilityId.SPINECRAWLERROOT_SPINECRAWLERROOT, position))
 
     async def manage_structures(self):
         structures = self.bot.units.structure
@@ -397,6 +398,10 @@ class MicroManager(Manager):
 
     async def manage_priority_targeting(self, unit, attack_priorities=None):
         """Handles combat priority targeting for the given unit"""
+
+        if unit.is_gathering:
+            # Don't priority target if it's a mining worker
+            return
 
         if attack_priorities is None:
             attack_priorities = set()

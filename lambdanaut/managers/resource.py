@@ -69,12 +69,13 @@ class ResourceManager(Manager):
         # Move excess worker off saturated minerals to unsaturated minerals
         for saturated_townhall in saturated_townhalls:
             mineral_workers = self.bot.workers.filter(
-                lambda worker: worker.is_carrying_minerals)
+                lambda worker: worker.is_carrying_minerals and worker.is_gathering)
             if mineral_workers.exists:
                 worker = mineral_workers.closest_to(saturated_townhall)
                 unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)
                 mineral = self.bot.state.mineral_field.closest_to(unsaturated_townhall)
 
+                self.bot.actions.append(worker.return_resource(unsaturated_townhall))
                 self.bot.actions.append(worker.gather(mineral, queue=True))
 
     async def manage_minerals(self):
@@ -122,6 +123,7 @@ class ResourceManager(Manager):
                     unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)
                     mineral = self.bot.state.mineral_field.closest_to(unsaturated_townhall)
 
+                    self.bot.actions.append(worker.return_resource(unsaturated_townhall))
                     self.bot.actions.append(worker.gather(mineral, queue=True))
 
         else:
@@ -143,6 +145,7 @@ class ResourceManager(Manager):
                     unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)
                     mineral = self.bot.state.mineral_field.closest_to(unsaturated_townhall)
 
+                    self.bot.actions.append(worker.return_resource(unsaturated_townhall))
                     self.bot.actions.append(worker.gather(mineral, queue=True))
 
             # Move workers from minerals to unsaturated extractors
