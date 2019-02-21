@@ -628,9 +628,12 @@ class BuildManager(Manager):
                 self.print("Couldn't build expansion. All spots are taken.")
                 return False
 
+            # Get drones that aren't carrying minerals or gas
+            drones = self.bot.units(const.DRONE).filter(
+                lambda d: not d.is_carrying_minerals and not d.is_carrying_vespene)
+
             if self.can_afford(build_target):
-                drones = self.bot.units(const.DRONE)
-                if drones.exists:
+                if drones:
                     drone = drones.closest_to(expansion_location)
 
                     err = await self.bot.do(drone.build(build_target, expansion_location))
@@ -650,8 +653,7 @@ class BuildManager(Manager):
                     not self._recent_commands.contains(
                         BuildManagerCommands.EXPAND_MOVE, self.bot.state.game_loop):
                 if expansion_location:
-                    drones = self.bot.units(const.DRONE)
-                    if drones.exists:
+                    if drones:
                         nearest_drone = self.bot.units(const.DRONE).closest_to(expansion_location)
                         # Only move the drone to the expansion location if it's far away
                         # To keep from constantly issuing move commands
