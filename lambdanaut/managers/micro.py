@@ -116,13 +116,13 @@ class MicroManager(Manager):
         # Micro banelings
         for baneling in banelings:
             nearby_enemy_units = self.bot.known_enemy_units.closer_than(9, baneling)
-            if nearby_enemy_units.exists:
+            if nearby_enemy_units:
                 nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priorities)
-                if nearby_enemy_priorities.exists:
+                if nearby_enemy_priorities:
                     # Filter enemy priorities for only those that also have a nearby priority.
                     # It's only a priority if it makes the splash damage worth it.
                     nearby_enemy_priorities = nearby_enemy_priorities.filter(
-                        lambda u: nearby_enemy_units.closer_than(2, u).of_type(attack_priorities).exists)
+                        lambda u: nearby_enemy_units.closer_than(2, u).of_type(attack_priorities))
 
                     if nearby_enemy_priorities:
                         nearby_enemy_unit = nearby_enemy_priorities.closest_to(baneling)
@@ -335,8 +335,7 @@ class MicroManager(Manager):
 
                 # Unroot spine crawlers that are far away from the front expansions
                 # Also unroot spine crawlers if a nearby ramp gets creep on it.
-                if not nearby_spine_crawlers \
-                        or (len(nearby_spine_crawlers) < len(spine_crawlers) / 2) \
+                if len(nearby_spine_crawlers) < len(spine_crawlers) \
                         or (ramp_close_to_townhall and ramp_lower_than_townhall and ramp_creep
                             and ramp_distance_to_sc > 2):
 
@@ -355,7 +354,7 @@ class MicroManager(Manager):
                         target = nearby_ramp
                     else:
                         near_townhall = townhall.position.towards_with_random_angle(
-                            self.bot.enemy_start_location, 10, max_difference=(math.pi / 3.0))
+                            self.bot.enemy_start_location, 10)
                         target = near_townhall
 
                     position = await self.bot.find_placement(
@@ -369,8 +368,8 @@ class MicroManager(Manager):
 
         # Cancel damaged not-ready structures
         for structure in structures.not_ready:
-            if structure.health_percentage < 0.05 or \
-                    (structure.build_progress > 0.98 and structure.health_percentage < 0.4):
+            if structure.health_percentage < 0.08 or \
+                    (structure.build_progress > 0.98 and structure.health_percentage < 0.35):
                 self.bot.actions.append(structure(const.CANCEL))
 
     async def manage_eggs(self):

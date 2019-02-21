@@ -4,6 +4,7 @@ import lib.sc2.constants as const
 
 import lambdanaut.const2 as const2
 from lambdanaut.const2 import Messages, OverlordStates
+from lambdanaut.expiringlist import ExpiringList
 from lambdanaut.managers import StatefulManager
 import lambdanaut.utils as utils
 
@@ -49,6 +50,9 @@ class OverlordManager(StatefulManager):
         # Message subscriptions
         self.subscribe(Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP)
 
+        # Expiring list of recent expansions we've sent an overlord to
+        self._recent_expansions_visited = ExpiringList()
+
     @property
     def scouting_overlord_tags(self):
         return {self.scouting_overlord_tag,
@@ -92,16 +96,45 @@ class OverlordManager(StatefulManager):
 
     async def overlord_dispersal(self):
         """
-        Disperse Overlords evenly around base
+        Disperse Overlords to different expansions
         """
         overlords = self.bot.units(const.OVERLORD).filter(
             lambda o: o.tag not in self.scouting_overlord_tags).idle
 
-        distance = self.bot.start_location_to_enemy_start_location_distance * 0.5
-        for overlord in overlords:
-            target = self.bot.start_location.towards_with_random_angle(
-                self.bot.enemy_start_location, distance, max_difference=(math.pi / 1.0))
-            self.bot.actions.append(overlord.move(target))
+        if overlords:
+            # Get a list of expansion positions that
+            # * We don't have overlords at already
+            # * There aren't any enemies there
+            # * And that we haven't visited recently
+            if self.bot.enemy_cache:
+                expansion_locations = [
+                    expansion for expansion in self.bot.expansion_locations.keys()
+                    if not self.bot.is_visible(expansion)
+                    and expansion.distance_to_closest(self.bot.enemy_cache.values()) > 17
+                    and expansion.distance_to_closest(overlords) > 16
+                    and not self._recent_expansions_visited.contains(expansion, self.bot.state.game_loop)
+                ]
+            else:
+                expansion_locations = []
+
+            for overlord in overlords:
+                if expansion_locations:
+                    # There's an expansion location we aren't scouting. Check it out
+                    expansion = overlord.position.closest(expansion_locations)
+
+                    # Add expansion to expiring list so we don't check it again soon
+                    self._recent_expansions_visited.add(expansion, self.bot.state.game_loop, expiry=45)
+
+                    target = expansion.towards_with_random_angle(
+                        self.bot.start_location, 9)
+                    self.bot.actions.append(overlord.move(target))
+
+                else:
+                    # There's an expansion location we aren't scouting. Check it out
+                    distance = self.bot.start_location_to_enemy_start_location_distance * 0.5
+                    target = self.bot.start_location.towards_with_random_angle(
+                        self.bot.enemy_start_location, distance, max_difference=(math.pi / 1.0))
+                    self.bot.actions.append(overlord.move(target))
 
     async def proxy_scout_with_second_overlord(self):
         overlords = self.bot.units(const.OVERLORD)
@@ -198,7 +231,7 @@ class OverlordManager(StatefulManager):
                 nearby_enemy_units = self.bot.units.enemy. \
                     closer_than(10, overlord).filter(lambda unit: unit.can_attack_air)
 
-                if nearby_enemy_units.exists:
+                if nearby_enemy_units:
                     nearby_enemy_unit = nearby_enemy_units.closest_to(overlord)
                     away_from_enemy = overlord.position.towards(nearby_enemy_unit, -1)
                     self.bot.actions.append(overlord.move(away_from_enemy))
@@ -332,8 +365,6 @@ class OverlordManager(StatefulManager):
         We haven't seen any enemy structures yet.
         Move towards enemy's natural expansion.
         """
-        await self.overlord_flee()
-
         # Early game scouting
 
         enemy_natural_expansion = self.bot.get_enemy_natural_expansion()
@@ -359,7 +390,7 @@ class OverlordManager(StatefulManager):
             self.bot.actions.append(overlord.move(away_from_enemy_natural_expansion))
 
     async def do_initial_backout(self):
-        await self.overlord_flee()
+        pass
 
     async def do_suicide_dive(self):
         overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
@@ -374,7 +405,7 @@ class OverlordManager(StatefulManager):
                 overlord.move(self.bot.enemy_start_location.position))
 
     async def do_initial_dive(self):
-        await self.overlord_flee()
+        pass
 
     async def determine_state_change(self):
         if self.state == OverlordStates.INITIAL:
@@ -473,6 +504,7 @@ class OverlordManager(StatefulManager):
 
         await self.read_messages()
 
+        await self.overlord_flee()
         await self.overlord_dispersal()
         await self.turn_on_generate_creep()
         await self.proxy_scout_with_second_overlord()

@@ -23,6 +23,8 @@
   
   * Create an influence map to use for strategizing and micro
     * https://aigamedev.com/open/tutorial/influence-map-mechanics/
+    
+  * Revisit spine crawler placement after choke detection code has been implemented
   
   * Build a recurrent neural net that learns to micro Mutalisks
     * Goal: Kill as many enemy units as possible before losing all mutalisks

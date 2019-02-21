@@ -31,7 +31,7 @@ MAPS = [
     'BlueshiftLE',
     'PortAleksanderLE', ]
 
-MAP_NAME = "Micro"
+MAP_NAME = ""
 REALTIME = False
 
 # BUILD = sc2.AIBuild.RandomBuild
