@@ -297,21 +297,6 @@ class ForceManager(StatefulManager):
                         elif queen.distance_to(th) > 10:
                             self.bot.actions.append(queen.attack(th.position))
 
-                # # Have army defend
-                # army = self.bot.units(const2.ZERG_ARMY_UNITS)
-                #
-                # # The harder we're attacked, the further-out army to pull back
-                # if len(enemies_nearby) < 5:
-                #     army.closer_than(self.bot.start_location_to_enemy_start_location_distance * 0.6,
-                #                      self.bot.enemy_start_location)
-                #
-                # for unit in army:
-                #
-                #     target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
-                #
-                #     if target and unit.weapon_cooldown <= 0:
-                #         self.bot.actions.append(unit.attack(target.position))
-
                 # Have army clusters defend
                 army_clusters = self.bot.army_clusters
 
@@ -330,10 +315,12 @@ class ForceManager(StatefulManager):
                                     army_cluster, nearest_enemy_cluster)
 
                                 if army_strength >= 0 \
-                                    or (army_strength > -6 and
-                                        nearest_enemy_cluster.position.distance_to(army_cluster.position) < 10):
-                                    # Attack enemy if we stand a chance or if we hardly stand a change and they're
-                                    # in our face.
+                                        or (army_strength > -6 and
+                                            nearest_enemy_cluster.position.distance_to(army_cluster.position) < 10)\
+                                        or self.bot.supply_used > 185:
+                                    # Attack enemy if we stand a chance or
+                                    # if we hardly stand a chance and they're in our face or
+                                    # if we're near supply max
                                     for unit in army_cluster:
                                         if unit.type_id not in const2.NON_COMBATANTS \
                                                 and unit.tag not in self.bot.townhall_queens.values():
@@ -718,7 +705,8 @@ class ForceManager(StatefulManager):
                 relative_army_strength = self.bot.relative_army_strength(
                     army, self.bot.enemy_cache.values(), ignore_workers=True)
 
-                if relative_army_strength < -1:
+                # Switch back to housekeeping if our army is weaker and we're not max supply
+                if relative_army_strength < -1 and self.bot.supply_used < 190:
                     return await self.change_state(ForcesStates.HOUSEKEEPING)
 
                 # Start attacking when army has amassed
