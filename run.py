@@ -44,10 +44,10 @@ BUILD = sc2.AIBuild.Rush
 # DIFFICULTY = sc2.Difficulty.CheatInsane
 # DIFFICULTY = sc2.Difficulty.CheatMoney
 # DIFFICULTY = sc2.Difficulty.CheatVision
-DIFFICULTY = sc2.Difficulty.VeryHard
+# DIFFICULTY = sc2.Difficulty.VeryHard
 # DIFFICULTY = sc2.Difficulty.Hard
 # DIFFICULTY = sc2.Difficulty.Medium
-# DIFFICULTY = sc2.Difficulty.Easy
+DIFFICULTY = sc2.Difficulty.Easy
 
 RACE = sc2.Race.Zerg
 ENEMY_RACE = sc2.Race.Zerg
