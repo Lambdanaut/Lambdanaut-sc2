@@ -654,7 +654,7 @@ class BuildManager(Manager):
                         BuildManagerCommands.EXPAND_MOVE, self.bot.state.game_loop):
                 if expansion_location:
                     if drones:
-                        nearest_drone = self.bot.units(const.DRONE).closest_to(expansion_location)
+                        nearest_drone = drones.closest_to(expansion_location)
                         # Only move the drone to the expansion location if it's far away
                         # To keep from constantly issuing move commands
                         if nearest_drone.distance_to(expansion_location) > 9:

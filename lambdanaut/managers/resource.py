@@ -60,8 +60,10 @@ class ResourceManager(Manager):
         if not saturated_townhalls:
             return
 
+        # Unsaturated Townhalls include townhalls that are almost complete
         unsaturated_townhalls = self.bot.townhalls.filter(
-            lambda th: th.assigned_harvesters < th.ideal_harvesters)
+            lambda th: th.assigned_harvesters < th.ideal_harvesters or
+                       (not th.is_ready and th.build_progress > 0.95))
 
         if not unsaturated_townhalls:
             return
@@ -69,7 +71,7 @@ class ResourceManager(Manager):
         # Move excess worker off saturated minerals to unsaturated minerals
         for saturated_townhall in saturated_townhalls:
             mineral_workers = self.bot.workers.filter(
-                lambda worker: worker.is_carrying_minerals and worker.is_gathering)
+                lambda worker: worker.is_carrying_minerals and worker.is_collecting)
             if mineral_workers.exists:
                 worker = mineral_workers.closest_to(saturated_townhall)
                 unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)

@@ -399,7 +399,7 @@ class MicroManager(Manager):
     async def manage_priority_targeting(self, unit, attack_priorities=None):
         """Handles combat priority targeting for the given unit"""
 
-        if unit.is_gathering:
+        if unit.is_collecting:
             # Don't priority target if it's a mining worker
             return
 
