@@ -1,4 +1,5 @@
 import math
+from typing import Dict
 
 import lib.sc2 as sc2
 from lib.sc2.position import Point2
@@ -105,22 +106,41 @@ class MicroManager(Manager):
         banelings = self.bot.units(const.BANELING)
         burrowed_banelings = self.bot.units(const.UnitTypeId.BANELINGBURROWED)
 
-        attack_priorities = const2.WORKERS | {const.MARINE, const.ZERGLING, const.ZEALOT}
+        attack_priorities = const2.WORKERS | {
+            const.MARINE, const.ZERGLING, const.ZEALOT, const.SUPPLYDEPOT}
+
+        # Memorized mapping from {enemy_tag: count_of_nearby_enemy_priorities}
+        nearby_enemy_priority_counts: Dict[int, int] = {}
 
         # Micro banelings
         for baneling in banelings:
-            nearby_enemy_units = self.bot.known_enemy_units.closer_than(9, baneling)
-            if nearby_enemy_units:
-                nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priorities)
-                if nearby_enemy_priorities:
-                    # Filter enemy priorities for only those that also have a nearby priority.
-                    # It's only a priority if it makes the splash damage worth it.
-                    nearby_enemy_priorities = nearby_enemy_priorities.filter(
-                        lambda u: nearby_enemy_units.closer_than(2, u).of_type(attack_priorities))
+            nearby_enemy_units = self.bot.known_enemy_units.closer_than(10, baneling)
+            nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priorities)
 
-                    if nearby_enemy_priorities:
-                        nearby_enemy_unit = nearby_enemy_priorities.closest_to(baneling)
-                        self.bot.actions.append(baneling.attack(nearby_enemy_unit))
+            if nearby_enemy_priorities:
+                # Get the nearby priority target with the most nearby priority targets around it
+
+                greatest_count = 0
+                greatest_i = 0
+                for u_i in range(len(nearby_enemy_priorities)):
+                    u = nearby_enemy_priorities[u_i]
+
+                    u_nearby_enemy_count = nearby_enemy_priority_counts.get(u.tag)
+
+                    if u_nearby_enemy_count is None:
+                        u_nearby_enemy_count = len(nearby_enemy_units.closer_than(3, u))
+                        nearby_enemy_priority_counts[u.tag] = u_nearby_enemy_count
+
+                    if u_nearby_enemy_count > greatest_count:
+                        greatest_count = u_nearby_enemy_count
+                        greatest_i = u_i
+
+                greatest_priority = nearby_enemy_priorities[greatest_i]
+
+                if baneling.distance_to(greatest_priority) < 2:
+                    self.bot.actions.append(baneling.attack(greatest_priority))
+                else:
+                    self.bot.actions.append(baneling.move(greatest_priority.position))
 
         # Unburrow banelings if enemy nearby
         for baneling in burrowed_banelings:

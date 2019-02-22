@@ -204,7 +204,7 @@ class LambdaBot(sc2.BotAI):
         if self.iteration % 15 == 0:
 
             hatch = self.units(const.HATCHERY)
-            # await self._client.debug_create_unit([[const.ZERGLING, 1, self.c - Point2((4, 0)), 1]])
+            # await self._client.debug_create_unit([[const.BANELING, 1, self.start_location - Point2((4, 0)), 1]])
             # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.ZERGLING, 7, hatch.random.position + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.ROACH, 1, hatch.random.position + Point2((11, 0)), 1]])
@@ -220,7 +220,10 @@ class LambdaBot(sc2.BotAI):
         #     print("ENEMY COUNT: {}".format(len(enemy)))
         #     if friendly | enemy:
         #         await self._client.debug_kill_unit(friendly | enemy)
-
+        #
+        #     await self._client.debug_create_unit([[const.ZERGLING, 3, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
+        #     await self._client.debug_create_unit([[const.ZERGLING, 10, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
+        #     await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
             # await self._client.debug_create_unit([[const.DRONE, 30, self.start_location + Point2((5, 0)), 1]])
             # await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((4, 0)), 1]])
             # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
@@ -499,7 +502,7 @@ class LambdaBot(sc2.BotAI):
         """
 
         default_dps_map = {
-            const.BANELING: 24,
+            const.BANELING: 30,
             const.BUNKER: 30,
             const.HIGHTEMPLAR: 30,
             const.INFESTOR: 30,
@@ -524,7 +527,9 @@ class LambdaBot(sc2.BotAI):
             self,
             units_1: Union[clustering.Cluster, sc2.units.Units],
             units_2: Union[clustering.Cluster, sc2.units.Units],
-            ignore_workers=False) -> float:
+            ignore_workers=False,
+            ignore_defensive_structures=False,
+        ) -> float:
         """
         Returns a positive value if u1 is stronger, and negative if u2 is stronger.
         A value of +12 would be very good and a value of -12 would be very bad.
@@ -534,12 +539,15 @@ class LambdaBot(sc2.BotAI):
         """
 
         # Filter out structures that can't attack
+        # Also filter out structures that can attack if `ignore_defensive_structures` is true
         # Also filter out workers if ignore_workers is True
-        u1 = [u for u in units_1 if
-              (not u.is_structure or u.can_attack_ground or u.can_attack_air)
+        u1 = [u for u in units_1
+              if (not u.is_structure or u.can_attack_ground or u.can_attack_air)
+              and not ignore_defensive_structures or u not in const2.DEFENSIVE_STRUCTURES
               and (ignore_workers or u.type_id not in const2.WORKERS)]
         u2 = [u for u in units_2
               if (not u.is_structure or u.can_attack_ground or u.can_attack_air)
+              and not ignore_defensive_structures or u not in const2.DEFENSIVE_STRUCTURES
               and (ignore_workers or u.type_id not in const2.WORKERS)]
 
         u1_dps = sum(self.adjusted_dps(u) for u in u1)

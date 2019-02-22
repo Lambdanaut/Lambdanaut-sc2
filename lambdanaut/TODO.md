@@ -16,6 +16,10 @@
   * Write mutalisk micro and re-add mutalisk to ling-bane-muta build
   
   * Better defending micro. Need to beat cheezerg's cheezy cheese 
+  
+  * Add COUNTERING forces state
+    * If the opponent is attacking our base and has more than we have, then attack their main 
+      base and don't come back to defend. 
 
 ## MEDIUM PRIORITY
 
