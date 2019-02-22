@@ -258,7 +258,7 @@ class ForceManager(StatefulManager):
                 # Workers attack enemy
                 ground_enemies = [enemy for enemy in enemies_nearby if not enemy.is_flying]
                 workers = self.bot.workers.closer_than(14, enemies_nearby[0].position)
-                if workers and ground_enemies and \
+                if ground_enemies and \
                         len(workers) > len(ground_enemies):
                     for worker in workers:
                         if worker.tag in self.workers_defending:
@@ -273,6 +273,12 @@ class ForceManager(StatefulManager):
                                 if target.type_id not in worker_non_targets:
                                     self.workers_defending.add(worker.tag)
                                     self.bot.actions.append(worker.attack(target.position))
+                else:
+                    # If they have more than us, stop the worker from defending
+                    for worker in workers:
+                        if worker.tag in self.workers_defending:
+                            self.workers_defending.remove(worker.tag)
+                            self.bot.actions.append(worker.stop())
 
                 # Have nearest queen defend
                 queen_tag = self.bot.townhall_queens.get(th.tag)
@@ -349,7 +355,6 @@ class ForceManager(StatefulManager):
                         if worker.distance_to(nearest_townhall.position) > 18:
                             workers_defending_to_remove.add(worker_id)
                             self.bot.actions.append(worker.return_resource(nearest_townhall))
-                            self.bot.actions.append(worker.move(nearest_townhall.position, queue=True))
                 else:
                     workers_defending_to_remove.add(worker_id)
 
