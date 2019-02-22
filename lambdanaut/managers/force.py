@@ -188,10 +188,10 @@ class ForceManager(StatefulManager):
             closest_townhall = townhalls.closest_to(self.bot.enemy_start_location)
             for townhall in townhalls:
 
-                number_of_units_to_townhall = round((len(army) / len(townhalls)) * 0.1)
+                number_of_units_to_townhall = round((len(army) / len(townhalls)) * 0.4)
                 if townhall.tag == closest_townhall.tag:
                     # The closest townhall to the enemy should have more army
-                    number_of_units_to_townhall = round((len(army) / len(townhalls)) * 4)
+                    number_of_units_to_townhall = round((len(army) / len(townhalls)) * 3)
 
                 nearby_army = army.closer_than(22, townhall.position)
 
