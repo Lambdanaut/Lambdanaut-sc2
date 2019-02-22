@@ -211,7 +211,7 @@ class LambdaBot(sc2.BotAI):
         if self.iteration % 15 == 0:
 
             hatch = self.units(const.HATCHERY)
-            await self._client.debug_create_unit([[const.INFESTOR, 1, self.start_location - Point2((4, 0)), 1]])
+            # await self._client.debug_create_unit([[const.INFESTOR, 1, self.start_location - Point2((4, 0)), 1]])
             # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.ZERGLING, 7, hatch.random.position + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.ROACH, 1, hatch.random.position + Point2((11, 0)), 1]])
@@ -220,18 +220,18 @@ class LambdaBot(sc2.BotAI):
         # Create banelings and zerglings every 15 steps
         # For testing micro maps
         #
-        import random
-        friendly = self.units
-        enemy = self.known_enemy_units
-        if not friendly or not enemy:
-            print("FRIENDLY COUNT: {}".format(len(friendly)))
-            print("ENEMY COUNT: {}".format(len(enemy)))
-            if friendly | enemy:
-                await self._client.debug_kill_unit(friendly | enemy)
-
-            await self._client.debug_create_unit([[const.ZERGLING, 3, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
-            await self._client.debug_create_unit([[const.ZERGLING, 10, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
-            await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
+        # import random
+        # friendly = self.units
+        # enemy = self.known_enemy_units
+        # if not friendly or not enemy:
+        #     print("FRIENDLY COUNT: {}".format(len(friendly)))
+        #     print("ENEMY COUNT: {}".format(len(enemy)))
+        #     if friendly | enemy:
+        #         await self._client.debug_kill_unit(friendly | enemy)
+        #
+        #     await self._client.debug_create_unit([[const.ZERGLING, 3, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
+        #     await self._client.debug_create_unit([[const.ZERGLING, 10, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
+        #     await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
             # await self._client.debug_create_unit([[const.DRONE, 30, self.start_location + Point2((5, 0)), 1]])
             # await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((4, 0)), 1]])
             # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])

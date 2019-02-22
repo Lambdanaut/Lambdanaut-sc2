@@ -18,8 +18,8 @@ ZERG_STRUCTURES_FROM_DRONES = \
      const.INFESTATIONPIT, const.HYDRALISKDEN, const.LURKERDENMP, const.ULTRALISKCAVERN, }
 
 ZERG_UNITS_FROM_LARVAE = \
-    {const.DRONE, const.OVERLORD, const.ZERGLING, const.ROACH, const.HYDRALISK,
-     const.MUTALISK, const.CORRUPTOR, const.ULTRALISK, }
+    {const.DRONE, const.OVERLORD, const.ZERGLING, const.ROACH, const.HYDRALISK, const.INFESTOR,
+     const.UnitTypeId.SWARMHOSTMP, const.MUTALISK, const.CORRUPTOR, const.ULTRALISK, const.VIPER, }
 
 ZERG_ARMY_UNITS = \
     {const.ZERGLING, const.BANELING, const.ROACH, const.RAVAGER, const.HYDRALISK, const.MUTALISK, const.OVERSEER,
