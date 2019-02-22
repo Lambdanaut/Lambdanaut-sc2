@@ -40,7 +40,7 @@ class Cluster(list):
         prev_position = self.position
 
         # Iterate over self, adding up all the points in ourself
-        sum_of_self = reduce(lambda p1, p2: p1.position + p2.position, self, Point2((0, 0)))
+        sum_of_self = reduce(lambda p1, p2: p1 + p2.position, self, Point2((0, 0)))
 
         new_position = sum_of_self / len(self)
 
@@ -84,6 +84,7 @@ class Cluster(list):
         new_cluster = Cluster((self.position + other.position) / 2, self + other)
         new_cluster.update_position()
         return new_cluster
+
 
 def get_fresh_clusters(data, n=4) -> List[Cluster]:
     """
@@ -131,5 +132,5 @@ def k_means_update(clusters: List[Cluster], data):
         nearest_cluster = cluster.position.closest(clusters_excluding_this_cluster)
 
         if cluster and nearest_cluster and \
-                cluster.position.distance_to(nearest_cluster.position) < 11:
+                cluster.position.distance_to(nearest_cluster.position) < 9:
             cluster.merge(nearest_cluster)

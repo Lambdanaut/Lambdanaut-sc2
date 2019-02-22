@@ -246,15 +246,19 @@ class LambdaBot(sc2.BotAI):
             if cluster:
                 radius = cluster.position.distance_to_furthest(cluster)
                 cluster_position = cluster.position.to3
-                cluster_position += Point3((0, 0, 5))
+                cluster_position += Point3((0, 0, 6))
                 self._client.debug_sphere_out(cluster_position, radius, color=Green())
+                self._client.debug_text_screen(str('Size: {}'.format(len(cluster))),
+                                               cluster_position, color=Green())
 
         for cluster in self.enemy_clusters:
             if cluster:
                 radius = cluster.position.distance_to_furthest(cluster)
                 cluster_position = cluster.position.to3
-                cluster_position += Point3((0, 0, 5))
+                cluster_position += Point3((0, 0, 6))
                 self._client.debug_sphere_out(cluster_position, radius, color=Red())
+                self._client.debug_text_screen(str('Size: {}'.format(len(cluster))),
+                                               cluster_position, color=Red())
 
         await self._client.send_debug()
 
