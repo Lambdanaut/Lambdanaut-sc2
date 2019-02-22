@@ -2,16 +2,28 @@ from functools import reduce
 import random
 from typing import List, Union
 
+import lib.sc2.constants as const
+from lib.sc2.unit import Unit
 from lib.sc2.units import Units
-from lib.sc2.position import Point2
+from lib.sc2.position import Point2, Point3
+
+import lambdanaut.const2 as const2
 
 
 class Cluster(list):
-    def __init__(self, position: Point2, *args: Union[Units, List[Point2], List[Units]]):
+    def __init__(self, position: Point2, *args: Union[Units, List[Unit]]):
 
         super(Cluster, self).__init__(*args)
 
-        self.position = position
+        # 3D point where:
+        # `x` is the x position in 2D sc2 space
+        # `y` is the y position in 2D sc2 space
+        # `z` is a special value used to break apart unit groups by unit type
+        self._position: Point3 = position.to3
+
+    @property
+    def position(self):
+        return self._position.to2
 
     @property
     def radius(self):
@@ -37,17 +49,19 @@ class Cluster(list):
         if not len(self):
             return False
 
-        prev_position = self.position
+        prev_position = self._position
 
         # Iterate over self, adding up all the points in ourself
-        sum_of_self = reduce(lambda p1, p2: p1.position + p2.position, self, Point2((0, 0)))
+        sum_of_self = reduce(
+            lambda p1, p2: p1.position + p2.position + self.unit_z_value(p2),
+            self, Point3((0, 0, 0)))
 
         new_position = sum_of_self / len(self)
 
         position_changed = prev_position != new_position
 
         # Update position with new position
-        self.position = new_position
+        self._position = new_position
 
         return position_changed
 
@@ -57,13 +71,13 @@ class Cluster(list):
         """
         if len(self):
             # Choose a random data point from self
-            centroid = random.choice(self)
+            centroid = random.choice(self).position.to3
         else:
             # If we have no data, set a random point as the centroid
-            centroid = Point2((random.randint(0, 300), random.randint(0, 300)))
+            centroid = Point3((random.randint(0, 300), random.randint(0, 300), random.randint(0, 15)))
 
         self.clear()
-        self.position = centroid.position
+        self._position = centroid.position
 
     def merge(self, cluster2):
         """
@@ -73,6 +87,24 @@ class Cluster(list):
         self += cluster2
         self.update_position()
         cluster2.refresh()
+
+    def unit_z_value(self, unit: Unit) -> Point3:
+        """
+
+        """
+        unit_type = unit.type_id
+
+        if unit.is_structure:
+            if unit_type in {const.SPINECRAWLER, const.SPORECRAWLER, const.BUNKER, const.MISSILETURRET,
+                             const.PHOTONCANNON, const.SHIELDBATTERY, const.PLANETARYFORTRESS}:
+                return Point3((0, 0, 5))
+            else:
+                return Point3((0, 0, 0))
+        elif unit_type in const2.WORKERS:
+            return Point3((0, 0, 10))
+
+        else:
+            return Point3((0, 0, 15))
 
     def __or__(self, other):
         """
@@ -84,6 +116,7 @@ class Cluster(list):
         new_cluster = Cluster((self.position + other.position) / 2, self + other)
         new_cluster.update_position()
         return new_cluster
+
 
 def get_fresh_clusters(data, n=4) -> List[Cluster]:
     """
@@ -131,5 +164,5 @@ def k_means_update(clusters: List[Cluster], data):
         nearest_cluster = cluster.position.closest(clusters_excluding_this_cluster)
 
         if cluster and nearest_cluster and \
-                cluster.position.distance_to(nearest_cluster.position) < 11:
+                cluster.position.distance_to(nearest_cluster.position) < 10:
             cluster.merge(nearest_cluster)
