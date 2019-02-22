@@ -244,7 +244,7 @@ class ForceManager(StatefulManager):
 
         for th in self.bot.townhalls:
             enemies_nearby = [u.snapshot for u in self.bot.enemy_cache.values()
-                              if u.distance_to(th) < 35]
+                              if u.distance_to(th) < 25]
 
             if enemies_nearby:
                 # Publish message if there are multiple enemies
@@ -682,7 +682,7 @@ class ForceManager(StatefulManager):
             # Loop through all townhalls. If enemies are near any of them, don't change state.
             for th in self.bot.townhalls:
                 enemies_nearby = self.bot.known_enemy_units.closer_than(
-                    40, th.position).exclude_type(const2.ENEMY_NON_ARMY)
+                    25, th.position).exclude_type(const2.ENEMY_NON_ARMY)
 
                 if enemies_nearby:
                     # Enemies found, don't change state.
@@ -759,7 +759,7 @@ class ForceManager(StatefulManager):
         if self.state != ForcesStates.DEFENDING and self.allow_defending:
             for th in self.bot.townhalls:
                 enemies_nearby = self.bot.known_enemy_units.closer_than(
-                    30, th).exclude_type(const2.ENEMY_NON_ARMY)
+                    25, th).exclude_type(const2.ENEMY_NON_ARMY)
 
                 if enemies_nearby:
                     return await self.change_state(ForcesStates.DEFENDING)

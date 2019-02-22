@@ -132,7 +132,7 @@ class LambdaBot(sc2.BotAI):
             await self.overlord_manager.run()
 
         # Update the unit clusters
-        if iteration % 12 == 0:
+        if iteration % 9 == 0:
             self.update_clusters()
 
         if DEBUG:
@@ -273,7 +273,8 @@ class LambdaBot(sc2.BotAI):
         Updates the position of k-means clusters we keep of units
         """
 
-        types_to_exclude = {const.OVERLORD, const.CREEPTUMORBURROWED, const.CREEPTUMOR, const.SPINECRAWLERUPROOTED}
+        types_to_exclude = {const.OVERLORD, const.CREEPTUMORBURROWED, const.CREEPTUMOR, const.SPINECRAWLERUPROOTED,
+                            const.LARVA, const.UnitTypeId.EGG}
 
         our_army = [u for u in self.unit_cache.values() if u.type_id not in types_to_exclude]
         enemy_army = [u for u in self.enemy_cache.values() if u.type_id not in types_to_exclude]
