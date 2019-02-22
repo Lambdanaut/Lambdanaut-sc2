@@ -260,10 +260,8 @@ class ForceManager(StatefulManager):
                         len(workers) > len(ground_enemies):
                     for worker in workers:
                         if worker.tag in self.workers_defending:
-                            # Defending workers gone idle, attack enemy
-                            if worker.is_idle or worker.is_collecting:
-                                target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
-                                self.bot.actions.append(worker.attack(target))
+                            target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
+                            self.bot.actions.append(worker.attack(target))
 
                         else:
                             # Only attack with 1 worker if the enemy is 1 worker
@@ -349,7 +347,7 @@ class ForceManager(StatefulManager):
                 worker = self.bot.workers.find_by_tag(worker_id)
                 if worker:
                     nearest_townhall = self.bot.townhalls.closest_to(worker.position)
-                    if worker.distance_to(nearest_townhall.position) > 35:
+                    if worker.distance_to(nearest_townhall.position) > 25:
                         workers_defending_to_remove.add(worker_id)
                         self.bot.actions.append(worker.move(nearest_townhall.position))
                 else:
