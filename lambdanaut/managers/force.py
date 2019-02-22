@@ -188,10 +188,10 @@ class ForceManager(StatefulManager):
             closest_townhall = townhalls.closest_to(self.bot.enemy_start_location)
             for townhall in townhalls:
 
-                number_of_units_to_townhall = round((len(army) / len(townhalls)) * 0.4)
+                number_of_units_to_townhall = round((len(army) / len(townhalls)) * 0.5)
                 if townhall.tag == closest_townhall.tag:
                     # The closest townhall to the enemy should have more army
-                    number_of_units_to_townhall = round((len(army) / len(townhalls)) * 3)
+                    number_of_units_to_townhall = round((len(army) / len(townhalls)) * 3.5)
 
                 nearby_army = army.closer_than(22, townhall.position)
 
@@ -242,6 +242,8 @@ class ForceManager(StatefulManager):
         Defend townhalls from nearby enemies
         """
 
+        worker_non_targets = {const.BANELING, const.REAPER}
+
         for th in self.bot.townhalls:
             enemies_nearby = [u.snapshot for u in self.bot.enemy_cache.values()
                               if u.distance_to(th) < 25]
@@ -261,16 +263,16 @@ class ForceManager(StatefulManager):
                     for worker in workers:
                         if worker.tag in self.workers_defending:
                             target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
-                            self.bot.actions.append(worker.attack(target))
+                            if target.type_id not in worker_non_targets:
+                                self.bot.actions.append(worker.attack(target))
 
                         else:
                             # Add workers to defending workers and attack nearby enemy
                             if len(self.workers_defending) <= len(ground_enemies):
                                 target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
-                                if target:
-                                    if target.type_id not in {const.BANELING, const.REAPER}:
-                                        self.workers_defending.add(worker.tag)
-                                        self.bot.actions.append(worker.attack(target.position))
+                                if target.type_id not in worker_non_targets:
+                                    self.workers_defending.add(worker.tag)
+                                    self.bot.actions.append(worker.attack(target.position))
 
                 # Have nearest queen defend
                 queen_tag = self.bot.townhall_queens.get(th.tag)
