@@ -39,6 +39,8 @@
 
   * Test micro on a test map. Get better micro through this.
   
+  * Micro infestors behind the cluster they're in
+  
   * Write mutalisk micro and re-add mutalisk to ling-bane-muta build
   
   * Better defending micro. Need to beat cheezerg's cheezy cheese 

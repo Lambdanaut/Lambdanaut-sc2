@@ -32,6 +32,8 @@ class LambdaBot(sc2.BotAI):
     def __init__(self):
         super(LambdaBot, self).__init__()
 
+        self.debug = DEBUG
+
         self.intel_manager = None
         self.build_manager = None
         self.resource_manager = None
@@ -136,7 +138,7 @@ class LambdaBot(sc2.BotAI):
         if iteration % 9 == 0:
             self.update_clusters()
 
-        if DEBUG:
+        if self.debug:
             await self.draw_debug()
 
         # "Do" actions
