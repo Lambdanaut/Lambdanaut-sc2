@@ -109,38 +109,44 @@ class MicroManager(Manager):
         attack_priorities = const2.WORKERS | {
             const.MARINE, const.ZERGLING, const.ZEALOT, const.SUPPLYDEPOT}
 
-        # Memorized mapping from {enemy_tag: count_of_nearby_enemy_priorities}
-        nearby_enemy_priority_counts: Dict[int, int] = {}
+        # Splash action to perform on enemies
+        def splash_action(baneling, enemy):
+            if baneling.distance_to(enemy) < 2:
+                self.bot.actions.append(baneling.attack(enemy))
+            else:
+                self.bot.actions.append(baneling.move(enemy.position))
 
-        # Micro banelings
-        for baneling in banelings:
-            nearby_enemy_units = self.bot.known_enemy_units.closer_than(10, baneling)
-            nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priorities)
+        # Micro banelings towards priority targets, calling `splash_action` on them.
+        self.bot.splash_on_enemies(
+            units=banelings,
+            action=splash_action,
+            search_range=10,
+            priorities=attack_priorities,)
 
-            if nearby_enemy_priorities:
-                # Get the nearby priority target with the most nearby priority targets around it
+        # for baneling in banelings:
+        #     nearby_enemy_units = self.bot.known_enemy_units.closer_than(10, baneling)
+        #     nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priorities)
+        #
+        #     if nearby_enemy_priorities:
+        #         # Get the nearby priority target with the most nearby priority targets around it
+        #
+        #         greatest_count = 0
+        #         greatest_i = 0
+        #         for u_i in range(len(nearby_enemy_priorities)):
+        #             u = nearby_enemy_priorities[u_i]
+        #
+        #             u_nearby_enemy_count = nearby_enemy_priority_counts.get(u.tag)
+        #
+        #             if u_nearby_enemy_count is None:
+        #                 u_nearby_enemy_count = len(nearby_enemy_units.closer_than(3, u))
+        #                 nearby_enemy_priority_counts[u.tag] = u_nearby_enemy_count
+        #
+        #             if u_nearby_enemy_count > greatest_count:
+        #                 greatest_count = u_nearby_enemy_count
+        #                 greatest_i = u_i
+        #
+        #         greatest_priority = nearby_enemy_priorities[greatest_i]
 
-                greatest_count = 0
-                greatest_i = 0
-                for u_i in range(len(nearby_enemy_priorities)):
-                    u = nearby_enemy_priorities[u_i]
-
-                    u_nearby_enemy_count = nearby_enemy_priority_counts.get(u.tag)
-
-                    if u_nearby_enemy_count is None:
-                        u_nearby_enemy_count = len(nearby_enemy_units.closer_than(3, u))
-                        nearby_enemy_priority_counts[u.tag] = u_nearby_enemy_count
-
-                    if u_nearby_enemy_count > greatest_count:
-                        greatest_count = u_nearby_enemy_count
-                        greatest_i = u_i
-
-                greatest_priority = nearby_enemy_priorities[greatest_i]
-
-                if baneling.distance_to(greatest_priority) < 2:
-                    self.bot.actions.append(baneling.attack(greatest_priority))
-                else:
-                    self.bot.actions.append(baneling.move(greatest_priority.position))
 
         # Unburrow banelings if enemy nearby
         for baneling in burrowed_banelings:
@@ -238,6 +244,44 @@ class MicroManager(Manager):
                         distance = await self.bot._client.query_pathing(ravager, away_from_enemy)
                         if distance and distance < 5:
                             self.bot.actions.append(ravager.move(away_from_enemy))
+
+    async def manage_infestors(self):
+        infestors = self.bot.units(const.INFESTOR)
+
+        if infestors:
+
+            fungal_priorities = const2.WORKERS | {
+                const.ZERGLING, const.BANELING, const.HYDRALISK, const.ROACH, const.MUTALISK, const.CORRUPTOR,
+                const.BROODLORD,
+                const.MARINE, const.MARAUDER, const.REAPER, const.GHOST, const.VIKING, const.BANSHEE, const.MEDIVAC,
+                const.ZEALOT, const.DARKTEMPLAR, const.STALKER, const.ADEPT, const.VOIDRAY, const.TEMPEST,
+                const.SENTRY, const.HIGHTEMPLAR, }
+
+            # Splash action to perform on enemies during fungal growths
+            def splash_action(infestor, enemy):
+                if infestor.distance_to(enemy) > 11:
+                    towards_enemy = infestor.position.towards(enemy, 1)
+                    self.bot.actions.append(infestor.move(towards_enemy))
+                else:
+                    self.bot.actions.append(infestor(
+                        const.AbilityId.FUNGALGROWTH_FUNGALGROWTH, enemy.position))
+
+            # Splash condition that must be passed on the enemy unit to fungal him
+            # We don't want to re-fungal already fungalled units
+            def splash_condition(enemy) -> bool:
+                """ TODO: This is broken or something. It always returns true.
+                I don't think fungal growth buffs show up in our sc2 lib version"""
+                return not enemy.has_buff(const.BuffId.FUNGALGROWTH)
+
+            # Perform fungal growths on clumps of enemies
+            fungal_infestors = infestors.filter(lambda i: i.energy >= 75)
+            self.bot.splash_on_enemies(
+                units=fungal_infestors,
+                action=splash_action,
+                search_range=14,
+                condition=splash_condition,
+                min_enemies=5,
+                priorities=fungal_priorities,)
 
     async def manage_mutalisks(self):
         mutalisks = self.bot.units(const.MUTALISK)
@@ -531,6 +575,7 @@ class MicroManager(Manager):
         await self.manage_banelings()
         await self.manage_roaches()
         await self.manage_ravagers()
+        await self.manage_infestors()
         await self.manage_mutalisks()
         await self.manage_corruptors()
         await self.manage_overseers()

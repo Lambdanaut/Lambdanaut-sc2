@@ -1,11 +1,12 @@
 from collections import defaultdict
 import math
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import lib.sc2 as sc2
 import lib.sc2.constants as const
 from lib.sc2.position import Point2, Point3
 from lib.sc2.unit import Unit
+from lib.sc2.units import Units
 
 from lambdanaut import VERSION, DEBUG
 import lambdanaut.builds as builds
@@ -210,7 +211,7 @@ class LambdaBot(sc2.BotAI):
         if self.iteration % 15 == 0:
 
             hatch = self.units(const.HATCHERY)
-            # await self._client.debug_create_unit([[const.BANELING, 1, self.start_location - Point2((4, 0)), 1]])
+            await self._client.debug_create_unit([[const.INFESTOR, 1, self.start_location - Point2((4, 0)), 1]])
             # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.ZERGLING, 7, hatch.random.position + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.ROACH, 1, hatch.random.position + Point2((11, 0)), 1]])
@@ -219,17 +220,18 @@ class LambdaBot(sc2.BotAI):
         # Create banelings and zerglings every 15 steps
         # For testing micro maps
         #
-        # friendly = self.units
-        # enemy = self.known_enemy_units
-        # if not friendly or not enemy:
-        #     print("FRIENDLY COUNT: {}".format(len(friendly)))
-        #     print("ENEMY COUNT: {}".format(len(enemy)))
-        #     if friendly | enemy:
-        #         await self._client.debug_kill_unit(friendly | enemy)
-        #
-        #     await self._client.debug_create_unit([[const.ZERGLING, 3, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
-        #     await self._client.debug_create_unit([[const.ZERGLING, 10, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
-        #     await self._client.debug_create_unit([[const.ZERGLING, 3, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
+        import random
+        friendly = self.units
+        enemy = self.known_enemy_units
+        if not friendly or not enemy:
+            print("FRIENDLY COUNT: {}".format(len(friendly)))
+            print("ENEMY COUNT: {}".format(len(enemy)))
+            if friendly | enemy:
+                await self._client.debug_kill_unit(friendly | enemy)
+
+            await self._client.debug_create_unit([[const.ZERGLING, 3, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
+            await self._client.debug_create_unit([[const.ZERGLING, 10, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
+            await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
             # await self._client.debug_create_unit([[const.DRONE, 30, self.start_location + Point2((5, 0)), 1]])
             # await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((4, 0)), 1]])
             # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
@@ -455,6 +457,70 @@ class LambdaBot(sc2.BotAI):
         adjacents = (corners[1], corners[2])
 
         return adjacents
+
+    def splash_on_enemies(
+            self,
+            units: Units,
+            action: Callable[[Unit, Unit], None],
+            search_range: float,
+            condition: Callable[[Unit], bool]=None,
+            min_enemies=1,
+            priorities: set=None) -> bool:
+        """
+        Performs function `action` on an enemy if enough nearby enemies are found
+        that we can enact splash damage on.
+
+        Usage: Banelings and Infestors(fungal growth) looking for optimal splash damage
+
+        :param units: Units to use splash damage
+        :param action: Function that takes two Units as inputs and does splash-related actions
+        :param search_range: Max distance to apply search of enemies to
+        :param condition: Optional condition function that takes an enemy unit and returns a boolean.
+                          Can be used, for instance, to check if a unit is already fungalled
+        :param min_enemies: Minimum enemies required near each other to take `action`
+        :param priorities: Optional enemies to act on. Default is all enemies
+        :return:
+        """
+        # Memorized mapping from {enemy_tag: count_of_nearby_enemy_priorities}
+        nearby_enemy_priority_counts: Dict[int, int] = {}
+
+        for unit in units:
+            nearby_enemy_units = self.known_enemy_units.closer_than(search_range, unit)
+
+            if priorities is None:
+                nearby_enemy_priorities = nearby_enemy_units
+            else:
+                nearby_enemy_priorities = nearby_enemy_units.of_type(priorities)
+
+            if nearby_enemy_priorities:
+                # Get the nearby priority target with the most nearby priority targets around it
+
+                greatest_count = 0
+                greatest_i = 0
+                for u_i in range(len(nearby_enemy_priorities)):
+                    u = nearby_enemy_priorities[u_i]
+
+                    # Skip this unit if conditional is false
+                    if condition is not None and not condition(u):
+                        continue
+
+                    u_nearby_enemy_count = nearby_enemy_priority_counts.get(u.tag)
+
+                    if u_nearby_enemy_count is None:
+                        u_nearby_enemy_count = len(nearby_enemy_units.closer_than(3, u))
+                        nearby_enemy_priority_counts[u.tag] = u_nearby_enemy_count
+
+                    if u_nearby_enemy_count > greatest_count:
+                        greatest_count = u_nearby_enemy_count
+                        greatest_i = u_i
+
+                greatest_priority = nearby_enemy_priorities[greatest_i]
+
+                if greatest_count >= min_enemies:
+                    # If the enemy has enough enemies around him, then call
+                    # `action` on it
+                    action(unit, greatest_priority)
+
 
     def closest_and_most_damaged(self, unit_group, unit, priorities=None, can_attack=True):
         """

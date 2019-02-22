@@ -62,6 +62,7 @@ ZERG_UPGRADES_TO_STRUCTURE = {
     const.EVOLVEMUSCULARAUGMENTS: const.HYDRALISKDEN,
     const.EVOLVEGROOVEDSPINES: const.HYDRALISKDEN,
     const.BURROW: const.HATCHERY,
+    const.INFESTORENERGYUPGRADE: const.INFESTATIONPIT,
     const.UpgradeId.OVERLORDSPEED: const.HATCHERY,
     const.CHITINOUSPLATING: const.ULTRALISKCAVERN,
     const.ANABOLICSYNTHESIS: const.ULTRALISKCAVERN,
@@ -92,6 +93,7 @@ ZERG_UPGRADES_TO_TECH_REQUIREMENT = {
     const.EVOLVEGROOVEDSPINES: const.HYDRALISKDEN,
     const.BURROW: const.HATCHERY,
     const.UpgradeId.OVERLORDSPEED: const.HATCHERY,
+    const.INFESTORENERGYUPGRADE: const.INFESTATIONPIT,
     const.CHITINOUSPLATING: const.ULTRALISKCAVERN,
     const.ANABOLICSYNTHESIS: const.ULTRALISKCAVERN,
 }
@@ -114,7 +116,7 @@ VESPENE_REFINERIES = {const.EXTRACTOR, const.REFINERY, const.ASSIMILATOR}
 # Used when determing whether to attack or not
 ZERG_ARMY_VALUE = \
     {const.ZERGLING: 0.4, const.BANELING: 1.25, const.ROACH: 1.5, const.RAVAGER: 2.5, const.HYDRALISK: 2,
-     const.MUTALISK: 2, const.OVERSEER: 1, const.INFESTOR: 2, const.CORRUPTOR: 2, const.VIPER: 3,
+     const.MUTALISK: 2, const.OVERSEER: 1, const.INFESTOR: 2.5, const.CORRUPTOR: 2, const.VIPER: 3,
      const.BROODLORD: 4, const.ULTRALISK: 5}
 
 TOWNHALLS = {townhall for subset in sc2.data.race_townhalls.values() for townhall in subset}
