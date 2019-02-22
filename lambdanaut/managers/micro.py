@@ -269,8 +269,7 @@ class MicroManager(Manager):
             # Splash condition that must be passed on the enemy unit to fungal him
             # We don't want to re-fungal already fungalled units
             def splash_condition(enemy) -> bool:
-                """ TODO: This is broken or something. It always returns true.
-                I don't think fungal growth buffs show up in our sc2 lib version"""
+                """ TODO: This is broken. you can't see enemy buffs. Hope this is changed in the protocol."""
                 return not enemy.has_buff(const.BuffId.FUNGALGROWTH)
 
             # Perform fungal growths on clumps of enemies
