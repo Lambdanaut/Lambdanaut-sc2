@@ -342,7 +342,7 @@ class ForceManager(StatefulManager):
                     townhalls = self.bot.townhalls.ready
                     if townhalls:
                         nearest_townhall = townhalls.closest_to(worker.position)
-                        if worker.distance_to(nearest_townhall.position) > 20:
+                        if worker.distance_to(nearest_townhall.position) > 18:
                             workers_defending_to_remove.add(worker_id)
                             self.bot.actions.append(worker.move(nearest_townhall.position))
                 else:
@@ -682,7 +682,7 @@ class ForceManager(StatefulManager):
             # Loop through all townhalls. If enemies are near any of them, don't change state.
             for th in self.bot.townhalls:
                 enemies_nearby = self.bot.known_enemy_units.closer_than(
-                    25, th.position).exclude_type(const2.ENEMY_NON_ARMY)
+                    23, th.position).exclude_type(const2.ENEMY_NON_ARMY)
 
                 if enemies_nearby:
                     # Enemies found, don't change state.

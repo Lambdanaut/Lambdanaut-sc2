@@ -1,5 +1,31 @@
 # PROBLEMS AND SOLUTIONS
 
+## NOTES
+
+  * Proxy rax rush
+    * Rush location: 3rd furthest from enemy start location but also off-center from center of map so it's not scouted
+    * Build
+      * SCV
+      * Send first SCV at 0:00
+      * Send second SCV at 0:15
+      * Supply Depot
+      * SCV
+      * Barracks
+      * Barracks
+      * SCV
+      * Send 3rd scv. Scout lightly for proxy
+      * Marine
+      * Marine 
+      * (Continue marine production)
+      * Send 7 more scv
+      * Orbital command
+      * bunker at base of enemy ramp. 
+      * Pressure enemy ramp with 10 workers and two marines
+      * Try to kill as many workers as possible while not losing scv/marine
+      * Retreat to bunker if enemy attacks with force and Repair bunker
+      * If enemy wall is down, make a bee-line for their mineral line
+      * Priority target
+        * Baneling nest, Tech lab on factory, Defensive structures, Pylons, Cybernetics core
 
 ## BUGS
 
