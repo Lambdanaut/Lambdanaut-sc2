@@ -668,20 +668,20 @@ class BuildManager(Manager):
 
         elif build_target == const.LAIR:
             # Get a hatchery
-            hatcheries = self.bot.units(const.HATCHERY)
+            hatcheries = self.bot.units(const.HATCHERY).idle
 
             # Train the unit
-            if self.can_afford(build_target) and hatcheries.exists:
+            if self.can_afford(build_target) and hatcheries:
                 hatchery = hatcheries.closest_to(self.bot.start_location)
                 self.bot.actions.append(hatchery.build(build_target))
                 return True
 
         elif build_target == const.HIVE:
             # Get a lair
-            lairs = self.bot.units(const.LAIR)
+            lairs = self.bot.units(const.LAIR).idle
 
             # Train the unit
-            if self.can_afford(build_target) and lairs.exists:
+            if self.can_afford(build_target) and lairs:
                 self.bot.actions.append(lairs.random.build(build_target))
                 return True
 
@@ -797,7 +797,14 @@ class BuildManager(Manager):
 
             townhalls = self.bot.townhalls.idle
 
-            if self.can_afford(build_target) and townhalls.exists:
+            # Prefer using a townhall that doesn't already have a queen.
+            preferred_townhalls = townhalls.filter(
+                lambda th: th.tag not in self.bot.townhall_queens)
+
+            if preferred_townhalls:
+                townhalls = preferred_townhalls
+
+            if self.can_afford(build_target) and townhalls:
                 self.bot.actions.append(
                     townhalls.random.train(build_target))
 
@@ -808,7 +815,7 @@ class BuildManager(Manager):
             larvae = self.bot.units(const.LARVA)
 
             # Train the unit
-            if self.can_afford(build_target) and larvae.exists:
+            if self.can_afford(build_target) and larvae:
                 if build_target == const.OVERLORD:
                     # Keep from issuing another overlord build command too soon
                     # Overlords are built in 18 seconds.

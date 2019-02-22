@@ -32,7 +32,7 @@ MAPS = [
     'PortAleksanderLE', ]
 
 MAP_NAME = ""
-REALTIME = True
+REALTIME = False
 
 # BUILD = sc2.AIBuild.RandomBuild
 # BUILD = sc2.AIBuild.Rush

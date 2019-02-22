@@ -339,10 +339,12 @@ class ForceManager(StatefulManager):
             for worker_id in self.workers_defending:
                 worker = self.bot.workers.find_by_tag(worker_id)
                 if worker:
-                    nearest_townhall = self.bot.townhalls.closest_to(worker.position)
-                    if worker.distance_to(nearest_townhall.position) > 25:
-                        workers_defending_to_remove.add(worker_id)
-                        self.bot.actions.append(worker.move(nearest_townhall.position))
+                    townhalls = self.bot.townhalls.ready
+                    if townhalls:
+                        nearest_townhall = townhalls.closest_to(worker.position)
+                        if worker.distance_to(nearest_townhall.position) > 25:
+                            workers_defending_to_remove.add(worker_id)
+                            self.bot.actions.append(worker.move(nearest_townhall.position))
                 else:
                     workers_defending_to_remove.add(worker_id)
 
