@@ -268,7 +268,7 @@ class ForceManager(StatefulManager):
                             if len(self.workers_defending) <= len(ground_enemies):
                                 target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
                                 if target:
-                                    if target.type_id != const.BANELING:
+                                    if target.type_id not in {const.BANELING, const.REAPER}:
                                         self.workers_defending.add(worker.tag)
                                         self.bot.actions.append(worker.attack(target.position))
 
@@ -305,7 +305,7 @@ class ForceManager(StatefulManager):
                                 army_strength = self.bot.relative_army_strength(
                                     army_cluster, nearest_enemy_cluster)
 
-                                if army_strength >= 0 \
+                                if army_strength >= -1 \
                                         or (army_strength > -6 and
                                             nearest_enemy_cluster.position.distance_to(army_cluster.position) < 10)\
                                         or self.bot.supply_used > 185:
@@ -320,7 +320,7 @@ class ForceManager(StatefulManager):
                                             if target and unit.weapon_cooldown <= 0 and not unit.is_attacking:
                                                 self.bot.actions.append(unit.attack(target.position))
 
-                                elif army_strength < -1:
+                                elif army_strength < -2:
                                     # If enemy is greater regroup to center of largest cluster towards friendly townhall
                                     largest_army_cluster = functools.reduce(
                                         lambda c1, c2: c1 if len(c1) >= len(c2) else c2,
@@ -344,7 +344,8 @@ class ForceManager(StatefulManager):
                         nearest_townhall = townhalls.closest_to(worker.position)
                         if worker.distance_to(nearest_townhall.position) > 18:
                             workers_defending_to_remove.add(worker_id)
-                            self.bot.actions.append(worker.move(nearest_townhall.position))
+                            self.bot.actions.append(worker.return_resource(nearest_townhall))
+                            self.bot.actions.append(worker.move(nearest_townhall.position, queue=True))
                 else:
                     workers_defending_to_remove.add(worker_id)
 

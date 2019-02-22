@@ -2,7 +2,7 @@
 
 ## NOTES
 
-  * Proxy rax rush
+  * Proxy rax rush for future bot
     * Rush location: 3rd furthest from enemy start location but also off-center from center of map so it's not scouted
     * Build
       * SCV
@@ -24,7 +24,7 @@
       * Try to kill as many workers as possible while not losing scv/marine
       * Retreat to bunker if enemy attacks with force and Repair bunker
       * If enemy wall is down, make a bee-line for their mineral line
-      * Priority target
+      * Priority targets
         * Baneling nest, Tech lab on factory, Defensive structures, Pylons, Cybernetics core
 
 ## BUGS
@@ -46,6 +46,9 @@
   * Add COUNTERING forces state
     * If the opponent is attacking our base and has more than we have, then attack their main 
       base and don't come back to defend. 
+
+  * Try out Agglomerative Clustering in SKLearn to get better clusters
+    * https://hdbscan.readthedocs.io/en/latest/comparing_clustering_algorithms.html#agglomerative-clustering
 
 ## MEDIUM PRIORITY
 
