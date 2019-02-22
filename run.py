@@ -77,28 +77,8 @@ if __name__ == '__main__':
             sc2.player.Computer(ENEMY_RACE, DIFFICULTY, BUILD)
         ]
 
-        # ## USE HOST GAME ITER INSTEAD
-        # sc2.run_game(
-        #     sc2.maps.get(MAP_NAME),
-        #     player_config,
-        #     realtime=REALTIME,
-        #     save_replay_as=REPLAY_NAME)
-
-        gen = sc2.main._host_game_iter(
+        sc2.run_game(
             sc2.maps.get(MAP_NAME),
             player_config,
             realtime=REALTIME,
-            save_replay_as=REPLAY_NAME,
-        )
-
-        while True:
-            r = next(gen)
-
-            # input("Press enter to reload ")
-
-            print("============================ Reloading Lambdanaut =================================")
-
-            importlib.reload(bot)
-            player_config[0].ai = bot.LambdaBot()
-            gen.send(player_config)
-
+            save_replay_as=REPLAY_NAME)

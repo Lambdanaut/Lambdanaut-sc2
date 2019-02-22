@@ -204,7 +204,7 @@ class LambdaBot(sc2.BotAI):
         if self.iteration % 15 == 0:
 
             hatch = self.units(const.HATCHERY)
-            # await self._client.debug_create_unit([[const.ZERGLING, 1, self.start_location - Point2((4, 0)), 1]])
+            # await self._client.debug_create_unit([[const.ZERGLING, 1, self.c - Point2((4, 0)), 1]])
             # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.ZERGLING, 7, hatch.random.position + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.ROACH, 1, hatch.random.position + Point2((11, 0)), 1]])

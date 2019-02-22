@@ -48,8 +48,7 @@ class MicroManager(Manager):
         return False
 
     async def manage_workers(self):
-        for worker in self.bot.workers.filter(lambda w: not w.is_collecting):
-            self.micro_back_melee(worker)
+        pass
 
     async def manage_zerglings(self):
         zerglings = self.bot.units(const.ZERGLING)
@@ -58,9 +57,6 @@ class MicroManager(Manager):
 
         # Micro zerglings
         for zergling in zerglings:
-
-            if self.micro_back_melee(zergling):
-                continue
 
             nearby_enemy_units = self.bot.known_enemy_units.closer_than(8, zergling)
             if nearby_enemy_units:
