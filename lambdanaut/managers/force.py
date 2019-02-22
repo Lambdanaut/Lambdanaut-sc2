@@ -255,7 +255,7 @@ class ForceManager(StatefulManager):
 
                 # Workers attack enemy
                 ground_enemies = [enemy for enemy in enemies_nearby if not enemy.is_flying]
-                workers = self.bot.workers.closer_than(18, enemies_nearby[0].position)
+                workers = self.bot.workers.closer_than(14, enemies_nearby[0].position)
                 if workers and ground_enemies and \
                         len(workers) > len(ground_enemies):
                     for worker in workers:
@@ -342,7 +342,7 @@ class ForceManager(StatefulManager):
                     townhalls = self.bot.townhalls.ready
                     if townhalls:
                         nearest_townhall = townhalls.closest_to(worker.position)
-                        if worker.distance_to(nearest_townhall.position) > 25:
+                        if worker.distance_to(nearest_townhall.position) > 20:
                             workers_defending_to_remove.add(worker_id)
                             self.bot.actions.append(worker.move(nearest_townhall.position))
                 else:
@@ -759,7 +759,7 @@ class ForceManager(StatefulManager):
         if self.state != ForcesStates.DEFENDING and self.allow_defending:
             for th in self.bot.townhalls:
                 enemies_nearby = self.bot.known_enemy_units.closer_than(
-                    25, th).exclude_type(const2.ENEMY_NON_ARMY)
+                    23, th).exclude_type(const2.ENEMY_NON_ARMY)
 
                 if enemies_nearby:
                     return await self.change_state(ForcesStates.DEFENDING)
