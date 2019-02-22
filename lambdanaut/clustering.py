@@ -95,16 +95,12 @@ class Cluster(list):
         unit_type = unit.type_id
 
         if unit.is_structure:
-            if unit_type in {const.SPINECRAWLER, const.SPORECRAWLER, const.BUNKER, const.MISSILETURRET,
-                             const.PHOTONCANNON, const.SHIELDBATTERY, const.PLANETARYFORTRESS}:
-                return Point3((0, 0, 5))
-            else:
-                return Point3((0, 0, 0))
+            return Point3((0, 0, 15))
         elif unit_type in const2.WORKERS:
             return Point3((0, 0, 10))
 
         else:
-            return Point3((0, 0, 15))
+            return Point3((0, 0, 0))
 
     def __or__(self, other):
         """
