@@ -85,12 +85,13 @@ class ResourceManager(Manager):
 
         # Move idle workers to mining
         for worker in self.bot.workers.idle:
-            townhalls = self.bot.townhalls
-            if not townhalls.exists: return
-            townhall = townhalls.closest_to(worker.position)
-            mineral = self.bot.state.mineral_field.closest_to(townhall)
+            townhalls = self.bot.townhalls.ready
 
-            self.bot.actions.append(worker.gather(mineral))
+            if townhalls:
+                townhall = townhalls.closest_to(worker.position)
+                mineral = self.bot.state.mineral_field.closest_to(townhall)
+
+                self.bot.actions.append(worker.gather(mineral))
 
     async def manage_vespene(self):
         # If we have over 5 times the vespene than we do minerals, hold off on gas

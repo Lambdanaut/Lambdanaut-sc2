@@ -67,16 +67,22 @@ class LambdaBot(sc2.BotAI):
         # properties (Last health, shields, location, etc)
         self.enemy_cache = {}
 
-        # Our army clusters
-        self.army_clusters = clustering.get_fresh_clusters([], n=8)
-
-        # Our enemy clusters
-        self.enemy_clusters = clustering.get_fresh_clusters([], n=7)
+        # Clusters to be set on the first iteration
+        self.army_clusters = None
+        self.enemy_clusters = None
 
     async def on_step(self, iteration):
         self.iteration = iteration
 
         if iteration == 0:
+            # Our army clusters
+            self.army_clusters = clustering.get_fresh_clusters(
+                [], k=8, center_around=self.game_info.map_center)
+
+            # Our enemy clusters
+            self.enemy_clusters = clustering.get_fresh_clusters(
+                [], k=7, center_around=self.game_info.map_center)
+
             # Update the default builds based on the enemy's race
             builds.update_default_builds(self.enemy_race)
 

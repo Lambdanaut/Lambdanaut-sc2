@@ -1,29 +1,22 @@
+"""
+OLD CLUSTERING ALGORITHM
+"""
+
+
 from functools import reduce
 import random
 from typing import List, Union
 
-import lib.sc2.constants as const
-from lib.sc2.unit import Unit
 from lib.sc2.units import Units
-from lib.sc2.position import Point2, Point3
-
-import lambdanaut.const2 as const2
+from lib.sc2.position import Point2
 
 
 class Cluster(list):
-    def __init__(self, position: Point2, *args: Union[Units, List[Unit]]):
+    def __init__(self, position: Point2, *args: Union[Units, List[Point2], List[Units]]):
 
         super(Cluster, self).__init__(*args)
 
-        # 3D point where:
-        # `x` is the x position in 2D sc2 space
-        # `y` is the y position in 2D sc2 space
-        # `z` is a special value used to break apart unit groups by unit type
-        self._position: Point3 = position.to3
-
-    @property
-    def position(self):
-        return self._position.to2
+        self.position = position
 
     @property
     def radius(self):
@@ -49,19 +42,17 @@ class Cluster(list):
         if not len(self):
             return False
 
-        prev_position = self._position
+        prev_position = self.position
 
         # Iterate over self, adding up all the points in ourself
-        sum_of_self = reduce(
-            lambda p1, p2: p1 + p2.position + self.unit_z_value(p2),
-            self, Point3((0, 0, 0)))
+        sum_of_self = reduce(lambda p1, p2: p1 + p2.position, self, Point2((0, 0)))
 
         new_position = sum_of_self / len(self)
 
         position_changed = prev_position != new_position
 
         # Update position with new position
-        self._position = new_position
+        self.position = new_position
 
         return position_changed
 
@@ -71,13 +62,13 @@ class Cluster(list):
         """
         if len(self):
             # Choose a random data point from self
-            centroid = random.choice(self).position.to3
+            centroid = random.choice(self)
         else:
             # If we have no data, set a random point as the centroid
-            centroid = Point3((random.randint(0, 300), random.randint(0, 300), random.randint(0, 15)))
+            centroid = Point2((random.randint(0, 300), random.randint(0, 300)))
 
         self.clear()
-        self._position = centroid.position
+        self.position = centroid.position
 
     def merge(self, cluster2):
         """
@@ -87,20 +78,6 @@ class Cluster(list):
         self += cluster2
         self.update_position()
         cluster2.refresh()
-
-    def unit_z_value(self, unit: Unit) -> Point3:
-        """
-
-        """
-        unit_type = unit.type_id
-
-        if unit.is_structure:
-            return Point3((0, 0, 15))
-        elif unit_type in const2.WORKERS:
-            return Point3((0, 0, 10))
-
-        else:
-            return Point3((0, 0, 0))
 
     def __or__(self, other):
         """
@@ -114,18 +91,34 @@ class Cluster(list):
         return new_cluster
 
 
-def get_fresh_clusters(data, n=4) -> List[Cluster]:
+def get_fresh_clusters(data, k=4, center_around: Point2=None) -> List[Cluster]:
     """
-    Returns `n` fresh clusters that have not been calibrated
+    Returns `k` fresh clusters that have not been calibrated
     """
 
-    if len(data) < n:
-        # If data is shorter than n, just create a list of linear points
-        centroids = [Point2((i, i)) for i in range(0, 400, 400 // n)]
+    if len(data) < k:
+        # If data is shorter than k, just create a list of random points
+
+        if center_around is None:
+            # create a list of linear points
+            centroids = [Point2((i, i)) for i in range(0, 200, 200 // k)]
+        else:
+            # Use exponential variation around the given point `center_around`
+            centroids = []
+            for i in range(k):
+                # Randomly make the value negative
+                math_funcs = [lambda x: x, lambda x: 0-x]
+                f1 = random.choice(math_funcs)
+                f2 = random.choice(math_funcs)
+
+                x = f1(random.expovariate(0.01))
+                y = f2(random.expovariate(0.01))
+
+                centroids.append(Point2((x, y)))
 
     else:
-        # Otherwise choose n random data points from data to be our centers
-        centroids = random.sample(data, n)
+        # Otherwise choose k random data points from data to be our centers
+        centroids = random.sample(data, k)
 
     return [Cluster(centroid.position, data) for centroid in centroids]
 
