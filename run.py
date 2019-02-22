@@ -32,7 +32,7 @@ MAPS = [
     'PortAleksanderLE', ]
 
 MAP_NAME = ""
-REALTIME = True
+REALTIME = False
 
 # BUILD = sc2.AIBuild.RandomBuild
 BUILD = sc2.AIBuild.Rush
@@ -41,10 +41,10 @@ BUILD = sc2.AIBuild.Rush
 # BUILD = sc2.AIBuild.Macro
 # BUILD = sc2.AIBuild.Air
 
-DIFFICULTY = sc2.Difficulty.CheatInsane
+# DIFFICULTY = sc2.Difficulty.CheatInsane
 # DIFFICULTY = sc2.Difficulty.CheatMoney
 # DIFFICULTY = sc2.Difficulty.CheatVision
-# DIFFICULTY = sc2.Difficulty.VeryHard
+DIFFICULTY = sc2.Difficulty.VeryHard
 # DIFFICULTY = sc2.Difficulty.Hard
 # DIFFICULTY = sc2.Difficulty.Medium
 # DIFFICULTY = sc2.Difficulty.Easy
