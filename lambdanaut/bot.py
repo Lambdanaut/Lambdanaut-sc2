@@ -548,7 +548,9 @@ class LambdaBot(sc2.BotAI):
             else:
                 health = u.health_percentage
 
-            return health * u.distance_to(unit) * (int(u not in priorities) + 1)
+            priority_bonus = 1 if u in priorities else 4
+
+            return health * u.distance_to(unit) * priority_bonus
 
         if isinstance(unit_group, sc2.units.Units):
             return unit_group.sorted(metric)[0]
