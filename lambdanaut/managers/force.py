@@ -293,7 +293,9 @@ class ForceManager(StatefulManager):
 
                 # The harder we're attacked, the further-out army to pull back
                 if len(enemies_nearby) < 5:
-                    army_clusters = [self.bot.start_location.closest(army_clusters)]
+                    army_clusters = [cluster for cluster in army_clusters
+                        if self.bot.start_location.distance_to(cluster.position) <
+                                     self.bot.start_location_to_enemy_start_location_distance / 2]
 
                 if army_clusters:
                     nearest_enemy_cluster = self.bot.start_location.closest(self.bot.enemy_clusters)
