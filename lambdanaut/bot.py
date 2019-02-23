@@ -237,18 +237,18 @@ class LambdaBot(sc2.BotAI):
         # Create banelings and zerglings every 15 steps
         # For testing micro maps
         #
-        import random
-        friendly = self.units
-        enemy = self.known_enemy_units
-        if not friendly or not enemy:
-            print("FRIENDLY COUNT: {}".format(len(friendly)))
-            print("ENEMY COUNT: {}".format(len(enemy)))
-            if friendly | enemy:
-                await self._client.debug_kill_unit(friendly | enemy)
-
-            await self._client.debug_create_unit([[const.HYDRALISK, 25, self.start_location - Point2((4, 0)), 1]])
-            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 2, self.start_location + Point2((9, 0)), 2]])
-            await self._client.debug_create_unit([[const.MARINE, 17, self.start_location + Point2((7, 0)), 2]])
+        # import random
+        # friendly = self.units
+        # enemy = self.known_enemy_units
+        # if not friendly or not enemy:
+        #     print("FRIENDLY COUNT: {}".format(len(friendly)))
+        #     print("ENEMY COUNT: {}".format(len(enemy)))
+        #     if friendly | enemy:
+        #         await self._client.debug_kill_unit(friendly | enemy)
+        #
+        #     await self._client.debug_create_unit([[const.HYDRALISK, 25, self.start_location - Point2((4, 0)), 1]])
+        #     await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 2, self.start_location + Point2((9, 0)), 2]])
+            # await self._client.debug_create_unit([[const.MARINE, 17, self.start_location + Point2((7, 0)), 2]])
         #     await self._client.debug_create_unit([[const.ZERGLING, 3, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
         #     await self._client.debug_create_unit([[const.ZERGLING, 10, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
         #     await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
