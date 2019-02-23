@@ -63,7 +63,7 @@ class ResourceManager(Manager):
         # Unsaturated Townhalls include townhalls that are almost complete
         unsaturated_townhalls = self.bot.townhalls.filter(
             lambda th: th.assigned_harvesters < th.ideal_harvesters or
-                       (not th.is_ready and th.build_progress > 0.94))
+                       (not th.is_ready and th.build_progress > 0.93))
 
         if not unsaturated_townhalls:
             return
