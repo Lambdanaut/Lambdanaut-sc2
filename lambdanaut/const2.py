@@ -21,6 +21,8 @@ ZERG_UNITS_FROM_LARVAE = \
     {const.DRONE, const.OVERLORD, const.ZERGLING, const.ROACH, const.HYDRALISK, const.INFESTOR,
      const.UnitTypeId.SWARMHOSTMP, const.MUTALISK, const.CORRUPTOR, const.ULTRALISK, const.VIPER, }
 
+ZERG_UNITS_FROM_STRUCTURES = {const.QUEEN}
+
 ZERG_ARMY_UNITS = \
     {const.ZERGLING, const.BANELING, const.ROACH, const.RAVAGER, const.HYDRALISK, const.MUTALISK, const.OVERSEER,
      const.INFESTOR, const.CORRUPTOR, const.VIPER, const.BROODLORD, const.ULTRALISK, }

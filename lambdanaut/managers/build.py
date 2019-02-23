@@ -597,6 +597,14 @@ class BuildManager(Manager):
                             else:
                                 return build_targets
 
+                        # Return early if the next build target is built from a structure
+                        # This prevents queuing up multiple units at a single structure.
+                        if unit in const2.ZERG_UNITS_FROM_STRUCTURES:
+                            if not build_targets:
+                                return [unit]
+                            else:
+                                return build_targets
+
                         # Add the build target
                         build_targets.append(unit)
 

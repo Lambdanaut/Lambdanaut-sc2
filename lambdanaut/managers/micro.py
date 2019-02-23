@@ -7,6 +7,7 @@ import lib.sc2.constants as const
 
 import lambdanaut.const2 as const2
 from lambdanaut.const2 import Messages
+from lambdanaut.expiringlist import ExpiringList
 from lambdanaut.managers import Manager
 import lambdanaut.utils as utils
 
@@ -30,6 +31,11 @@ class MicroManager(Manager):
         # Subscribe to messages
         self.subscribe(Messages.UNROOT_ALL_SPINECRAWLERS)
         self.subscribe(Messages.STRUCTURE_COMPLETE)
+
+        # Track the last fungal growth used
+        # Because the sc2 protocol doesn't let us see buffs on enemies, we only allow
+        # one fungal per 2 game seconds.
+        self._fungals_used = ExpiringList()
 
     async def micro_back_melee(self, unit) -> bool:
         """
@@ -250,21 +256,24 @@ class MicroManager(Manager):
 
         if infestors:
 
-            fungal_priorities = const2.WORKERS | {
+            fungal_priorities = {
                 const.ZERGLING, const.BANELING, const.HYDRALISK, const.ROACH, const.MUTALISK, const.CORRUPTOR,
                 const.BROODLORD,
                 const.MARINE, const.MARAUDER, const.REAPER, const.GHOST, const.VIKING, const.BANSHEE, const.MEDIVAC,
                 const.ZEALOT, const.DARKTEMPLAR, const.STALKER, const.ADEPT, const.VOIDRAY, const.TEMPEST,
                 const.SENTRY, const.HIGHTEMPLAR, }
 
-            # Splash action to perform on enemies during fungal growths
             def splash_action(infestor, enemy):
-                if infestor.distance_to(enemy) > 11:
+                """Splash action to perform on enemies during fungal growths"""
+                if infestor.distance_to(enemy) >= 12:
                     towards_enemy = infestor.position.towards(enemy, 1)
                     self.bot.actions.append(infestor.move(towards_enemy))
                 else:
                     self.bot.actions.append(infestor(
                         const.AbilityId.FUNGALGROWTH_FUNGALGROWTH, enemy.position))
+
+                    # Record the fungal we used so we don't fungal again for 2 seconds
+                    self._fungals_used.add(True, self.bot.state.game_loop, expiry=2)
 
             # Splash condition that must be passed on the enemy unit to fungal him
             # We don't want to re-fungal already fungalled units
@@ -272,15 +281,16 @@ class MicroManager(Manager):
                 """ TODO: This is broken. you can't see enemy buffs. Hope this is changed in the protocol."""
                 return not enemy.has_buff(const.BuffId.FUNGALGROWTH)
 
-            # Perform fungal growths on clumps of enemies
-            fungal_infestors = infestors.filter(lambda i: i.energy >= 75)
-            self.bot.splash_on_enemies(
-                units=fungal_infestors,
-                action=splash_action,
-                search_range=14,
-                condition=splash_condition,
-                min_enemies=5,
-                priorities=fungal_priorities,)
+            if not self._fungals_used.contains(True, self.bot.state.game_loop):
+                # Perform fungal growths on clumps of enemies
+                fungal_infestors = infestors.filter(lambda i: i.energy >= 75)
+                self.bot.splash_on_enemies(
+                    units=fungal_infestors,
+                    action=splash_action,
+                    search_range=14,
+                    condition=splash_condition,
+                    min_enemies=5,
+                    priorities=fungal_priorities,)
 
     async def manage_mutalisks(self):
         mutalisks = self.bot.units(const.MUTALISK)
