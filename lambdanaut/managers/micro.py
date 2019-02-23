@@ -23,7 +23,6 @@ class MicroManager(Manager):
         super(MicroManager, self).__init__(bot)
 
         self.healing_roaches_tags = set()
-        self.microing_burrowed_roach_tags = set()
         self.healing_infestors_tags = set()
 
         # We only want to send a single bile at each force field.
@@ -131,31 +130,6 @@ class MicroManager(Manager):
             search_range=10,
             priorities=attack_priorities,)
 
-        # for baneling in banelings:
-        #     nearby_enemy_units = self.bot.known_enemy_units.closer_than(10, baneling)
-        #     nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priorities)
-        #
-        #     if nearby_enemy_priorities:
-        #         # Get the nearby priority target with the most nearby priority targets around it
-        #
-        #         greatest_count = 0
-        #         greatest_i = 0
-        #         for u_i in range(len(nearby_enemy_priorities)):
-        #             u = nearby_enemy_priorities[u_i]
-        #
-        #             u_nearby_enemy_count = nearby_enemy_priority_counts.get(u.tag)
-        #
-        #             if u_nearby_enemy_count is None:
-        #                 u_nearby_enemy_count = len(nearby_enemy_units.closer_than(3, u))
-        #                 nearby_enemy_priority_counts[u.tag] = u_nearby_enemy_count
-        #
-        #             if u_nearby_enemy_count > greatest_count:
-        #                 greatest_count = u_nearby_enemy_count
-        #                 greatest_i = u_i
-        #
-        #         greatest_priority = nearby_enemy_priorities[greatest_i]
-
-
         # Unburrow banelings if enemy nearby
         for baneling in burrowed_banelings:
             nearby_enemy_units = self.bot.known_enemy_units.closer_than(2, baneling)
@@ -165,8 +139,6 @@ class MicroManager(Manager):
 
     async def manage_roaches(self):
         roaches = self.bot.units(const.ROACH)
-
-        attack_priorities = const2.WORKERS | {const.SIEGETANK, const.UnitTypeId.SIEGETANKSIEGED}
 
         for roach in roaches:
             # Burrow damaged roaches
