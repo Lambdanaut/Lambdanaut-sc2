@@ -1,8 +1,3 @@
-"""
-OLD CLUSTERING ALGORITHM
-"""
-
-
 from functools import reduce
 import random
 from typing import List, Union

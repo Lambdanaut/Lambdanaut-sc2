@@ -19,6 +19,7 @@ from lambdanaut.managers.intel import IntelManager
 from lambdanaut.managers.micro import MicroManager
 from lambdanaut.managers.overlord import OverlordManager
 from lambdanaut.managers.resource import ResourceManager
+from lambdanaut.pathfinding import Pathfinder
 import lambdanaut.unit_cache as unit_cache
 
 from lambdanaut.const2 import Messages
@@ -75,6 +76,7 @@ class LambdaBot(sc2.BotAI):
         self.enemy_clusters = None
 
     async def on_step(self, iteration):
+        import pdb; pdb.set_trace()
         self.iteration = iteration
 
         if iteration == 0:

@@ -1,3 +1,9 @@
+"""
+Unused modification to clustering that uses a 3D point where `z` is the unit type.
+Effectively this clusters units together more tightly.
+Not sure how useful it actually is. It has slightly higher computational overhead.
+"""
+
 from functools import reduce
 import random
 from typing import List, Union
