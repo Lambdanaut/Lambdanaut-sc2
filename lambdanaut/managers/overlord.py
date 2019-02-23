@@ -169,10 +169,11 @@ class OverlordManager(StatefulManager):
                         self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY)
 
                     # Report enemy ground rushes
-                    enemy_units = self.bot.known_enemy_units.not_structure.not_flying
+                    enemy_units = self.bot.known_enemy_units.not_structure.\
+                        not_flying.exclude_type(const2.ENEMY_NON_ARMY)
                     if enemy_units.exists:
-                        nearby_enemy_units = enemy_units.exclude_type(
-                            const2.ENEMY_NON_ARMY).closer_than(150, self.bot.start_location)
+                        nearby_enemy_units = enemy_units.closer_than(
+                            self.bot.start_location_to_enemy_start_location_distance * 0.85, self.bot.start_location)
                         enemy_workers = nearby_enemy_units.of_type(const2.WORKERS)
                         nearby_enemy_units = nearby_enemy_units - enemy_workers
                         if enemy_workers.exists and len(enemy_workers) > 2:

@@ -239,8 +239,7 @@ class LambdaBot(sc2.BotAI):
             if friendly | enemy:
                 await self._client.debug_kill_unit(friendly | enemy)
 
-            await self._client.debug_create_unit([[const.LAIR, 1, self.start_location - Point2((6, 0)), 1]])
-            await self._client.debug_create_unit([[const.INFESTOR, 25, self.start_location - Point2((4, 0)), 1]])
+            await self._client.debug_create_unit([[const.ROACH, 40, self.start_location - Point2((25, 0)), 1]])
             await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 5, self.start_location + Point2((9, 0)), 2]])
         # await self._client.debug_create_unit([[const.MARINE, 17, self.start_location + Point2((7, 0)), 2]])
         #     await self._client.debug_create_unit([[const.ZERGLING, 3, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
@@ -252,6 +251,10 @@ class LambdaBot(sc2.BotAI):
         # await self._client.debug_create_unit([[const.HATCHERY, 1, self.start_location - Point2((11, 0)), 1]])
         # await self._client.debug_create_unit([[const.ZERGLING, 5, self.start_location + Point2((7, 0)), 2]])
         # await self._client.debug_create_unit([[const.SPINECRAWLER, 6, self.start_location + Point2((8, 0)), 2]])
+
+        for unit in friendly:
+            if unit.is_attacking:
+                import pdb; pdb.set_trace()
 
     async def draw_debug(self):
         """

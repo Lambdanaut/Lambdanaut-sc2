@@ -246,7 +246,7 @@ class ForceManager(StatefulManager):
 
         for th in self.bot.townhalls:
             enemies_nearby = [u.snapshot for u in self.bot.enemy_cache.values()
-                              if u.distance_to(th) < 25]
+                              if u.distance_to(th) < 30]
 
             if enemies_nearby:
                 # Publish message if there are multiple enemies
@@ -300,10 +300,13 @@ class ForceManager(StatefulManager):
                 army_clusters = self.bot.army_clusters
 
                 # The harder we're attacked, the further-out army to pull back
+                # 1 Enemy: 0.2 of map. 2 enemy: 0.4 of map. 5 or more enemy: 1.0 of map
+                distance_ratio_to_pull_back = max(1.0, len(enemies_nearby) * 0.2)
                 if len(enemies_nearby) < 5:
-                    army_clusters = [cluster for cluster in army_clusters
-                                     if self.bot.start_location.distance_to(cluster.position) <
-                                     self.bot.start_location_to_enemy_start_location_distance / 2]
+                    army_clusters = \
+                        [cluster for cluster in army_clusters
+                         if self.bot.start_location.distance_to(cluster.position) <
+                         self.bot.start_location_to_enemy_start_location_distance * distance_ratio_to_pull_back]
 
                 if army_clusters:
                     nearest_enemy_cluster = self.bot.start_location.closest(self.bot.enemy_clusters)
@@ -328,7 +331,7 @@ class ForceManager(StatefulManager):
                                             target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
 
                                             if target and unit.weapon_cooldown <= 0 and not unit.is_attacking:
-                                                self.bot.actions.append(unit.attack(target.position))
+                                                self.bot.actions.append(unit.attack(target))
 
                                 elif army_strength < -2:
                                     # If enemy is greater regroup to center of largest cluster towards friendly townhall
