@@ -10,7 +10,7 @@ from lib.sc2.pixel_map import PixelMap
 from lib.sc2.unit import Unit
 from lib.sc2.units import Units
 
-from lambdanaut import VERSION, DEBUG
+from lambdanaut import VERSION, DEBUG, CREATE_DEBUG_UNITS
 import lambdanaut.builds as builds
 import lambdanaut.const2 as const2
 import lambdanaut.clustering as clustering
@@ -155,6 +155,8 @@ class LambdaBot(sc2.BotAI):
 
         if self.debug:
             await self.draw_debug()
+            if CREATE_DEBUG_UNITS:
+                await self.create_debug_units()
 
         # "Do" actions
         await self.do_actions(self.actions)
@@ -204,16 +206,7 @@ class LambdaBot(sc2.BotAI):
     def start_location_to_enemy_start_location_distance(self):
         return self.start_location.distance_to(self.enemy_start_location)
 
-    async def draw_debug(self):
-        """
-        Draws debug images on screen during game
-        """
-
-        # # Print cluster debug info
-        # print ("Army cluster count: {}".format(len([cluster for cluster in self.army_clusters if cluster])))
-        # print ("Army clusters: {}".format([cluster.position for cluster in self.army_clusters]))
-        # print ("Enemy cluster count: {}".format(len([cluster for cluster in self.enemy_clusters if cluster])))
-
+    async def create_debug_units(self):
         # Create units on condition
         # zerglings = self.units(const.ZERGLING)
         # if len(zerglings) > 10:
@@ -237,27 +230,38 @@ class LambdaBot(sc2.BotAI):
         # Create banelings and zerglings every 15 steps
         # For testing micro maps
         #
-        # import random
-        # friendly = self.units
-        # enemy = self.known_enemy_units
-        # if not friendly or not enemy:
-        #     print("FRIENDLY COUNT: {}".format(len(friendly)))
-        #     print("ENEMY COUNT: {}".format(len(enemy)))
-        #     if friendly | enemy:
-        #         await self._client.debug_kill_unit(friendly | enemy)
-        #
-        #     await self._client.debug_create_unit([[const.HYDRALISK, 25, self.start_location - Point2((4, 0)), 1]])
-        #     await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 2, self.start_location + Point2((9, 0)), 2]])
-            # await self._client.debug_create_unit([[const.MARINE, 17, self.start_location + Point2((7, 0)), 2]])
+        import random
+        friendly = self.units
+        enemy = self.known_enemy_units
+        if not friendly or not enemy:
+            print("FRIENDLY COUNT: {}".format(len(friendly)))
+            print("ENEMY COUNT: {}".format(len(enemy)))
+            if friendly | enemy:
+                await self._client.debug_kill_unit(friendly | enemy)
+
+            await self._client.debug_create_unit([[const.LAIR, 1, self.start_location - Point2((6, 0)), 1]])
+            await self._client.debug_create_unit([[const.INFESTOR, 25, self.start_location - Point2((4, 0)), 1]])
+            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 5, self.start_location + Point2((9, 0)), 2]])
+        # await self._client.debug_create_unit([[const.MARINE, 17, self.start_location + Point2((7, 0)), 2]])
         #     await self._client.debug_create_unit([[const.ZERGLING, 3, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
         #     await self._client.debug_create_unit([[const.ZERGLING, 10, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
         #     await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
-            # await self._client.debug_create_unit([[const.DRONE, 30, self.start_location + Point2((5, 0)), 1]])
-            # await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((4, 0)), 1]])
-            # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
-            # await self._client.debug_create_unit([[const.HATCHERY, 1, self.start_location - Point2((11, 0)), 1]])
-            # await self._client.debug_create_unit([[const.ZERGLING, 5, self.start_location + Point2((7, 0)), 2]])
-            # await self._client.debug_create_unit([[const.SPINECRAWLER, 6, self.start_location + Point2((8, 0)), 2]])
+        # await self._client.debug_create_unit([[const.DRONE, 30, self.start_location + Point2((5, 0)), 1]])
+        # await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((4, 0)), 1]])
+        # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
+        # await self._client.debug_create_unit([[const.HATCHERY, 1, self.start_location - Point2((11, 0)), 1]])
+        # await self._client.debug_create_unit([[const.ZERGLING, 5, self.start_location + Point2((7, 0)), 2]])
+        # await self._client.debug_create_unit([[const.SPINECRAWLER, 6, self.start_location + Point2((8, 0)), 2]])
+
+    async def draw_debug(self):
+        """
+        Draws debug images on screen during game
+        """
+
+        # # Print cluster debug info
+        # print ("Army cluster count: {}".format(len([cluster for cluster in self.army_clusters if cluster])))
+        # print ("Army clusters: {}".format([cluster.position for cluster in self.army_clusters]))
+        # print ("Enemy cluster count: {}".format(len([cluster for cluster in self.enemy_clusters if cluster])))
 
         class Green:
             r = 0

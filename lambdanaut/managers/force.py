@@ -165,7 +165,7 @@ class ForceManager(StatefulManager):
                     self.last_enemy_army_position = None
 
     async def do_housekeeping(self):
-        zerg_army_units = const2.ZERG_ARMY_UNITS | {const.ROACHBURROWED}
+        zerg_army_units = const2.ZERG_ARMY_UNITS | {const.ROACHBURROWED, const.INFESTORBURROWED}
 
         army = self.bot.units(zerg_army_units).tags_not_in(self.bot.occupied_units)
 

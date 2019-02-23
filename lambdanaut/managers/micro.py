@@ -23,6 +23,8 @@ class MicroManager(Manager):
         super(MicroManager, self).__init__(bot)
 
         self.healing_roaches_tags = set()
+        self.microing_burrowed_roach_tags = set()
+        self.healing_infestors_tags = set()
 
         # We only want to send a single bile at each force field.
         # Tag the biled ones.
@@ -185,7 +187,7 @@ class MicroManager(Manager):
             roach = self.bot.units.find_by_tag(roach_tag)
             if roach:
                 if roach.health_percentage > 0.96:
-                    nearby_enemy_units = self.bot.known_enemy_units.closer_than(10, roach)
+                    nearby_enemy_units = self.bot.known_enemy_units.closer_than(10, roach).not_structure
                     if nearby_enemy_units.empty or len(nearby_enemy_units) < 2:
                         # Untag roach as a healing roach
                         to_remove_from_healing.add(roach_tag)
@@ -253,8 +255,9 @@ class MicroManager(Manager):
 
     async def manage_infestors(self):
         infestors = self.bot.units(const.INFESTOR)
+        burrowed_infestors = self.bot.units(const.UnitTypeId.INFESTORBURROWED)
 
-        if infestors:
+        if infestors or burrowed_infestors:
 
             fungal_priorities = const2.WORKERS | {
                 const.ZERGLING, const.BANELING, const.HYDRALISK, const.ROACH, const.MUTALISK, const.CORRUPTOR,
@@ -262,7 +265,12 @@ class MicroManager(Manager):
                 const.MARINE, const.MARAUDER, const.REAPER, const.GHOST, const.VIKING, const.BANSHEE, const.MEDIVAC,
                 const.HELLION, const.HELLIONTANK,
                 const.ZEALOT, const.DARKTEMPLAR, const.STALKER, const.ADEPT, const.VOIDRAY, const.TEMPEST,
-                const.SENTRY, const.HIGHTEMPLAR, }
+                const.SENTRY, const.HIGHTEMPLAR, const.PHOENIX,}
+
+            infested_terran_priorities = const2.TOWNHALLS | {
+                const.SIEGETANKSIEGED, const.CARRIER, const.PHOENIX, const.BROODLORD, const.ULTRALISK,
+                const.PHOTONCANNON, const.SPINECRAWLER, const.BUNKER
+            }
 
             def splash_action(infestor, enemy):
                 """Splash action to perform on enemies during fungal growths"""
@@ -293,23 +301,60 @@ class MicroManager(Manager):
                     min_enemies=5,
                     priorities=fungal_priorities,)
 
-            # Move infestors away from nearby enemies
-            for infestor in infestors:
-                cluster = infestor.position.closest(self.bot.army_clusters)
-                if cluster:
-                    nearby_enemy_units = self.bot.known_enemy_units.closer_than(7, infestor)
+            for infestor in infestors | burrowed_infestors:
+                if const.BURROW in self.bot.state.upgrades \
+                        and not infestor.is_burrowed \
+                        and infestor.health_percentage < 0.40:
+                    # Burrow damaged infestors
 
-                    if nearby_enemy_units:
-                        # Keep infestor slightly behind center of army cluster
-                        closest_enemy = nearby_enemy_units.closest_to(infestor.position)
-                        target = cluster.position.towards(closest_enemy, -3)
+                    # Move away from the direction we're facing
+                    target = utils.towards_direction(infestor.position, infestor.facing, -20)
 
-                        self.bot.actions.append(infestor.move(target))
+                    # Tag infestor as a healing infestor
+                    self.healing_infestors_tags.add(infestor.tag)
+
+                    self.bot.actions.append(infestor(const.AbilityId.BURROWDOWN_INFESTOR))
+                    self.bot.actions.append(infestor.move(target, queue=True))
+                else:
+                    cluster = infestor.position.closest(self.bot.army_clusters)
+                    if cluster:
+                        nearby_enemy_units = self.bot.known_enemy_units.closer_than(10, infestor)
+
+                        if nearby_enemy_units:
+                            nearby_enemy_priorities = nearby_enemy_units.of_type(infested_terran_priorities)
+                            if infestor.energy >= 25 and nearby_enemy_priorities:
+                                # Throw infested terran eggs at infested terran priorities
+                                nearby_enemy_priority = nearby_enemy_priorities.closest_to(infestor)
+                                self.bot.actions.append(infestor(
+                                    const.AbilityId.INFESTEDTERRANS_INFESTEDTERRANS,
+                                    nearby_enemy_priority.position))
+                            elif nearby_enemy_units.closer_than(7, infestor):
+                                # Move infestors away from nearby enemies
+                                closest_enemy = nearby_enemy_units.closest_to(infestor.position)
+                                target = cluster.position.towards(closest_enemy, -3)
+
+                                self.bot.actions.append(infestor.move(target))
+
+        # Unburrow healed infestors
+        to_remove_from_healing = set()
+        for infestor_tag in self.healing_infestors_tags:
+            infestor = self.bot.units.find_by_tag(infestor_tag)
+            if infestor:
+                if infestor.health_percentage > 0.96:
+                    nearby_enemy_units = self.bot.known_enemy_units.closer_than(10, infestor).not_structure
+                    if not nearby_enemy_units or len(nearby_enemy_units) < 2:
+                        # Untag infestor as a healing infestor
+                        to_remove_from_healing.add(infestor_tag)
+
+                        # Unburrow infestor
+                        self.bot.actions.append(infestor(const.AbilityId.BURROWUP_INFESTOR))
+            else:
+                to_remove_from_healing.add(infestor_tag)
 
     async def manage_mutalisks(self):
         mutalisks = self.bot.units(const.MUTALISK)
 
-        attack_priorities = {const.QUEEN, const.SIEGETANK}
+        attack_priorities = {const.QUEEN, const.SIEGETANK, const.SIEGETANKSIEGED,}
 
         for mutalisk in mutalisks:
             nearby_enemy_units = self.bot.known_enemy_units.closer_than(11, mutalisk)
@@ -499,7 +544,9 @@ class MicroManager(Manager):
                     self.bot.actions.append(unit.attack(target))
 
     async def manage_combat_micro(self):
-        # Units to do default combat micro for
+        """Does default combat micro for units"""
+
+        types_not_to_micro = {const.LURKERMP, const.INFESTEDTERRAN, const.ROACHBURROWED, const.INFESTORBURROWED}
 
         # Micro closer to nearest enemy army cluster if our dps is higher
         # Micro further from nearest enemy army cluster if our dps is lower
@@ -509,8 +556,7 @@ class MicroManager(Manager):
             nearest_enemy_cluster = army_center.closest(self.bot.enemy_clusters)
             enemy_army_center = nearest_enemy_cluster.position
 
-            types_not_to_move = {const.LURKERMP}
-            nearby_army = [u.snapshot for u in army_cluster if u.type_id not in types_not_to_move]
+            nearby_army = [u.snapshot for u in army_cluster if u.type_id not in types_not_to_micro]
             if army_center.distance_to(enemy_army_center) < 17:
                 # Micro against enemy clusters
                 if nearby_army and nearest_enemy_cluster:

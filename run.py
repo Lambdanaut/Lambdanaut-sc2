@@ -10,6 +10,7 @@ sys.path.append(os.path.join('.', 'lib/'))
 import lib.sc2 as sc2
 from __init__ import run_ladder_game
 
+import lambdanaut
 import lambdanaut.bot as bot
 
 datetime_str = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M")
@@ -31,8 +32,9 @@ MAPS = [
     'BlueshiftLE',
     'PortAleksanderLE', ]
 
-MAP_NAME = "kairo_training"
-REALTIME = True
+MAP_NAME = ""
+MICRO_MAP_NAME = "kairo_training"
+REALTIME = False
 
 # BUILD = sc2.AIBuild.RandomBuild
 # BUILD = sc2.AIBuild.Rush
@@ -57,6 +59,11 @@ if not MAP_NAME:
     MAP_NAME = random.choice(MAPS)
 if not BUILD:
     BUILD = random.choice(BUILDS)
+
+TESTING_MICRO = lambdanaut.CREATE_DEBUG_UNITS
+if TESTING_MICRO:
+    MAP_NAME = MICRO_MAP_NAME
+
 
 
 # Start game
