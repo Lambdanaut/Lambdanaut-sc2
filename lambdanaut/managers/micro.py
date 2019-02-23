@@ -256,10 +256,11 @@ class MicroManager(Manager):
 
         if infestors:
 
-            fungal_priorities = {
+            fungal_priorities = const2.WORKERS | {
                 const.ZERGLING, const.BANELING, const.HYDRALISK, const.ROACH, const.MUTALISK, const.CORRUPTOR,
                 const.BROODLORD,
                 const.MARINE, const.MARAUDER, const.REAPER, const.GHOST, const.VIKING, const.BANSHEE, const.MEDIVAC,
+                const.HELLION, const.HELLIONTANK,
                 const.ZEALOT, const.DARKTEMPLAR, const.STALKER, const.ADEPT, const.VOIDRAY, const.TEMPEST,
                 const.SENTRY, const.HIGHTEMPLAR, }
 
@@ -272,8 +273,8 @@ class MicroManager(Manager):
                     self.bot.actions.append(infestor(
                         const.AbilityId.FUNGALGROWTH_FUNGALGROWTH, enemy.position))
 
-                    # Record the fungal we used so we don't fungal again for 2 seconds
-                    self._fungals_used.add(True, self.bot.state.game_loop, expiry=2)
+                    # Record the fungal we used so we don't fungal again for 1 seconds
+                    self._fungals_used.add(True, self.bot.state.game_loop, expiry=1)
 
             # Splash condition that must be passed on the enemy unit to fungal him
             # We don't want to re-fungal already fungalled units
@@ -296,7 +297,7 @@ class MicroManager(Manager):
             for infestor in infestors:
                 cluster = infestor.position.closest(self.bot.army_clusters)
                 if cluster:
-                    nearby_enemy_units = self.bot.known_enemy_units.closer_than(9, infestor)
+                    nearby_enemy_units = self.bot.known_enemy_units.closer_than(7, infestor)
 
                     if nearby_enemy_units:
                         # Keep infestor slightly behind center of army cluster
@@ -483,16 +484,13 @@ class MicroManager(Manager):
             # Don't priority target if it's a mining worker
             return
 
-        if attack_priorities is None:
-            attack_priorities = set()
-
         enemy_units = self.bot.known_enemy_units
         if enemy_units:
             if self.bot.is_melee(unit):
                 # Search for further priorities if unit is melee
                 enemy_units = enemy_units.closer_than(3, unit)
             else:
-                enemy_units = enemy_units.closer_than(unit.ground_range * 1.3, unit)
+                enemy_units = enemy_units.closer_than(unit.ground_range * 1.8, unit)
 
             if enemy_units:
                 target = self.bot.closest_and_most_damaged(
@@ -517,6 +515,9 @@ class MicroManager(Manager):
                 # Micro against enemy clusters
                 if nearby_army and nearest_enemy_cluster:
                     army_strength = self.bot.relative_army_strength(army_cluster, nearest_enemy_cluster)
+
+                    units_in_attack_range_count = self.bot.count_units_in_attack_range(nearby_army, nearest_enemy_cluster)
+                    units_in_attack_range_ratio = units_in_attack_range_count / len(nearby_army)
 
                     for unit in nearby_army:
                         if unit.movement_speed > 0 and \
@@ -549,20 +550,19 @@ class MicroManager(Manager):
                                 self.bot.actions.append(unit.move(away_from_enemy))
                                 self.bot.actions.append(unit.attack(unit.position, queue=True))
 
-                            # If nearest enemy unit is ranged close the distance if our cluster is stronger
-                            elif army_strength > 2 and \
-                                    unit_is_combatant:
-                                distance_to_enemy_unit = unit.distance_to(nearest_enemy_unit)
-                                if unit.ground_range > 1 and \
-                                        distance_to_enemy_unit > unit.ground_range * 0.5 and \
-                                        not unit.is_moving and unit.weapon_cooldown <= 0:
-                                    how_far_to_move = distance_to_enemy_unit * 0.6
-                                    towards_enemy = unit.position.towards(
-                                        nearest_enemy_unit, how_far_to_move)
-                                    self.bot.actions.append(unit.move(towards_enemy))
+                            # Close the distance if our cluster is stronger
+                            elif unit_is_combatant and units_in_attack_range_ratio < 0.8 \
+                                    and unit.weapon_cooldown \
+                                    and unit.distance_to(nearest_enemy_unit) > unit.ground_range * 0.35 \
+                                    and not self.bot.is_melee(unit) \
+                                    and not unit.is_moving:
+                                how_far_to_move = 1
+                                towards_enemy = unit.position.towards(
+                                    nearest_enemy_unit, how_far_to_move)
+                                self.bot.actions.append(unit.move(towards_enemy))
 
                             # Handle combat priority targeting
-                            elif not unit.weapon_cooldown or unit.is_attacking:
+                            else:
                                 priorities = const2.WORKERS | {const.SIEGETANK, const.SIEGETANKSIEGED, const.QUEEN,
                                                                const.COLOSSUS, const.MEDIVAC, const.WARPPRISM}
                                 await self.manage_priority_targeting(unit, attack_priorities=priorities)
