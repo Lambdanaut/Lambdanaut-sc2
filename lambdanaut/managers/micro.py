@@ -563,8 +563,13 @@ class MicroManager(Manager):
 
                             # Handle combat priority targeting
                             else:
-                                priorities = const2.WORKERS | {const.SIEGETANK, const.SIEGETANKSIEGED, const.QUEEN,
-                                                               const.COLOSSUS, const.MEDIVAC, const.WARPPRISM}
+                                priorities = {
+                                    const.SIEGETANK, const.SIEGETANKSIEGED, const.MEDIVAC, const.CYCLONE,
+                                    const.COLOSSUS, const.WARPPRISM, const.ARCHON, const.HIGHTEMPLAR,
+                                    const.DARKTEMPLAR, const.IMMORTAL,
+                                    const.INFESTOR, const.QUEEN, const.LURKERMP, const.LURKERMPBURROWED,
+                                    const.ULTRALISK, const.BROODLORD,
+                                }
                                 await self.manage_priority_targeting(unit, attack_priorities=priorities)
 
     async def read_messages(self):
