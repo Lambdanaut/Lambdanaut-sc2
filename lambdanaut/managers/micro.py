@@ -292,6 +292,19 @@ class MicroManager(Manager):
                     min_enemies=5,
                     priorities=fungal_priorities,)
 
+            # Move infestors away from nearby enemies
+            for infestor in infestors:
+                cluster = infestor.position.closest(self.bot.army_clusters)
+                if cluster:
+                    nearby_enemy_units = self.bot.known_enemy_units.closer_than(9, infestor)
+
+                    if nearby_enemy_units:
+                        # Keep infestor slightly behind center of army cluster
+                        closest_enemy = nearby_enemy_units.closest_to(infestor.position)
+                        target = cluster.position.towards(closest_enemy, -3)
+
+                        self.bot.actions.append(infestor.move(target))
+
     async def manage_mutalisks(self):
         mutalisks = self.bot.units(const.MUTALISK)
 
@@ -312,7 +325,7 @@ class MicroManager(Manager):
                         self.bot.actions.append(mutalisk.move(towards_start_location))
 
                     # Prefer targeting our priorities
-                    if nearby_enemy_workers.exists:
+                    if nearby_enemy_workers:
                         nearby_enemy_units = nearby_enemy_workers
                     elif nearby_enemy_priorities.exists:
                         nearby_enemy_units = nearby_enemy_priorities
@@ -322,9 +335,9 @@ class MicroManager(Manager):
 
     async def manage_corruptors(self):
         corruptors = self.bot.units(const.CORRUPTOR)
-        if corruptors.exists:
+        if corruptors:
             army = self.bot.units(const2.ZERG_ARMY_UNITS)
-            if army.exists:
+            if army:
                 for corruptor in corruptors:
                     # Keep corruptor slightly ahead center of army
                     if corruptor.distance_to(army.center) > 6:

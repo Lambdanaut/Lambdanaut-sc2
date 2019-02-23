@@ -41,6 +41,13 @@
   
   * Micro infestors behind the cluster they're in
   
+  * Test that burrowing banelings still work
+  
+  * Make use of Pathfinding
+    * For Microing around seiged tanks and flanking them
+    * For moving-to-attacking
+    * For mutalisk micro
+  
   * Write mutalisk micro and re-add mutalisk to ling-bane-muta build
   
   * Better defending micro. Need to beat cheezerg's cheezy cheese 

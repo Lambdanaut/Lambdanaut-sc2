@@ -71,6 +71,7 @@ class IntelManager(Manager):
                 new_enemy_start_location = point.closest(enemy_start_locations)
 
                 self.bot.enemy_start_location = new_enemy_start_location
+                self.bot.update_shortest_path_to_enemy_start_location()
 
     def enemy_counter_with_midgame_broodlord_rush(self):
         """Checks the map to see if there are any visible units we should counter with a broodlord rush"""

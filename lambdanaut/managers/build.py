@@ -223,7 +223,7 @@ class BuildManager(Manager):
             if message in large_defense:
                 self.ack(message)
                 # Only stop non-army production if we have three or more townhalls
-                if len(self.bot.townhalls.ready) > 2:
+                if len(self.bot.townhalls) > 2:
                     self.stop_townhall_production = True
                     self.stop_worker_production = True
 

@@ -1,10 +1,12 @@
 from collections import defaultdict
+import copy
 import math
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import lib.sc2 as sc2
 import lib.sc2.constants as const
 from lib.sc2.position import Point2, Point3
+from lib.sc2.pixel_map import PixelMap
 from lib.sc2.unit import Unit
 from lib.sc2.units import Units
 
@@ -42,7 +44,7 @@ class LambdaBot(sc2.BotAI):
         self.force_manager = None
         self.micro_manager = None
 
-        self.managers = {}
+        self.managers = set()
 
         self.iteration = 0
 
@@ -53,15 +55,15 @@ class LambdaBot(sc2.BotAI):
         self._message_subscriptions: Dict[const2.Messages, List[Manager]] = defaultdict(list)
 
         # Global Intel
-        self.enemy_start_location = None
-        self.not_enemy_start_locations = None
+        self.enemy_start_location: Point2 = None
+        self.not_enemy_start_locations: Set[Point2] = None
 
         # Set of tags of units currently occupied in some way. Don't order them.
         # This is cleared every time an attack ends
-        self.occupied_units = set()
+        self.occupied_units: Set[int] = set()
 
         # Townhall tag -> Queen tag mapping of what queens belong to what townhalls
-        self.townhall_queens = {}
+        self.townhall_queens: Dict[int, int] = {}
 
         # Map of all our unit's tags to UnitCached objects with their remembered
         # properties (Last health, shields, location, etc)
@@ -72,11 +74,16 @@ class LambdaBot(sc2.BotAI):
         self.enemy_cache = {}
 
         # Clusters to be set on the first iteration
-        self.army_clusters = None
-        self.enemy_clusters = None
+        self.army_clusters: List[clustering.Cluster] = None
+        self.enemy_clusters: List[clustering.Cluster] = None
+
+        # Fastest path to the enemy start location
+        self.shortest_path_to_enemy_start_location: List[Tuple[int, int]] = None
+
+        # Copy of self.game_info.pathing_grid except the starting structures are removed
+        self.pathing_grid: PixelMap = None
 
     async def on_step(self, iteration):
-        import pdb; pdb.set_trace()
         self.iteration = iteration
 
         if iteration == 0:
@@ -97,6 +104,12 @@ class LambdaBot(sc2.BotAI):
             except IndexError:
                 self.enemy_start_location = self.game_info.map_center
             self.not_enemy_start_locations = {self.start_location}
+
+            # Update our local copy of the pathing grid (self.pathing_grid)
+            self.update_pathing_grid()
+
+            # Update the pathing variables
+            self.update_shortest_path_to_enemy_start_location()
 
             # Load up managers
             self.intel_manager = IntelManager(self)
@@ -365,8 +378,39 @@ class LambdaBot(sc2.BotAI):
         except IndexError:
             return None
 
-    def is_melee(self, unit: Unit) -> bool:
-        return unit.ground_range < 1.5 and unit.can_attack_ground
+    def update_pathing_grid(self):
+        """
+        Updates the local pathing grid copy to remove start location structures
+
+        Meant to be called on the first iteration of the game.
+        """
+
+        pathing_grid = copy.deepcopy(self.game_info.pathing_grid)
+
+        start_locations = [self.start_location] + self.enemy_start_locations
+        start_locations = [loc.rounded for loc in start_locations]
+
+        # Flood fill the start locations to eliminate the structures pathing block
+        for start_location in start_locations:
+            for p in pathing_grid.flood_fill(start_location, lambda x: x == 255):
+                pathing_grid[p] = [0]
+
+        self.pathing_grid = pathing_grid
+
+    def update_shortest_path_to_enemy_start_location(self):
+        """
+        Updates the stored shortest path to the enemy start location
+        """
+
+        pathfinder = Pathfinder(self.pathing_grid)
+
+        shortest_path = pathfinder.find_path(
+            self.start_location.rounded, self.enemy_start_location.rounded)
+
+        if shortest_path is None:
+            self.shortest_path_to_enemy_start_location = None
+        else:
+            self.shortest_path_to_enemy_start_location = [p for p in shortest_path]
 
     async def get_open_expansions(self) -> List[Point2]:
         """Gets a sorted list of open expansions from the start location"""
@@ -461,6 +505,9 @@ class LambdaBot(sc2.BotAI):
         adjacents = (corners[1], corners[2])
 
         return adjacents
+
+    def is_melee(self, unit: Unit) -> bool:
+        return unit.ground_range < 1.5 and unit.can_attack_ground
 
     def splash_on_enemies(
             self,

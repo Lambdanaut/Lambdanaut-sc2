@@ -447,14 +447,14 @@ class ForceManager(StatefulManager):
                             # Consider them harassing banelings for the moment
                             self.banelings_harassing.add(baneling.tag)
 
-                            # Move them to a nearest ramp near the army center and burrow them
-                            target = army.center
+                            # Move them to the nearest point along the shortest path to the
+                            # enemy main and burrow them
+                            path = self.bot.shortest_path_to_enemy_start_location
 
-                            nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
-                            nearby_ramp = target.closest(nearby_ramps)  # Ramp closest to army
-
-                            if nearby_ramp.distance_to(target) < 14:
-                                target = nearby_ramp
+                            if path:
+                                target = baneling.position.closest(path)
+                            else:
+                                target = army.center
 
                             self.bot.actions.append(baneling.move(target))
                             self.bot.actions.append(
@@ -662,7 +662,7 @@ class ForceManager(StatefulManager):
                 relative_army_strength = self.bot.relative_army_strength(
                     army, self.bot.enemy_cache.values(), ignore_workers=True)
 
-                if (relative_army_strength > 12 and len(army) > 4) \
+                if (relative_army_strength > 10 and len(army) > 4) \
                         or army_value > self.army_value_to_attack:
                     return await self.change_state(ForcesStates.MOVING_TO_ATTACK)
 
@@ -709,7 +709,7 @@ class ForceManager(StatefulManager):
                     army, self.bot.enemy_cache.values(), ignore_workers=True)
 
                 # Switch back to housekeeping if our army is weaker and we're not max supply
-                if relative_army_strength < -1 and self.bot.supply_used < 190:
+                if relative_army_strength < -5 and self.bot.supply_used < 180:
                     return await self.change_state(ForcesStates.HOUSEKEEPING)
 
                 # Start attacking when army has amassed
