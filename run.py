@@ -31,8 +31,8 @@ MAPS = [
     'BlueshiftLE',
     'PortAleksanderLE', ]
 
-MAP_NAME = ""
-REALTIME = False
+MAP_NAME = "kairo_training"
+REALTIME = True
 
 # BUILD = sc2.AIBuild.RandomBuild
 # BUILD = sc2.AIBuild.Rush

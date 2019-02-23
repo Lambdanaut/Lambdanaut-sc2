@@ -948,5 +948,3 @@ class BuildManager(Manager):
             else:
                 # Build the current build targets
                 await self.create_build_targets(current_build_targets)
-
-
