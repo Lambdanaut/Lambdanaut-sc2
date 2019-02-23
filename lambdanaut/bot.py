@@ -237,15 +237,18 @@ class LambdaBot(sc2.BotAI):
         # Create banelings and zerglings every 15 steps
         # For testing micro maps
         #
-        # import random
-        # friendly = self.units
-        # enemy = self.known_enemy_units
-        # if not friendly or not enemy:
-        #     print("FRIENDLY COUNT: {}".format(len(friendly)))
-        #     print("ENEMY COUNT: {}".format(len(enemy)))
-        #     if friendly | enemy:
-        #         await self._client.debug_kill_unit(friendly | enemy)
-        #
+        import random
+        friendly = self.units
+        enemy = self.known_enemy_units
+        if not friendly or not enemy:
+            print("FRIENDLY COUNT: {}".format(len(friendly)))
+            print("ENEMY COUNT: {}".format(len(enemy)))
+            if friendly | enemy:
+                await self._client.debug_kill_unit(friendly | enemy)
+
+            await self._client.debug_create_unit([[const.HYDRALISK, 25, self.start_location - Point2((4, 0)), 1]])
+            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 2, self.start_location + Point2((9, 0)), 2]])
+            await self._client.debug_create_unit([[const.MARINE, 17, self.start_location + Point2((7, 0)), 2]])
         #     await self._client.debug_create_unit([[const.ZERGLING, 3, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
         #     await self._client.debug_create_unit([[const.ZERGLING, 10, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
         #     await self._client.debug_create_unit([[const.ZERGLING, 20, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
@@ -572,6 +575,17 @@ class LambdaBot(sc2.BotAI):
                     # `action` on it
                     action(unit, greatest_priority)
 
+    def count_units_in_attack_range(self, units1, units2):
+        """
+        Counts the number of units1 that are in attack range of at least one unit in units2
+        """
+        count = 0
+        for unit1 in units1:
+            for unit2 in units2:
+                if unit1.target_in_range(unit2):
+                    count += 1
+                    break
+        return count
 
     def closest_and_most_damaged(self, unit_group, unit, priorities=None, can_attack=True):
         """
@@ -597,7 +611,7 @@ class LambdaBot(sc2.BotAI):
             else:
                 health = u.health_percentage
 
-            priority_bonus = 1 if u in priorities else 4
+            priority_bonus = 1 if u.type_id in priorities else 10
 
             return health * u.distance_to(unit) * priority_bonus
 
