@@ -96,7 +96,7 @@ class ResourceManager(Manager):
     async def manage_vespene(self):
         # If we have over 5 times the vespene than we do minerals, hold off on gas
         if self.bot.vespene > 350 and self.bot.minerals > 50 \
-                and self.bot.vespene / self.bot.minerals > 6 and \
+                and self.bot.vespene / self.bot.minerals > 8 and \
                 not self._recent_commands.contains(
                     ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
                     self.bot.state.game_loop):

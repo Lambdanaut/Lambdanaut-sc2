@@ -575,12 +575,14 @@ class LambdaBot(sc2.BotAI):
                     # `action` on it
                     action(unit, greatest_priority)
 
-    def count_units_in_attack_range(self, units1, units2):
+    def count_units_in_attack_range(self, units1, units2, ranged_only=False):
         """
         Counts the number of units1 that are in attack range of at least one unit in units2
         """
         count = 0
         for unit1 in units1:
+            if ranged_only and self.is_melee(unit1):
+                continue
             for unit2 in units2:
                 if unit1.target_in_range(unit2):
                     count += 1

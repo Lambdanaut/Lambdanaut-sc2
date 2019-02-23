@@ -516,8 +516,9 @@ class MicroManager(Manager):
                 if nearby_army and nearest_enemy_cluster:
                     army_strength = self.bot.relative_army_strength(army_cluster, nearest_enemy_cluster)
 
-                    units_in_attack_range_count = self.bot.count_units_in_attack_range(nearby_army, nearest_enemy_cluster)
-                    units_in_attack_range_ratio = units_in_attack_range_count / len(nearby_army)
+                    ranged_units_in_attack_range_count = self.bot.count_units_in_attack_range(
+                        nearby_army, nearest_enemy_cluster, ranged_only=True)
+                    ranged_units_in_attack_range_ratio = ranged_units_in_attack_range_count / len(nearby_army)
 
                     for unit in nearby_army:
                         if unit.movement_speed > 0 and \
@@ -551,7 +552,7 @@ class MicroManager(Manager):
                                 self.bot.actions.append(unit.attack(unit.position, queue=True))
 
                             # Close the distance if our cluster is stronger
-                            elif unit_is_combatant and units_in_attack_range_ratio < 0.8 \
+                            elif unit_is_combatant and ranged_units_in_attack_range_ratio < 0.8 \
                                     and unit.weapon_cooldown \
                                     and unit.distance_to(nearest_enemy_unit) > unit.ground_range * 0.35 \
                                     and not self.bot.is_melee(unit) \
