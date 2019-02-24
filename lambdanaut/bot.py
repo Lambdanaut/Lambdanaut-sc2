@@ -150,7 +150,7 @@ class LambdaBot(sc2.BotAI):
         await self.micro_manager.run()
 
         # Do this more rarely. Less important. Start on third iteration.
-        if iteration % 15 == 3:
+        if iteration % 5 == 3:
             await self.overlord_manager.run()
 
         # Update the unit clusters

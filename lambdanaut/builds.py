@@ -202,9 +202,10 @@ RAVAGER_ALL_IN = [
     ROACHWARREN,
     ROACH,
     ROACH,
-    PublishMessage(Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP),  # Send the second overlord to the enemy's main ramp
     IfHasThenDontBuild(RAVAGER, ROACH, 2),
-    RAVAGER, RAVAGER, RAVAGER, RAVAGER, RAVAGER, RAVAGER, RAVAGER,
+    RAVAGER, RAVAGER, RAVAGER,
+    PublishMessage(Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP),  # Send the second overlord to the enemy's main ramp
+    RAVAGER, RAVAGER, RAVAGER, RAVAGER,
     QUEEN,
 ]
 RAVAGER_ALL_IN += [RAVAGER] * 100
@@ -213,9 +214,13 @@ RAVAGER_ALL_IN += [RAVAGER] * 100
 # Open with 3 ravagers and then transition into another build
 def opener_ravager_harass_when_to_stop_attacking(manager) -> bool:
     """
-    Conditional function that returns True when we have at least 3 hatcheries or no ravagers left
+    Conditional function that returns True when
+     * we have at least 3 hatcheries or
+     * or if we have 2 hatcheries and no ravagers left
     """
-    return len(manager.bot.units(HATCHERY)) > 2 or len(manager.bot.units(RAVAGER)) == 0
+    hatch_len = len(manager.bot.units(HATCHERY).ready)
+    return hatch_len > 2 \
+        or (hatch_len > 1 and len(manager.bot.units(RAVAGER)) == 0 and len(manager.bot.units(RAVAGERCOCOON)) == 0)
 
 
 OPENER_RAVAGER_HARASS = [
@@ -233,20 +238,20 @@ OPENER_RAVAGER_HARASS = [
     DRONE,  # 15
     OVERLORD,  # 3
     ROACHWARREN,
-    PublishMessage(Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP),  # Send the second overlord to the enemy's main ramp
     IfHasThenDontBuild(RAVAGER, ROACH, 3),
     RAVAGER, RAVAGER,
     # Start attacking and don't stop until we have no ravagers left
-    PublishMessage(Messages.DONT_STOP_ATTACKING_UNTIL_CONDITION, opener_ravager_harass_when_to_stop_attacking),
     RAVAGER,
+    PublishMessage(Messages.DONT_STOP_ATTACKING_UNTIL_CONDITION, opener_ravager_harass_when_to_stop_attacking),
     QUEEN,
     DRONE, DRONE, DRONE,  # 18
+    PublishMessage(Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP),  # Send the second overlord to the enemy's main ramp
     PublishMessage(Messages.ALLOW_DEFENDING),  # Publish a message saying we can switch to DEFENDING
 ]
 
 # Suspect enemy cheese but no proof. Get a spawning pool first with Zerglings
 EARLY_GAME_POOL_FIRST_CAUTIOUS = [
-    SPAWNINGPOOL,
+    AtLeast(1, SPAWNINGPOOL),
     HATCHERY,
     EXTRACTOR,
     QUEEN,  # 1
@@ -266,7 +271,7 @@ EARLY_GAME_POOL_FIRST_CAUTIOUS = [
 
 # Enemy cheese found. Get a spawning pool first with Zerglings, Banelings, and Spine Crawlers
 EARLY_GAME_POOL_FIRST_DEFENSIVE = [
-    SPAWNINGPOOL,
+    AtLeast(1, SPAWNINGPOOL),
     EXTRACTOR,
     OVERLORD,  # 3
     ZERGLING, ZERGLING,
@@ -295,7 +300,7 @@ EARLY_GAME_POOL_FIRST_DEFENSIVE = [
 # Get a spawning pool first with Zerglings for an all-in rush
 EARLY_GAME_POOL_FIRST_OFFENSIVE = [
     EXTRACTOR,
-    SPAWNINGPOOL,
+    AtLeast(1, SPAWNINGPOOL),
     OVERLORD,  # 3
     ZERGLING, ZERGLING,
     ZERGLING, ZERGLING,
@@ -316,7 +321,7 @@ EARLY_GAME_SPORE_CRAWLERS = [
     HATCHERY,  # 2 (First expand)
     DRONE,  # 19
     EXTRACTOR,  # 1
-    SPAWNINGPOOL,
+    AtLeast(1, SPAWNINGPOOL),
     DRONE, DRONE,  # 21
     OVERLORD,  # 3
     QUEEN,  # 1
@@ -330,7 +335,7 @@ EARLY_GAME_SPORE_CRAWLERS = [
 
 # Early game pool first with 4 defensive Zerglings
 EARLY_GAME_POOL_FIRST = [
-    SPAWNINGPOOL,
+    AtLeast(1, SPAWNINGPOOL),
     HATCHERY,  # 2 (First expand)
     EXTRACTOR,  # 1
     DRONE,  # 19
@@ -349,7 +354,7 @@ EARLY_GAME_HATCHERY_FIRST = [
     HATCHERY,  # 2 (First expand)
     DRONE,  # 19
     EXTRACTOR,  # 1
-    SPAWNINGPOOL,
+    AtLeast(1, SPAWNINGPOOL),
     DRONE, DRONE, # 21
     OVERLORD,  # 3
     QUEEN,  # 1
@@ -430,7 +435,7 @@ MID_GAME_ROACH_HYDRA_LURKER = [
     DRONE, DRONE, DRONE, DRONE, DRONE,
     DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
     AtLeast(3, EXTRACTOR),
-    ROACHWARREN,
+    AtLeast(1, ROACHWARREN),
     DRONE, DRONE, DRONE, DRONE,
     EXTRACTOR,
     EXTRACTOR,
@@ -451,12 +456,12 @@ MID_GAME_ROACH_HYDRA_LURKER = [
     CanAfford(ZERGMISSILEWEAPONSLEVEL2),
     CanAfford(ZERGGROUNDARMORSLEVEL2),
     EXTRACTOR,
-    EXTRACTOR
 ]
 MID_GAME_ROACH_HYDRA_LURKER += [CanAfford(GLIALRECONSTITUTION)]
-MID_GAME_ROACH_HYDRA_LURKER += [IfHasThenDontBuild(GREATERSPIRE, ROACH, 8)]  # Build roaches until late game
+MID_GAME_ROACH_HYDRA_LURKER += [IfHasThenDontBuild(GREATERSPIRE, ROACH, 8)]  # Build extra roaches until late game
 MID_GAME_ROACH_HYDRA_LURKER += [QUEEN] * 2
 MID_GAME_ROACH_HYDRA_LURKER += [RAVAGER] * 3
+MID_GAME_ROACH_HYDRA_LURKER += [EXTRACTOR] * 1
 MID_GAME_ROACH_HYDRA_LURKER += [CanAfford(TUNNELINGCLAWS)]  # Roach burrow move
 MID_GAME_ROACH_HYDRA_LURKER += [CanAfford(BURROW)]
 MID_GAME_ROACH_HYDRA_LURKER += [HYDRALISKDEN]
@@ -731,3 +736,10 @@ def update_default_builds(enemy_race):
         DEFAULT_NEXT_BUILDS.update(DEFAULT_NEXT_BUILDS_ZERG)
     elif enemy_race == sc2.Race.Protoss:
         DEFAULT_NEXT_BUILDS.update(DEFAULT_NEXT_BUILDS_PROTOSS)
+
+
+# Set of builds that must set their default next build after they are completed
+# This is for builds that we don't want to keep around in the build order when we're through with them.
+FORCE_DEFAULT_NEXT_BUILDS = {
+    Builds.OPENER_RAVAGER_HARASS
+}

@@ -100,7 +100,7 @@ class BuildManager(Manager):
                     and len(self.bot.shortest_path_to_enemy_start_location) < 155:
                 self.starting_build = Builds.OPENER_RAVAGER_HARASS
 
-    def add_build(self, build):
+    def add_build(self, build: Builds):
         self.print("Adding build order: {}".format(build.name))
 
         assert isinstance(build, Builds)
@@ -117,10 +117,18 @@ class BuildManager(Manager):
 
         self.builds[build_stage.value] = build
 
-    def add_next_default_build(self):
-        latest_build = self.get_latest_build()
+    def add_next_default_build(self, build: builds.Builds=None):
+        """
+        Adds the next default build to our builds list(self.builds)
+        If `builds` is given, then add the next default build for that build
+        Otherwise just add the next default build for our latest build
+        """
+        if build is None:
+            build = self.get_latest_build()
+        else:
+            build = build
 
-        next_default_build = DEFAULT_NEXT_BUILDS[latest_build]
+        next_default_build = DEFAULT_NEXT_BUILDS[build]
         if next_default_build is not None:
             self.add_build(next_default_build)
 
@@ -511,8 +519,16 @@ class BuildManager(Manager):
         build_order_counts = Counter()
 
         # Go through each build looking for the unit we don't have
+        last_build = None
         for build in self.builds:
             if build is None:
+                # Reached end of build
+                return []
+
+            if last_build in builds.FORCE_DEFAULT_NEXT_BUILDS:
+                # The last build was in our `FORCE_DEFAULT_NEXT_BUILDS` set.
+                # Return empty so that we set its default next build
+                self.add_next_default_build(last_build)
                 return []
 
             build_queue = builds.BUILD_MAPPING[build]
@@ -603,6 +619,8 @@ class BuildManager(Manager):
                         # If we have enough build targets, return.
                         if len(build_targets) == n_targets:
                             return build_targets
+
+            last_build = build
 
         return build_targets
 

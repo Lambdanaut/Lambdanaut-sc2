@@ -6,7 +6,7 @@ import lib.sc2.constants as const
 from lambdanaut.builds import BuildStages
 import lambdanaut.const2 as const2
 from lambdanaut.expiringlist import ExpiringList
-from lambdanaut.managers import StatefulManager
+from lambdanaut.managers import Manager, StatefulManager
 from lambdanaut.const2 import Messages, ForceManagerCommands, ForcesStates
 
 
@@ -101,7 +101,7 @@ class ForceManager(StatefulManager):
         # If this flag is set, don't stop attacking and don't change it to False until
         # self.dont_stop_attacking_condition returns True
         self.dont_stop_attacking = False
-        self.dont_stop_attacking_condition: Callable = None
+        self.dont_stop_attacking_condition: Callable[[Manager], bool] = None
 
         # Subscribe to messages
         self.subscribe(Messages.NEW_BUILD_STAGE)
@@ -205,7 +205,7 @@ class ForceManager(StatefulManager):
             closest_townhall = townhalls.closest_to(self.bot.enemy_start_location)
             for townhall in townhalls:
 
-                number_of_units_to_townhall = round((len(army) / len(townhalls)) * 0.5)
+                number_of_units_to_townhall = round((len(army) / len(townhalls)) * 0.4)
                 if townhall.tag == closest_townhall.tag:
                     # The closest townhall to the enemy should have more army
                     number_of_units_to_townhall = round((len(army) / len(townhalls)) * 3.5)

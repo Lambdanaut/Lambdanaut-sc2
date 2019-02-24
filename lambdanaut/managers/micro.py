@@ -207,7 +207,7 @@ class MicroManager(Manager):
                                                        cached_abilities_of_unit=abilities)
                     if can_cast:
                         our_closest_unit_to_enemy = self.bot.units.closest_to(enemy_unit)
-                        if our_closest_unit_to_enemy.distance_to(enemy_unit.position) > 1:
+                        if our_closest_unit_to_enemy.distance_to(enemy_unit.position) > 1.5:
 
                             # Only bile a forcefield at most once
                             if enemy_unit.type_id == const.UnitTypeId.FORCEFIELD:
@@ -221,7 +221,7 @@ class MicroManager(Manager):
                     # If we're not using bile, then micro back ravagers
                     closest_enemy = nearby_enemy_units.closest_to(ravager)
                     if ravager.weapon_cooldown and closest_enemy.distance_to(ravager) < ravager.ground_range:
-                        away_from_enemy = ravager.position.towards(closest_enemy, -3)
+                        away_from_enemy = ravager.position.towards(closest_enemy, -2)
 
                         distance = await self.bot._client.query_pathing(ravager, away_from_enemy)
                         if distance and distance < 5:
@@ -607,15 +607,15 @@ class MicroManager(Manager):
                                         nearest_enemy_unit, -2)
                                     self.bot.actions.append(unit.move(away_from_enemy))
 
-                            # If nearest enemy unit is melee and our cluster is small, back off
-                            elif 0 < nearest_enemy_unit.ground_range < 1.5 and len(army_cluster) < 8 \
-                                    and unit.ground_range > 1 and nearest_enemy_unit.distance_to(unit) > 0.5 \
-                                    and unit_is_combatant:
-                                how_far_to_move = -1
-                                away_from_enemy = unit.position.towards(
-                                    nearest_enemy_unit, how_far_to_move)
-                                self.bot.actions.append(unit.move(away_from_enemy))
-                                self.bot.actions.append(unit.attack(unit.position, queue=True))
+                            # # If nearest enemy unit is melee and our cluster is small, back off
+                            # elif self.bot.is_melee(nearest_enemy_unit) and len(army_cluster) < 8 \
+                            #         and not self.bot.is_melee(unit) and nearest_enemy_unit.distance_to(unit) < 1 \
+                            #         and unit_is_combatant:
+                            #     how_far_to_move = -1
+                            #     away_from_enemy = unit.position.towards(
+                            #         nearest_enemy_unit, how_far_to_move)
+                            #     self.bot.actions.append(unit.move(away_from_enemy))
+                            #     self.bot.actions.append(unit.attack(unit.position, queue=True))
 
                             # Close the distance if our cluster is stronger
                             elif unit_is_combatant and ranged_units_in_attack_range_ratio < 0.8 \

@@ -204,6 +204,7 @@ class OverlordManager(StatefulManager):
                 else:
                     # Overlord has died :(
                     self.proxy_scouting_overlord_tag = None
+                    self.proxy_search_concluded = True
 
     async def scout_enemy_third_expansion_with_third_overlord(self):
         overlords = self.bot.units(const.OVERLORD)
@@ -222,21 +223,23 @@ class OverlordManager(StatefulManager):
 
     async def overlord_flee(self):
         """
-        Flee overlords when they're damaged
+        Flee overlords when they're near an enemy that can attack air
         """
+
         dont_flee_tags = {self.baneling_drop_overlord_tag}
 
         overlords = self.bot.units(const.OVERLORD).tags_not_in(dont_flee_tags)
 
         for overlord in overlords:
-            if overlord.health_percentage != 1:
-                nearby_enemy_units = self.bot.units.enemy. \
-                    closer_than(10, overlord).filter(lambda unit: unit.can_attack_air)
+            nearby_enemy_units = self.bot.units.enemy. \
+                closer_than(11, overlord).filter(
+                    lambda unit: unit.can_attack_air
+                    and overlord.distance_to(unit) < unit.air_range * 1.5)
 
-                if nearby_enemy_units:
-                    nearby_enemy_unit = nearby_enemy_units.closest_to(overlord)
-                    away_from_enemy = overlord.position.towards(nearby_enemy_unit, -1)
-                    self.bot.actions.append(overlord.move(away_from_enemy))
+            if nearby_enemy_units:
+                nearby_enemy_unit = nearby_enemy_units.closest_to(overlord)
+                away_from_enemy = overlord.position.towards(nearby_enemy_unit, -1)
+                self.bot.actions.append(overlord.move(away_from_enemy))
 
     async def baneling_drops(self):
         """
