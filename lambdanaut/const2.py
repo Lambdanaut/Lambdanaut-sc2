@@ -173,7 +173,13 @@ class Messages(enum.Enum):
     # STATE MACHINE
     STATE_ENTERED = 27  # Value is State being left
     STATE_EXITED = 28  # Value is State entered
-    DONT_DEFEND = 29  # Indicates that we shouldn't ever enter DEFENDING forces state
+    DONT_ATTACK = 29  # Indicates that we shouldn't ever enter ATTACKING or MOVING_TO_ATTACK forces state
+    DONT_DEFEND = 30  # Indicates that we shouldn't ever enter DEFENDING forces state
+    ALLOW_DEFENDING = 31  # Indicates that we can enter the DEFENDING forces state
+    ALLOW_ATTACKING_THROUGH_NYDUS = 32  # Indicates that we can enter the ATTACKING_THROUGH_NYDUS state
+    # Starts an attack and doesn't stop until condition returns True.
+    # Val is a function of type [[manager], bool]. It takes the manager that receives the message as input.
+    DONT_STOP_ATTACKING_UNTIL_CONDITION = 33
 
 
 # Build Manager Commands
@@ -201,8 +207,9 @@ class ForcesStates(enum.Enum):
     DEFENDING = 2  # Defending against active threat at home
     MOVING_TO_ATTACK = 3
     ATTACKING = 4
-    RETREATING = 5
-    SEARCHING = 6
+    ATTACKING_THROUGH_NYDUS = 5
+    RETREATING = 6
+    SEARCHING = 7
 
 
 # Overlord Scout States

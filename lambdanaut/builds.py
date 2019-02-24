@@ -184,7 +184,7 @@ EARLY_GAME_DEFAULT_OPENER = [
     DRONE,  # 18
 ]
 
-# Ravager all-in
+# Ravager all-in with no transition
 RAVAGER_ALL_IN = [
     PublishMessage(Messages.DONT_DEFEND),  # Publish a message saying we shouldn't switch to DEFENDING
     PullWorkersOffVespeneUntil(ROACH, n=2),  # Mine with only 2 workers until we have a roach
@@ -202,12 +202,47 @@ RAVAGER_ALL_IN = [
     ROACHWARREN,
     ROACH,
     ROACH,
-    IfHasThenDontBuild(RAVAGER, ROACH, 2),
     PublishMessage(Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP),  # Send the second overlord to the enemy's main ramp
+    IfHasThenDontBuild(RAVAGER, ROACH, 2),
     RAVAGER, RAVAGER, RAVAGER, RAVAGER, RAVAGER, RAVAGER, RAVAGER,
     QUEEN,
 ]
 RAVAGER_ALL_IN += [RAVAGER] * 100
+
+
+# Open with 3 ravagers and then transition into another build
+def opener_ravager_harass_when_to_stop_attacking(manager) -> bool:
+    """
+    Conditional function that returns True when we have at least 3 hatcheries or no ravagers left
+    """
+    return len(manager.bot.units(HATCHERY)) > 2 or len(manager.bot.units(RAVAGER)) == 0
+
+
+OPENER_RAVAGER_HARASS = [
+    PublishMessage(Messages.DONT_DEFEND),  # Publish a message saying we shouldn't switch to DEFENDING
+    PullWorkersOffVespeneUntil(ROACH, n=2),  # Mine with only 2 workers until we have a roach
+    HATCHERY,  # 1
+    OVERLORD,  # 1
+    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,  # 12
+    DRONE,  # 13
+    DRONE,  # 14
+    SPAWNINGPOOL,
+    EXTRACTOR,  # 1
+    OVERLORD,  # 2
+    EXTRACTOR, # 2
+    DRONE,  # 15
+    OVERLORD,  # 3
+    ROACHWARREN,
+    PublishMessage(Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP),  # Send the second overlord to the enemy's main ramp
+    IfHasThenDontBuild(RAVAGER, ROACH, 3),
+    RAVAGER, RAVAGER,
+    # Start attacking and don't stop until we have no ravagers left
+    PublishMessage(Messages.DONT_STOP_ATTACKING_UNTIL_CONDITION, opener_ravager_harass_when_to_stop_attacking),
+    RAVAGER,
+    QUEEN,
+    DRONE, DRONE, DRONE,  # 18
+    PublishMessage(Messages.ALLOW_DEFENDING),  # Publish a message saying we can switch to DEFENDING
+]
 
 # Suspect enemy cheese but no proof. Get a spawning pool first with Zerglings
 EARLY_GAME_POOL_FIRST_CAUTIOUS = [
@@ -469,6 +504,33 @@ MID_GAME_CORRUPTOR_BROOD_LORD_RUSH += [BROODLORD] * 15
 MID_GAME_CORRUPTOR_BROOD_LORD_RUSH += [ZERGFLYERWEAPONSLEVEL2]
 MID_GAME_CORRUPTOR_BROOD_LORD_RUSH += [ZERGFLYERARMORSLEVEL1]
 
+
+MID_GAME_TWO_BASE_ROACH_QUEEN_NYDUS_TIMING = [
+    # Publish a message saying we shouldn't switch to MOVING_TO_ATTACK or ATTACK
+    # We want to attack through the nydus worm
+    PublishMessage(Messages.DONT_ATTACK),
+    DRONE, DRONE, DRONE, DRONE, DRONE,
+    AtLeast(4, QUEEN),
+    DRONE, DRONE, DRONE, DRONE,
+    AtLeast(2, EXTRACTOR),
+    LAIR,
+    AtLeast(4, EXTRACTOR),
+    AtLeast(1, SPINECRAWLER),
+    ROACHWARREN,
+    DRONE, DRONE, DRONE,
+    NYDUSNETWORK,
+    QUEEN,
+    DRONE, DRONE, DRONE, DRONE, DRONE,
+
+    ROACH, ROACH, ROACH, ROACH, ROACH, ROACH,
+    OVERSEER, OVERSEER,
+    ROACH, ROACH, ROACH, ROACH, ROACH, ROACH,
+    RAVAGER, RAVAGER, RAVAGER, RAVAGER, RAVAGER, RAVAGER,
+    QUEEN,
+    ROACH, ROACH, ROACH, ROACH, ROACH, ROACH, ROACH,
+    QUEEN,
+]
+
 LATE_GAME_CORRUPTOR_BROOD_LORD = [
     AtLeast(75, DRONE),
     AtLeast(1, INFESTATIONPIT),
@@ -513,25 +575,28 @@ LATE_GAME_ULTRALISK = [
 ]
 LATE_GAME_ULTRALISK += [ULTRALISK] * 30
 
+
 class Builds(enum.Enum):
     """Build Types"""
 
     EARLY_GAME_DEFAULT_OPENER = 0
     RAVAGER_ALL_IN = 1
+    OPENER_RAVAGER_HARASS = 2
 
-    EARLY_GAME_POOL_FIRST_CAUTIOUS = 2
-    EARLY_GAME_POOL_FIRST_DEFENSIVE = 3
-    EARLY_GAME_POOL_FIRST_OFFENSIVE = 4
-    EARLY_GAME_POOL_FIRST = 5
-    EARLY_GAME_HATCHERY_FIRST = 6
-    EARLY_GAME_SPORE_CRAWLERS = 7
+    EARLY_GAME_POOL_FIRST_CAUTIOUS = 3
+    EARLY_GAME_POOL_FIRST_DEFENSIVE = 4
+    EARLY_GAME_POOL_FIRST_OFFENSIVE = 5
+    EARLY_GAME_POOL_FIRST = 6
+    EARLY_GAME_HATCHERY_FIRST = 7
+    EARLY_GAME_SPORE_CRAWLERS = 8
 
-    MID_GAME_LING_BANE = 8
-    MID_GAME_ROACH_HYDRA_LURKER = 9
-    MID_GAME_CORRUPTOR_BROOD_LORD_RUSH = 10
+    MID_GAME_LING_BANE = 9
+    MID_GAME_ROACH_HYDRA_LURKER = 10
+    MID_GAME_TWO_BASE_ROACH_QUEEN_NYDUS_TIMING = 11
+    MID_GAME_CORRUPTOR_BROOD_LORD_RUSH = 12
 
-    LATE_GAME_CORRUPTOR_BROOD_LORD = 11
-    LATE_GAME_ULTRALISK = 12
+    LATE_GAME_CORRUPTOR_BROOD_LORD = 13
+    LATE_GAME_ULTRALISK = 14
 
 
 class BuildStages(enum.Enum):
@@ -545,6 +610,7 @@ class BuildStages(enum.Enum):
 OPENER_BUILDS = {
     Builds.EARLY_GAME_DEFAULT_OPENER,
     Builds.RAVAGER_ALL_IN,
+    Builds.OPENER_RAVAGER_HARASS,
 }
 
 EARLY_GAME_BUILDS = {
@@ -559,6 +625,7 @@ EARLY_GAME_BUILDS = {
 MID_GAME_BUILDS = {
     Builds.MID_GAME_LING_BANE,
     Builds.MID_GAME_ROACH_HYDRA_LURKER,
+    Builds.MID_GAME_TWO_BASE_ROACH_QUEEN_NYDUS_TIMING,
     Builds.MID_GAME_CORRUPTOR_BROOD_LORD_RUSH,
 }
 
@@ -590,6 +657,8 @@ def get_build_stage(build: Builds):
 BUILD_MAPPING = {
     Builds.EARLY_GAME_DEFAULT_OPENER: EARLY_GAME_DEFAULT_OPENER,
     Builds.RAVAGER_ALL_IN: RAVAGER_ALL_IN,
+    Builds.OPENER_RAVAGER_HARASS: OPENER_RAVAGER_HARASS,
+
     Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS: EARLY_GAME_POOL_FIRST_CAUTIOUS,
     Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE: EARLY_GAME_POOL_FIRST_DEFENSIVE,
     Builds.EARLY_GAME_POOL_FIRST_OFFENSIVE: EARLY_GAME_POOL_FIRST_OFFENSIVE,
@@ -599,6 +668,7 @@ BUILD_MAPPING = {
 
     Builds.MID_GAME_LING_BANE: MID_GAME_LING_BANE,
     Builds.MID_GAME_ROACH_HYDRA_LURKER: MID_GAME_ROACH_HYDRA_LURKER,
+    Builds.MID_GAME_TWO_BASE_ROACH_QUEEN_NYDUS_TIMING: MID_GAME_TWO_BASE_ROACH_QUEEN_NYDUS_TIMING,
     Builds.MID_GAME_CORRUPTOR_BROOD_LORD_RUSH: MID_GAME_CORRUPTOR_BROOD_LORD_RUSH,
 
     Builds.LATE_GAME_CORRUPTOR_BROOD_LORD: LATE_GAME_CORRUPTOR_BROOD_LORD,
@@ -610,15 +680,20 @@ BUILD_MAPPING = {
 DEFAULT_NEXT_BUILDS = {
     Builds.EARLY_GAME_DEFAULT_OPENER: Builds.EARLY_GAME_POOL_FIRST,
     Builds.RAVAGER_ALL_IN: None,
+    Builds.OPENER_RAVAGER_HARASS: Builds.EARLY_GAME_DEFAULT_OPENER,
+
     Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS: Builds.MID_GAME_ROACH_HYDRA_LURKER,
     Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE: Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS,
     Builds.EARLY_GAME_POOL_FIRST_OFFENSIVE: Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS,
     Builds.EARLY_GAME_SPORE_CRAWLERS: Builds.MID_GAME_ROACH_HYDRA_LURKER,
     Builds.EARLY_GAME_POOL_FIRST: Builds.MID_GAME_ROACH_HYDRA_LURKER,
     Builds.EARLY_GAME_HATCHERY_FIRST: Builds.MID_GAME_ROACH_HYDRA_LURKER,
+
     Builds.MID_GAME_LING_BANE: Builds.LATE_GAME_ULTRALISK,
     Builds.MID_GAME_ROACH_HYDRA_LURKER: Builds.LATE_GAME_CORRUPTOR_BROOD_LORD,
+    Builds.MID_GAME_TWO_BASE_ROACH_QUEEN_NYDUS_TIMING: Builds.MID_GAME_ROACH_HYDRA_LURKER,
     Builds.MID_GAME_CORRUPTOR_BROOD_LORD_RUSH: Builds.LATE_GAME_CORRUPTOR_BROOD_LORD,
+
     Builds.LATE_GAME_CORRUPTOR_BROOD_LORD: None,
     Builds.LATE_GAME_ULTRALISK: None,
 }

@@ -1,5 +1,5 @@
 import functools
-from typing import List
+from typing import Callable, List
 
 import lib.sc2.constants as const
 
@@ -40,6 +40,7 @@ class ForceManager(StatefulManager):
             ForcesStates.DEFENDING: self.do_defending,
             ForcesStates.MOVING_TO_ATTACK: self.do_moving_to_attack,
             ForcesStates.ATTACKING: self.do_attacking,
+            ForcesStates.ATTACKING_THROUGH_NYDUS: self.do_attacking_through_nydus,
             ForcesStates.RETREATING: self.do_retreating,
             ForcesStates.SEARCHING: self.do_searching,
         }
@@ -87,12 +88,28 @@ class ForceManager(StatefulManager):
         # Set of roaches attacking mineral lines
         self.roaches_harassing = set()
 
+        # If this flag is false, we wont switch to ATTACKING or MOVING_TO_ATTACK state
+        self.allow_attacking = True
+
+        # If this flag is false, we wont switch to ATTACKING_THROUGH_NYDUS
+        # Is false by default
+        self.allow_attacking_through_nydus = False
+
         # If this flag is false, we wont switch to DEFENDING state
         self.allow_defending = True
 
+        # If this flag is set, don't stop attacking and don't change it to False until
+        # self.dont_stop_attacking_condition returns True
+        self.dont_stop_attacking = False
+        self.dont_stop_attacking_condition: Callable = None
+
         # Subscribe to messages
         self.subscribe(Messages.NEW_BUILD_STAGE)
+        self.subscribe(Messages.DONT_STOP_ATTACKING_UNTIL_CONDITION)
+        self.subscribe(Messages.ALLOW_DEFENDING)
+        self.subscribe(Messages.DONT_ATTACK)
         self.subscribe(Messages.DONT_DEFEND)
+        self.subscribe(Messages.ALLOW_ATTACKING_THROUGH_NYDUS)
         self.subscribe(Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION)
         self.subscribe(Messages.DRONE_LEAVING_TO_CREATE_HATCHERY)
 
@@ -587,6 +604,9 @@ class ForceManager(StatefulManager):
             if not unit.is_attacking and not unit.is_moving and unit.weapon_cooldown <= 0:
                 self.bot.actions.append(unit.attack(target))
 
+    async def do_attacking_through_nydus(self):
+        pass
+
     async def start_retreating(self):
         # Add START_RETREATING to recent commands so we don't switch states for a bit.
         self._recent_commands.add(ForceManagerCommands.START_RETREATING,
@@ -626,16 +646,16 @@ class ForceManager(StatefulManager):
                     self.ack(message)
                     return await self.change_state(ForcesStates.SEARCHING)
 
-            if message in {Messages.DRONE_LEAVING_TO_CREATE_HATCHERY}:
+            elif message in {Messages.DRONE_LEAVING_TO_CREATE_HATCHERY}:
+                self.ack(message)
                 if self.state == ForcesStates.HOUSEKEEPING:
-                    self.ack(message)
 
-                    # Add the escorting worker to a list for 25 seconds
+                    # Add the escorted worker to a list for 25 seconds
                     self.escorting_workers.add(val, iteration=self.bot.state.game_loop, expiry=25)
 
                     return await self.change_state(ForcesStates.ESCORTING)
 
-            if message in {Messages.NEW_BUILD_STAGE}:
+            elif message in {Messages.NEW_BUILD_STAGE}:
                 self.ack(message)
 
                 # Update army value required to attack
@@ -648,10 +668,29 @@ class ForceManager(StatefulManager):
                 new_distance_to_moving_to_attack = self.get_army_center_distance_to_attack(val)
                 self.distance_to_moving_to_attack = new_distance_to_moving_to_attack
 
-            if message in {Messages.DONT_DEFEND}:
+            elif message in {Messages.ALLOW_DEFENDING}:
+                self.ack(message)
+
+                self.allow_defending = True
+
+            elif message in {Messages.DONT_DEFEND}:
                 self.ack(message)
 
                 self.allow_defending = False
+
+            elif message in {Messages.DONT_ATTACK}:
+                self.ack(message)
+
+                self.allow_attacking = False
+
+                if self.state in {ForcesStates.ATTACKING, ForcesStates.MOVING_TO_ATTACK}:
+                    return await self.change_state(ForcesStates.HOUSEKEEPING)
+
+            elif message in {Messages.DONT_STOP_ATTACKING_UNTIL_CONDITION}:
+                self.ack(message)
+
+                self.dont_stop_attacking = True
+                self.dont_stop_attacking_condition = val
 
         # HOUSEKEEPING
         if self.state == ForcesStates.HOUSEKEEPING:
@@ -665,8 +704,9 @@ class ForceManager(StatefulManager):
                 relative_army_strength = self.bot.relative_army_strength(
                     army, self.bot.enemy_cache.values(), ignore_workers=True)
 
-                if (relative_army_strength > 10 and len(army) > 4) \
-                        or army_value > self.army_value_to_attack:
+                if self.allow_attacking \
+                        and ((relative_army_strength > 10 and len(army) > 4)
+                             or army_value > self.army_value_to_attack):
                     return await self.change_state(ForcesStates.MOVING_TO_ATTACK)
 
         # ESCORTING
@@ -711,9 +751,11 @@ class ForceManager(StatefulManager):
                 relative_army_strength = self.bot.relative_army_strength(
                     army, self.bot.enemy_cache.values(), ignore_workers=True)
 
-                # Switch back to housekeeping if our army is weaker and we're not max supply
-                if relative_army_strength < -5 and self.bot.supply_used < 180:
-                    return await self.change_state(ForcesStates.HOUSEKEEPING)
+                # If we're allowed to stop attacking
+                if not self.dont_stop_attacking:
+                    # Switch back to housekeeping if our army is weaker and we're not max supply
+                    if relative_army_strength < -5 and self.bot.supply_used < 180:
+                        return await self.change_state(ForcesStates.HOUSEKEEPING)
 
                 # Start attacking when army has amassed
                 target = self.get_target()
@@ -727,18 +769,20 @@ class ForceManager(StatefulManager):
 
             if army:
 
-                # Value of the army
-                army_value = sum(const2.ZERG_ARMY_VALUE[unit.type_id] for unit in army)
+                # If we're allowed to stop attacking
+                if not self.dont_stop_attacking:
+                    # Value of the army
+                    army_value = sum(const2.ZERG_ARMY_VALUE[unit.type_id] for unit in army)
 
-                if army_value < self.army_value_to_attack * 0.4:
-                    return await self.change_state(ForcesStates.HOUSEKEEPING)
+                    if army_value < self.army_value_to_attack * 0.4:
+                        return await self.change_state(ForcesStates.HOUSEKEEPING)
 
-                # Retreat if our entire army is weaker than the army we see from them and we're not near max
-                enemy = self.bot.known_enemy_units.exclude_type(const2.WORKERS).not_structure
-                if enemy:
-                    relative_army_strength = self.bot.relative_army_strength(army, enemy, ignore_workers=True)
-                    if relative_army_strength < -3 and self.bot.supply_used < 170:
-                        return await self.change_state(ForcesStates.RETREATING)
+                    # Retreat if our entire army is weaker than the army we see from them and we're not near max
+                    enemy = self.bot.known_enemy_units.exclude_type(const2.WORKERS).not_structure
+                    if enemy:
+                        relative_army_strength = self.bot.relative_army_strength(army, enemy, ignore_workers=True)
+                        if relative_army_strength < -3 and self.bot.supply_used < 170:
+                            return await self.change_state(ForcesStates.RETREATING)
 
                 enemy_start_location = self.bot.enemy_start_location.position
                 # Start searching the map if we're at the enemy's base and can't find them.
@@ -776,6 +820,13 @@ class ForceManager(StatefulManager):
 
                 if enemies_nearby:
                     return await self.change_state(ForcesStates.DEFENDING)
+
+        # If self.dont_stop_attacking is set, then
+        # Check if we're ready to allow attacking again
+        if self.dont_stop_attacking and self.dont_stop_attacking_condition is not None:
+            if self.dont_stop_attacking_condition(self):
+                self.dont_stop_attacking = False
+                self.dont_stop_attacking_condition = None
 
     async def run(self):
         await super(ForceManager, self).run()

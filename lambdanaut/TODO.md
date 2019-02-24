@@ -27,6 +27,20 @@
       * Priority targets
         * Baneling nest, Tech lab on factory, Defensive structures, Pylons, Cybernetics core
 
+  * Rush distances from start location to start location
+    * Maps
+        * Automaton LE: 157
+        * Kairo Junction: 123
+        * Parasite LE: 162
+        * Cerulean Fall LE: 152
+        * Blueshift LE: 138
+        * Port Aleksander LE: 166
+        * DarknessSanctuaryLE
+          * Adjacent spawn: 149
+          * Cross spawn: 160
+   
+    * Average: 150
+
 ## BUGS
 
   * Couldn't take
@@ -37,11 +51,15 @@
 
 ## HIGH PRIORITY
 
+  * Add 2 base nydus build
+    * Add nydus outside enemy natural
+    * Add nydus into enemy main
+    * Add attack through nydus
+    * Add pull all queens through nydus
+
   * Test micro on a test map. Get better micro through this.
   
-  * Micro infestors behind the cluster they're in
-  
-  * Test that burrowing banelings still work
+  * Test that burrowing banelings still work after pathfinding integration
   
   * Make use of Pathfinding
     * For Microing around seiged tanks and flanking them
@@ -238,3 +256,5 @@
   
   * Workers ran to enemy base and hid behind their mineral line what the actual fucking fuck.
     * Has to have something to do with clustering, possibly the DEFENDING state. Perhaps something about moving to the center of a cluster
+   
+  * Micro infestors behind the cluster they're in

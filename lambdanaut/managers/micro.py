@@ -336,7 +336,6 @@ class MicroManager(Manager):
         * Generate pixelmap of air-ranged enemy units
         * Get path to priority around air-ranged enemy units
         * Queue up path to priority and follow it
-        * Adjust path every 15 iterations and queue up the new path
         *
         """
         mutalisks = self.bot.units(const.MUTALISK)
@@ -376,7 +375,8 @@ class MicroManager(Manager):
                                                if any(u.target_in_range(mu) for u in enemy_units)]
 
                 for mutalisk in mutalisks:
-                    if not mutalisk.is_attacking and not mutalisk.is_moving:
+                    if not mutalisk.is_attacking and not mutalisk.is_moving \
+                            or mutalisks_in_range_of_enemy:
                         nearest_priority = mutalisk.position.closest(enemy_priorities)
 
                         mutalisk_pos = mutalisk.position.rounded
@@ -397,7 +397,6 @@ class MicroManager(Manager):
                             self.bot.actions.append(mutalisk.move(p, queue=True))
 
                         self.bot.actions.append(mutalisk.attack(nearest_priority, queue=True))
-
 
     async def manage_corruptors(self):
         corruptors = self.bot.units(const.CORRUPTOR)
@@ -634,7 +633,7 @@ class MicroManager(Manager):
                                 priorities = {
                                     const.SIEGETANK, const.SIEGETANKSIEGED, const.MEDIVAC, const.CYCLONE,
                                     const.COLOSSUS, const.WARPPRISM, const.ARCHON, const.HIGHTEMPLAR,
-                                    const.DARKTEMPLAR, const.IMMORTAL,
+                                    const.DARKTEMPLAR, const.DISRUPTOR, const.IMMORTAL,
                                     const.INFESTOR, const.QUEEN, const.LURKERMP, const.LURKERMPBURROWED,
                                     const.ULTRALISK, const.BROODLORD,
                                 }

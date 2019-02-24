@@ -275,7 +275,7 @@ class ResourceManager(Manager):
                     if self.pull_off_gas_early:
                         self._recent_commands.add(
                             ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
-                            self.bot.state.game_loop, expiry=100)
+                            self.bot.state.game_loop, expiry=85)
 
             new_build = {Messages.NEW_BUILD}
             if message in new_build:

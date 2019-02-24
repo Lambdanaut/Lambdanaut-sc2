@@ -94,10 +94,11 @@ class BuildManager(Manager):
     def determine_opening_build(self):
         # Chance of cheese on smaller maps (2 player start locations)
         if len(self.bot.enemy_start_locations) < 3:
-            # Randomly do ravager all-ins against terran in production
-            if self.bot.enemy_race in {sc2.Race.Terran} and not self.bot.debug:
-                if not random.randint(0, 4):
-                    self.starting_build = Builds.RAVAGER_ALL_IN
+            # Start with Ravager harass against terran if the rush distance is short
+            # Average rush distance is around 155. Rush maps with shorter rush distances
+            if self.bot.enemy_race in {sc2.Race.Terran, sc2.Race.Protoss} \
+                    and len(self.bot.shortest_path_to_enemy_start_location) < 155:
+                self.starting_build = Builds.OPENER_RAVAGER_HARASS
 
     def add_build(self, build):
         self.print("Adding build order: {}".format(build.name))
@@ -167,17 +168,6 @@ class BuildManager(Manager):
                 Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH}
             if message in rush_detected:
                 self.ack(message)
-                #  TAKEN OUT BECAUSE THE HATCHERY WILL CANCEL ITSELF WHEN IT'S DAMAGED
-                # # Cancel constructing hatcheries that are not near completion
-                # constructing_hatcheries = self.bot.units(const.HATCHERY).not_ready
-                # if constructing_hatcheries.exists:
-                #     self.print("Cancelling all constructing hatcheries")
-                #     for hatchery in constructing_hatcheries:
-                #         enemy_units = self.bot.known_enemy_units
-                #         if enemy_units.exists:
-                #             nearby_enemy_units = enemy_units.closer_than(18, hatchery)
-                #             if nearby_enemy_units or hatchery.build_progress < 0.8:
-                #                 self.bot.actions.append(hatchery(const.CANCEL))
 
                 # Switch to a defensive build
                 self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
@@ -247,7 +237,7 @@ class BuildManager(Manager):
     def parse_special_build_target(self,
                                    unit: builds.SpecialBuildTarget,
                                    existing_unit_counts: Counter,
-                                   build_order_counts: Counter) -> Union[const.UnitTypeId, const.UpgradeId]:
+                                   build_order_counts: Counter) -> Union[const.UnitTypeId, const.UpgradeId, None]:
 
         """
         Parses a SpecialBuildTarget `unit` and performs relevant mutations on
@@ -572,8 +562,6 @@ class BuildManager(Manager):
                     # Skip banelings if we don't have any idle zerglings
                     if unit is const.BANELING and not self.bot.units(const.ZERGLING).idle:
                         continue
-                    elif unit is const.RAVAGER and not self.bot.units(const.ROACH).idle:
-                        continue
 
                     if (tech_requirement is None or existing_unit_counts[tech_requirement]) > 0 and \
                             (idle_building_structure is None or idle_building_structure.exists):
@@ -847,11 +835,14 @@ class BuildManager(Manager):
 
         elif build_target == const.RAVAGER:
             # Get a Roach
-            roaches = self.bot.units(const.ROACH).idle
+            roaches = self.bot.units(const.ROACH)
 
             # Train the unit
             if self.can_afford(build_target) and roaches.exists:
                 # Prefer idle roaches if they exist
+                idle_roaches = roaches.idle
+                if idle_roaches:
+                    roaches = idle_roaches
 
                 roach = roaches.closest_to(self.bot.start_location)
                 self.bot.actions.append(roach.train(build_target))
