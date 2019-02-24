@@ -34,7 +34,7 @@ MAPS = [
 
 MAP_NAME = ""
 MICRO_MAP_NAME = "kairo_training"
-REALTIME = False
+REALTIME = True
 
 # BUILD = sc2.AIBuild.RandomBuild
 # BUILD = sc2.AIBuild.Rush

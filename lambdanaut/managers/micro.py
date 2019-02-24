@@ -1,5 +1,6 @@
+import copy
 import math
-from typing import Dict
+from typing import Iterable, List, Tuple
 
 import lib.sc2 as sc2
 from lib.sc2.position import Point2
@@ -9,6 +10,7 @@ import lambdanaut.const2 as const2
 from lambdanaut.const2 import Messages
 from lambdanaut.expiringlist import ExpiringList
 from lambdanaut.managers import Manager
+from lambdanaut.pathfinding import Pathfinder
 import lambdanaut.utils as utils
 
 
@@ -324,32 +326,78 @@ class MicroManager(Manager):
                 to_remove_from_healing.add(infestor_tag)
 
     async def manage_mutalisks(self):
+        """
+        Mutalisk pathfinding
+
+        * If
+          * Priority within 40 of Mutalisk
+          * AND priority is further than Mutalisk attack range
+          * AND No nearby ranged air units can hit us
+        * Generate pixelmap of air-ranged enemy units
+        * Get path to priority around air-ranged enemy units
+        * Queue up path to priority and follow it
+        * Adjust path every 15 iterations and queue up the new path
+        *
+        """
         mutalisks = self.bot.units(const.MUTALISK)
 
-        attack_priorities = {const.QUEEN, const.SIEGETANK, const.SIEGETANKSIEGED,}
+        if mutalisks:
+            attack_priorities = const2.WORKERS | {
+                const.SIEGETANK, const.SIEGETANKSIEGED, const.MEDIVAC,
+                const.IMMORTAL,
+                const.BROODLORD,
+            }
 
-        for mutalisk in mutalisks:
-            nearby_enemy_units = self.bot.known_enemy_units.closer_than(11, mutalisk)
-            if nearby_enemy_units.exists:
-                # Only begin concentrated targeting near enemy town halls
-                if nearby_enemy_units.of_type(const2.TOWNHALLS).exists:
-                    nearby_enemy_workers = nearby_enemy_units.of_type(const2.WORKERS)
-                    nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priorities)
-                    nearby_enemy_can_attack_air = nearby_enemy_units.filter(lambda u: u.can_attack_air)
+            # Make a copy of a blank pixel map to draw on
+            pixel_map = copy.deepcopy(self.bot.blank_pixel_map)
 
-                    # TOO MANY BADDIES. GET OUT OF DODGE
-                    if len(nearby_enemy_can_attack_air) > 1:
-                        towards_start_location = mutalisk.position.towards(self.bot.start_location, 80)
-                        self.bot.actions.append(mutalisk.move(towards_start_location))
+            # Get enemy units that can attack air
+            enemy_units = [u.snapshot for u in self.bot.enemy_cache.values() if u.can_attack_air]
 
-                    # Prefer targeting our priorities
-                    if nearby_enemy_workers:
-                        nearby_enemy_units = nearby_enemy_workers
-                    elif nearby_enemy_priorities.exists:
-                        nearby_enemy_units = nearby_enemy_priorities
+            # Filter enemy_priorities for ones far enough from enemy air attackers
+            # Subtract two from air range to conservatively account for mutalisk's range (3)
+            enemy_priorities = [u.snapshot for u in self.bot.enemy_cache.values()
+                                if u.type_id in attack_priorities
+                                and all(u.distance_to(enemy) > enemy.air_range
+                                        for enemy in enemy_units)]
 
-                    nearby_enemy_unit = nearby_enemy_units.closest_to(mutalisk)
-                    self.bot.actions.append(mutalisk.attack(nearby_enemy_unit))
+            if enemy_priorities:
+                # Iterable of tuples ((unit position, unit air range))
+                enemy_ranges: Iterable[Tuple[Point2, int]] = \
+                    ((u.position.rounded, round(u.air_range * 1.1))
+                     for u in enemy_units)
+
+                # Flood fill the pixel map with enemy unit ranges
+                for pos, air_range in enemy_ranges:
+                    utils.draw_circle(pixel_map, pos, air_range, val=0xFF)
+
+                # Get mutalisks that are in range of enemy units.
+                mutalisks_in_range_of_enemy = [mu for mu in mutalisks
+                                               if any(u.target_in_range(mu) for u in enemy_units)]
+
+                for mutalisk in mutalisks:
+                    if not mutalisk.is_attacking and not mutalisk.is_moving:
+                        nearest_priority = mutalisk.position.closest(enemy_priorities)
+
+                        mutalisk_pos = mutalisk.position.rounded
+                        priority_pos = nearest_priority.position.rounded
+
+                        pathfinder = Pathfinder(pixel_map)
+
+                        path = pathfinder.find_path(mutalisk_pos, priority_pos)
+
+                        if not path:
+                            continue
+
+                        # Convert path to list and use only every 3rd step
+                        path: List[Point2] = [p for p in path][::3]
+
+                        # Issue move commands
+                        for p in path[1:-1]:
+                            self.bot.actions.append(mutalisk.move(p, queue=True))
+
+                        self.bot.actions.append(mutalisk.attack(nearest_priority, queue=True))
+
 
     async def manage_corruptors(self):
         corruptors = self.bot.units(const.CORRUPTOR)
@@ -518,7 +566,8 @@ class MicroManager(Manager):
     async def manage_combat_micro(self):
         """Does default combat micro for units"""
 
-        types_not_to_micro = {const.LURKERMP, const.INFESTEDTERRAN, const.ROACHBURROWED, const.INFESTORBURROWED}
+        types_not_to_micro = {const.LURKERMP, const.MUTALISK, const.INFESTEDTERRAN, const.ROACHBURROWED,
+                              const.INFESTORBURROWED}
 
         # Micro closer to nearest enemy army cluster if our dps is higher
         # Micro further from nearest enemy army cluster if our dps is lower

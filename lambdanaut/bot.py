@@ -23,6 +23,7 @@ from lambdanaut.managers.overlord import OverlordManager
 from lambdanaut.managers.resource import ResourceManager
 from lambdanaut.pathfinding import Pathfinder
 import lambdanaut.unit_cache as unit_cache
+import lambdanaut.utils as utils
 
 from lambdanaut.const2 import Messages
 from lambdanaut.builds import Builds
@@ -80,6 +81,9 @@ class LambdaBot(sc2.BotAI):
         # Fastest path to the enemy start location
         self.shortest_path_to_enemy_start_location: List[Tuple[int, int]] = None
 
+        # Blank pixel map for use in algorithms
+        self.blank_pixel_map: PixelMap = None
+
         # Copy of self.game_info.pathing_grid except the starting structures are removed
         self.pathing_grid: PixelMap = None
 
@@ -105,8 +109,8 @@ class LambdaBot(sc2.BotAI):
                 self.enemy_start_location = self.game_info.map_center
             self.not_enemy_start_locations = {self.start_location}
 
-            # Update our local copy of the pathing grid (self.pathing_grid)
-            self.update_pathing_grid()
+            # Update our local copies of different pixel maps (pathing_grid, blank_pixel_map, etc...)
+            self.update_pixel_maps()
 
             # Update the pathing variables
             self.update_shortest_path_to_enemy_start_location()
@@ -239,8 +243,18 @@ class LambdaBot(sc2.BotAI):
             if friendly | enemy:
                 await self._client.debug_kill_unit(friendly | enemy)
 
-            await self._client.debug_create_unit([[const.ROACH, 40, self.start_location - Point2((25, 0)), 1]])
-            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 5, self.start_location + Point2((9, 0)), 2]])
+            await self._client.debug_create_unit([[const.MUTALISK, 1, self.start_location - Point2((25, 0)), 1]])
+            await self._client.debug_create_unit([[const.MARINE, 1, self.start_location + Point2((9, 0)), 2]])
+            await self._client.debug_create_unit([[const.MARINE, 1, self.start_location + Point2((9, 9)), 2]])
+            await self._client.debug_create_unit([[const.MARINE, 1, self.start_location + Point2((3, 5)), 2]])
+            await self._client.debug_create_unit([[const.MARINE, 1, self.start_location + Point2((9, 13)), 2]])
+            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 1, self.start_location + Point2((9, 0)), 2]])
+            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 1, self.start_location + Point2((9, 12)), 2]])
+            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 1, self.start_location + Point2((9, 15)), 2]])
+            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 1, self.start_location + Point2((9, 30)), 2]])
+            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 1, self.start_location + Point2((9, 45)), 2]])
+            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 1, self.start_location + Point2((9, 90)), 2]])
+            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 1, self.start_location + Point2((9, -12)), 2]])
         # await self._client.debug_create_unit([[const.MARINE, 17, self.start_location + Point2((7, 0)), 2]])
         #     await self._client.debug_create_unit([[const.ZERGLING, 3, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
         #     await self._client.debug_create_unit([[const.ZERGLING, 10, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
@@ -251,10 +265,6 @@ class LambdaBot(sc2.BotAI):
         # await self._client.debug_create_unit([[const.HATCHERY, 1, self.start_location - Point2((11, 0)), 1]])
         # await self._client.debug_create_unit([[const.ZERGLING, 5, self.start_location + Point2((7, 0)), 2]])
         # await self._client.debug_create_unit([[const.SPINECRAWLER, 6, self.start_location + Point2((8, 0)), 2]])
-
-        for unit in friendly:
-            if unit.is_attacking:
-                import pdb; pdb.set_trace()
 
     async def draw_debug(self):
         """
@@ -388,13 +398,25 @@ class LambdaBot(sc2.BotAI):
         except IndexError:
             return None
 
-    def update_pathing_grid(self):
+    def update_pixel_maps(self):
         """
-        Updates the local pathing grid copy to remove start location structures
+        Creates pixel maps to be used later in the game.
+
+        Includes:
+          * self.blank_pixel_map: A blank pixel map
+          * self.pathing_grid: Copy of self.game_info.pathing_grid with start location structures flood-filled
 
         Meant to be called on the first iteration of the game.
         """
 
+        # Update Blank Pixel Map
+        blank_pixel_map = copy.deepcopy(self.game_info.pathing_grid)
+
+        utils.blank_out_pixel_map(blank_pixel_map)
+
+        self.blank_pixel_map = blank_pixel_map
+
+        # Update Pathing Grid
         pathing_grid = copy.deepcopy(self.game_info.pathing_grid)
 
         start_locations = [self.start_location] + self.enemy_start_locations
