@@ -34,8 +34,6 @@ BUILD = Builds.EARLY_GAME_DEFAULT_OPENER
 
 class LambdaBot(sc2.BotAI):
     def __init__(self):
-        super(LambdaBot, self).__init__()
-
         self.debug = DEBUG
 
         self.intel_manager = None
@@ -244,8 +242,9 @@ class LambdaBot(sc2.BotAI):
                 await self._client.debug_kill_unit(friendly | enemy)
 
             await self._client.debug_create_unit([[const.RAVAGER, 5, self.start_location - Point2((5, 0)), 1]])
-            await self._client.debug_create_unit([[const.SCV, 20, self.start_location + Point2((9, 0)), 2]])
-            await self._client.debug_create_unit([[const.SUPPLYDEPOT, 5, self.start_location + Point2((2, 0)), 2]])
+            await self._client.debug_create_unit([[const.ZEALOT, 3, self.start_location + Point2((9, 0)), 2]])
+            await self._client.debug_create_unit([[const.PROBE, 20, self.start_location + Point2((9, 0)), 2]])
+            await self._client.debug_create_unit([[const.NEXUS, 1, self.start_location + Point2((2, 0)), 2]])
             # await self._client.debug_create_unit([[const.MARINE, 12, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.PHOTONCANNON, 2, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.PYLON, 1, self.start_location + Point2((6, 0)), 2]])
@@ -672,9 +671,13 @@ class LambdaBot(sc2.BotAI):
             else:
                 health = u.health_percentage
 
-            priority_bonus = 1 if u.type_id in priorities else 10
+            # Multiply non-priorities value so we prefer priorities
+            priority_bonus = 1 if u.type_id in priorities else 5
 
-            return health * u.distance_to(unit) * priority_bonus
+            # Multiply structure values so we prefer non-structures
+            non_structure_bonus = 5 if u.is_structure and u.type_id not in const2.DEFENSIVE_STRUCTURES else 1
+
+            return health * u.distance_to(unit) * priority_bonus * non_structure_bonus
 
         if isinstance(unit_group, sc2.units.Units):
             return unit_group.sorted(metric)[0]

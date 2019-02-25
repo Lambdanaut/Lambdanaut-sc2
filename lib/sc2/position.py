@@ -22,7 +22,6 @@ class Pointlike(tuple):
 
     def distance_to(self, target: Union["Unit", "Point2"]) -> float:
         """Calculate a single distance from a point or unit to another point or unit"""
-        # TODO 1 distance calculation use pythagoras
         p = target.position
         assert isinstance(p, Pointlike), f"p is not of type Pointlike"
         if self == p:
@@ -46,8 +45,7 @@ class Pointlike(tuple):
 
     def is_closer_than(self, d: Union[int, float], p: Union["Unit", "Point2"]) -> bool:
         """ Check if another point (or unit) is closer than the given distance. More efficient than
-            distance_to(p) < d.
-        """
+            distance_to(p) < d."""
         p = p.position
         return self._distance_squared(p) < d ** 2
 

@@ -66,6 +66,11 @@ ERROR:lib.sc2.main:Error: Not all ids in unit_type_id are of type UnitTypeId
 
 ## HIGH PRIORITY
 
+  * Fix bile avoidance. Find a way to make bile avoidance a top priority. 
+    * We could use pathfinding. But that's really expensive and might not work
+    * We could set "is_avoiding_bile" on the cached unit, but that wouldn't be a global solution and it's a big fix
+    * We could edit all other micro and movement code in some way so that we avoid biles
+
   * Fix Overlord scouting to work with ravager rushing
 
   * Test micro on a test map. Get better micro through this.

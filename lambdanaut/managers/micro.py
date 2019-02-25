@@ -254,7 +254,11 @@ class MicroManager(Manager):
 
                         elif ravager.weapon_cooldown \
                                 and closest_enemy.distance_to(ravager) < ravager.ground_range:
-                            away_from_enemy = ravager.position.towards(closest_enemy, -2)
+
+                            # Move a bit further if the enemy is a unit rather than a structure
+                            distance_to_move = 1 if closest_enemy.is_structure else 2
+
+                            away_from_enemy = ravager.position.towards(closest_enemy, -distance_to_move)
 
                             pathable = not self.bot.game_info.pathing_grid.is_set(away_from_enemy.rounded)
                             if pathable:
@@ -619,7 +623,7 @@ class MicroManager(Manager):
                                       if u.type_id in const2.WORKERS and u.distance_to(army_center) < 35]
 
                     for unit in nearby_army:
-                        if unit.movement_speed > 0:
+                        if unit.movement_speed > 0 and not unit.is_collecting:
 
                             # If there are no enemies that we want to attack nearby, but there are workers,
                             # then attack the workers
@@ -666,6 +670,7 @@ class MicroManager(Manager):
                             # Handle combat priority targeting
                             else:
                                 priorities = {
+                                    const.STARPORTTECHLAB,
                                     const.SIEGETANK, const.SIEGETANKSIEGED, const.MEDIVAC, const.CYCLONE,
                                     const.COLOSSUS, const.WARPPRISM, const.ARCHON, const.HIGHTEMPLAR,
                                     const.DARKTEMPLAR, const.DISRUPTOR,

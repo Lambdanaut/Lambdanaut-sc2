@@ -103,6 +103,9 @@ class ForceManager(StatefulManager):
         self.dont_stop_attacking = False
         self.dont_stop_attacking_condition: Callable[[Manager], bool] = None
 
+        # Uncomment the below line for debugging purposes
+        self.dont_stop_attacking = True; self.state = ForcesStates.ATTACKING
+
         # Subscribe to messages
         self.subscribe(Messages.NEW_BUILD_STAGE)
         self.subscribe(Messages.DONT_STOP_ATTACKING_UNTIL_CONDITION)

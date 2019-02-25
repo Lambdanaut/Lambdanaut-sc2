@@ -8,7 +8,6 @@ from .ids.ability_id import AbilityId
 from .ids.unit_typeid import UnitTypeId
 from .unit_command import UnitCommand
 
-
 # Set of parts of names of abilities that have no cost
 # E.g every ability that has 'Hold' in its name is free
 # TODO move to constants, add more?
@@ -61,9 +60,8 @@ class GameData:
 
 
 class AbilityData:
-    ability_ids: List[int] = [ability_id.value for ability_id in AbilityId]  # sorted list
-    ability_ids.remove(0)
-    ability_ids.sort()
+
+    ability_ids: List[int] = [ability_id.value for ability_id in AbilityId][1:]  # sorted list
 
     @classmethod
     def id_exists(cls, ability_id):
@@ -276,9 +274,9 @@ class Cost:
 
     def __add__(self, other) -> "Cost":
         if not other:
-          return self
+            return self
         if not self:
-          return other
+            return other
         if self.time is None:
             time = other.time
         elif other.time is None:
@@ -286,4 +284,3 @@ class Cost:
         else:
             time = self.time + other.time
         return self.__class__(self.minerals + other.minerals, self.vespene + other.vespene, time=time)
-
