@@ -374,7 +374,7 @@ class ForceManager(StatefulManager):
                         nearest_townhall = townhalls.closest_to(worker.position)
                         if worker.distance_to(nearest_townhall.position) > 18:
                             workers_defending_to_remove.add(worker_id)
-                            self.bot.actions.append(worker.move(nearest_townhall))
+                            self.bot.actions.append(worker.move(nearest_townhall.position))
                 else:
                     workers_defending_to_remove.add(worker_id)
 
