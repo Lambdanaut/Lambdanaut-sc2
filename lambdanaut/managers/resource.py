@@ -49,6 +49,17 @@ class ResourceManager(Manager):
             mineral = minerals.closest_to(worker)
             self.bot.actions.append(worker.gather(mineral))
 
+    def return_distant_workers_to_townhalls(self):
+        townhalls = self.bot.townhalls
+        if townhalls:
+            for worker in self.bot.workers:
+                closest_townhall = townhalls.closest_to(worker)
+                if closest_townhall.distance_to(worker) > 50:
+                    minerals = self.bot.state.mineral_field
+                    if minerals:
+                        mineral = self.bot.state.mineral_field.closest_to(closest_townhall)
+                        self.bot.actions.append(worker.gather(mineral))
+
     async def manage_mineral_saturation(self):
         """
         Balances mineral saturation so that no patch is oversaturated with
@@ -64,7 +75,7 @@ class ResourceManager(Manager):
         # Unsaturated Townhalls include townhalls that are almost complete
         unsaturated_townhalls = self.bot.townhalls.filter(
             lambda th: th.assigned_harvesters < th.ideal_harvesters or
-                       (not th.is_ready and th.build_progress > 0.93))
+                       (not th.is_ready and th.build_progress > 0.92))
 
         if not unsaturated_townhalls:
             return
@@ -94,6 +105,7 @@ class ResourceManager(Manager):
 
                 if worker.is_carrying_minerals or worker.is_carrying_vespene:
                     self.bot.actions.append(worker.return_resource(townhall))
+                    self.bot.actions.append(worker.gather(mineral, queue=True))
                 else:
                     self.bot.actions.append(worker.gather(mineral))
 
@@ -315,5 +327,6 @@ class ResourceManager(Manager):
         await self.manage_resources()
         await self.manage_queens()
         await self.manage_creep_tumors()
+        self.return_distant_workers_to_townhalls()
 
 

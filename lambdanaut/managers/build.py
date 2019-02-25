@@ -883,7 +883,8 @@ class BuildManager(Manager):
             # Train the unit
             if self.can_afford(build_target) and zerglings:
                 zergling = zerglings.closest_to(self.bot.start_location)
-                self.bot.actions.append(zergling.train(build_target))
+                self.bot.actions.append(zergling.stop())
+                self.bot.actions.append(zergling.train(build_target, queue=True))
                 return True
 
         elif build_target == const.RAVAGER:
@@ -898,7 +899,8 @@ class BuildManager(Manager):
                     roaches = idle_roaches
 
                 roach = roaches.closest_to(self.bot.start_location)
-                self.bot.actions.append(roach.train(build_target))
+                self.bot.actions.append(roach.stop())
+                self.bot.actions.append(roach.train(build_target, queue=True))
                 return True
 
         elif build_target == const.LURKERMP:
@@ -913,7 +915,8 @@ class BuildManager(Manager):
                     hydralisks = idle_hydralisks
 
                 hydralisk = hydralisks.closest_to(self.bot.start_location)
-                self.bot.actions.append(hydralisk.train(build_target))
+                self.bot.actions.append(hydralisk.stop())
+                self.bot.actions.append(hydralisk.train(build_target, queue=True))
                 return True
 
         elif build_target == const.BROODLORD:

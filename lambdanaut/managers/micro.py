@@ -608,7 +608,7 @@ class MicroManager(Manager):
         """Does default combat micro for units"""
 
         types_not_to_micro = {const.LURKERMP, const.MUTALISK, const.INFESTEDTERRAN, const.ROACHBURROWED,
-                              const.INFESTORBURROWED}
+                              const.INFESTORBURROWED, const.BROODLORD}
 
         # Micro closer to nearest enemy army cluster if our dps is higher
         # Micro further from nearest enemy army cluster if our dps is lower
