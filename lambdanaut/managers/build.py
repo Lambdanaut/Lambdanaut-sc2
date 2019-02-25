@@ -846,7 +846,7 @@ class BuildManager(Manager):
 
         elif build_target == const.QUEEN:
 
-            townhalls = self.bot.townhalls.idle
+            townhalls = self.bot.townhalls.ready.idle
 
             # Prefer using a townhall that doesn't already have a queen.
             preferred_townhalls = townhalls.filter(
