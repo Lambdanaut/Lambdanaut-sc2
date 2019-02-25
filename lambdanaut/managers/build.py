@@ -167,7 +167,8 @@ class BuildManager(Manager):
             if message in cautious_early_game:
                 self.ack(message)
                 # If we're already defending hard, don't start defending soft
-                if Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE not in self.builds:
+                if Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE not in self.builds and \
+                        Builds.EARLY_GAME_SPORE_CRAWLERS not in self.builds:
                     self.add_build(Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS)
 
             # Messages indicating we need to defend a rush
@@ -178,16 +179,18 @@ class BuildManager(Manager):
             if message in rush_detected:
                 self.ack(message)
 
-                # Switch to a defensive build
-                self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
+                if Builds.EARLY_GAME_SPORE_CRAWLERS not in self.builds:
+                    # Switch to a defensive build
+                    self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
 
             # Messages indicating we need to defend an early aggression
             early_aggression = {Messages.FOUND_ENEMY_EARLY_AGGRESSION}
             if message in early_aggression:
                 self.ack(message)
 
-                # Switch to a defensive build
-                self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
+                if Builds.EARLY_GAME_SPORE_CRAWLERS not in self.builds:
+                    # Switch to a defensive build
+                    self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
 
             # Messages indicating we need to build spore crawlers
             spore_crawlers_early_game = {Messages.ENEMY_AIR_TECH_SCOUTED}
@@ -248,7 +251,6 @@ class BuildManager(Manager):
                                    existing_unit_counts: Counter,
                                    build_order_counts: Counter,
                                    build_targets: List) -> Union[const.UnitTypeId, const.UpgradeId, None]:
-
         """
         Parses a SpecialBuildTarget `unit` and performs relevant mutations on
         `build_order_counts`

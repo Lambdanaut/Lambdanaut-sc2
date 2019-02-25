@@ -179,7 +179,7 @@ class MicroManager(Manager):
         ravagers = self.bot.units(const.RAVAGER)
 
         bile_priorities = {
-            const.SCV, const.OVERLORD, const.MEDIVAC, const.SIEGETANKSIEGED,
+            const.SCV, const.OVERLORD, const.MEDIVAC, const.SIEGETANKSIEGED, const.BANSHEE,
             const.PHOTONCANNON, const.SPINECRAWLER, const.PYLON, const.SUPPLYDEPOT,
         }
         bile_priorities_neutral = {
@@ -223,7 +223,7 @@ class MicroManager(Manager):
                             self.bot.actions.append(ravager(const.EFFECT_CORROSIVEBILE, target))
                             break
                 else:
-                    # If we're not using bile, then micro back ravagers
+                    # If we're not using bile, then micro ravagers
                     enemies_to_avoid = {const.PHOTONCANNON, const.BUNKER, const.SPINECRAWLER}
                     nearby_enemy_units = [u for u in nearby_enemy_units
                                           if u.can_attack_ground or u.type_id in enemies_to_avoid]
@@ -562,7 +562,7 @@ class MicroManager(Manager):
                            self.bot.state.effects):
 
             for position in bile.positions:
-                units = self.bot.units.closer_than(1.5, position)
+                units = self.bot.units.closer_than(3, position)
 
                 if units:
                     for unit in units:
@@ -614,14 +614,29 @@ class MicroManager(Manager):
                         nearby_army, nearest_enemy_cluster, ranged_only=True)
                     ranged_units_in_attack_range_ratio = ranged_units_in_attack_range_count / len(nearby_army)
 
+                    nearby_workers = [u.snapshot for u in self.bot.enemy_cache.values()
+                                      if u.type_id in const2.WORKERS and u.distance_to(army_center) < 35]
+
                     for unit in nearby_army:
-                        if unit.movement_speed > 0 and \
-                                not unit.is_moving:
+                        if unit.movement_speed > 0:
+
+                            # If there are no enemies that we want to attack nearby, but there are workers,
+                            # then attack the workers
+                            attackable_enemy = [u for u in nearest_enemy_cluster
+                                                if self.bot.can_attack(unit, u) and
+                                                (not u.is_structure or u.type_id in const2.DEFENSIVE_STRUCTURES)]
+
                             nearest_enemy_unit = unit.position.closest(nearest_enemy_cluster)
                             unit_is_combatant = unit.type_id not in const2.NON_COMBATANTS
 
+                            # Attack the closest worker if there are no attackable nearby units
+                            print(attackable_enemy)
+                            if not attackable_enemy and nearby_workers:
+                                closest_worker = unit.position.closest(nearby_workers)
+                                self.bot.actions.append(unit.attack(closest_worker))
+
                             # Back off from enemy if our cluster is much weaker
-                            if army_strength < -5 and unit_is_combatant:
+                            elif army_strength < -5 and unit_is_combatant:
                                 if self.bot.is_melee(unit):
                                     away_from_enemy = unit.position.towards(
                                         nearest_enemy_unit, -2)
@@ -634,17 +649,6 @@ class MicroManager(Manager):
                                     away_from_enemy = unit.position.towards(
                                         nearest_enemy_unit, -2)
                                     self.bot.actions.append(unit.move(away_from_enemy))
-
-                            # # If nearest enemy unit is melee and our cluster is small, back off
-                            # elif self.bot.is_melee(nearest_enemy_unit) and len(army_cluster) < 8 \
-                            #         and not self.bot.is_melee(unit) and nearest_enemy_unit.distance_to(unit) < 1 \
-                            #         and unit_is_combatant:
-                            #     how_far_to_move = -1
-                            #     away_from_enemy = unit.position.towards(
-                            #         nearest_enemy_unit, how_far_to_move)
-                            #     self.bot.actions.append(unit.move(away_from_enemy))
-                            #     self.bot.actions.append(unit.attack(unit.position, queue=True))
-
                             # Close the distance if our cluster isn't in range
                             elif unit_is_combatant and ranged_units_in_attack_range_ratio < 0.8 \
                                     and len(army_cluster) > 6 \

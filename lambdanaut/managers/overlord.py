@@ -170,7 +170,7 @@ class OverlordManager(StatefulManager):
                     # The indexed expansion doesn't exist
                     pass
         else:
-            if not self.enemy_proxy_found and not self.proxy_search_concluded and overlords.exists:
+            if not self.enemy_proxy_found and not self.proxy_search_concluded and overlords:
                 scouting_overlord = overlords.find_by_tag(self.proxy_scouting_overlord_tag)
                 if scouting_overlord:
                     # Report enemy proxies
@@ -249,7 +249,7 @@ class OverlordManager(StatefulManager):
 
             if nearby_enemy_units:
                 nearby_enemy_unit = nearby_enemy_units.closest_to(overlord)
-                away_from_enemy = overlord.position.towards(nearby_enemy_unit, -1)
+                away_from_enemy = overlord.position.towards(nearby_enemy_unit, -9)
                 self.bot.actions.append(overlord.move(away_from_enemy))
 
     async def baneling_drops(self):
@@ -466,7 +466,8 @@ class OverlordManager(StatefulManager):
         elif self.state == OverlordStates.INITIAL_BACKOUT:
             # If we didn't find an enemy proxy/rush, and the search is off
             # Then suicide dive in to get more information
-            if not self.enemy_proxy_found and self.proxy_search_concluded:
+            if not self.enemy_proxy_found and self.proxy_search_concluded \
+                    and self.proxy_scouting_overlord_tag is not None:
                 if len(self.bot.known_enemy_structures) < 4:
                     await self.change_state(OverlordStates.SUICIDE_DIVE)
 

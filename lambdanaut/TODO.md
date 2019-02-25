@@ -43,19 +43,30 @@
 
 ## BUGS
 
-  * Couldn't take
-    * 5th expansion on Cerulean Falls LE.
-    * 4th expansion on Stasis LE
-    * Kept getting this error in the log over a hundred times in a row:
-    * `Build Manager: Couldn't build expansion. All spots are taken.`
+  * Saw this weird exception
+    * ERROR:lib.sc2.main:AI step threw an error
+Traceback (most recent call last):
+  File "/Users/jthomas/git/lambdanaut-sc2/lib/sc2/main.py", line 144, in _play_game_ai
+    await ai.on_step(iteration)
+  File "/Users/jthomas/git/lambdanaut-sc2/lambdanaut/bot.py", line 150, in on_step
+    await self.micro_manager.run()
+  File "/Users/jthomas/git/lambdanaut-sc2/lambdanaut/managers/micro.py", line 696, in run
+    await self.manage_combat_micro()
+  File "/Users/jthomas/git/lambdanaut-sc2/lambdanaut/managers/micro.py", line 611, in manage_combat_micro
+    army_strength = self.bot.relative_army_strength(army_cluster, nearest_enemy_cluster)
+  File "/Users/jthomas/git/lambdanaut-sc2/lambdanaut/bot.py", line 752, in relative_army_strength
+    u1_nearby_workers = self.units(const2.WORKERS).closer_than(14, units_1.center)
+  File "/Users/jthomas/git/lambdanaut-sc2/lib/sc2/units.py", line 25, in __call__
+    return UnitSelection(self, *args, **kwargs)
+  File "/Users/jthomas/git/lambdanaut-sc2/lib/sc2/units.py", line 349, in __init__
+    ), f"Not all ids in unit_type_id are of type UnitTypeId"
+AssertionError: Not all ids in unit_type_id are of type UnitTypeId
+ERROR:lib.sc2.main:Error: Not all ids in unit_type_id are of type UnitTypeId
+
 
 ## HIGH PRIORITY
 
-  * Add 2 base nydus build
-    * Add nydus outside enemy natural
-    * Add nydus into enemy main
-    * Add attack through nydus
-    * Add pull all queens through nydus
+  * Fix Overlord scouting to work with ravager rushing
 
   * Test micro on a test map. Get better micro through this.
   
@@ -78,6 +89,12 @@
     * https://hdbscan.readthedocs.io/en/latest/comparing_clustering_algorithms.html#agglomerative-clustering
 
 ## MEDIUM PRIORITY
+
+  * Add 2 base nydus build
+    * Add nydus outside enemy natural
+    * Add nydus into enemy main
+    * Add attack through nydus
+    * Add pull all queens through nydus
 
   * Make midgame rush to brood lords not sucky
   
