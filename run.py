@@ -3,8 +3,6 @@ import os
 import random
 import sys
 
-# Add lib to our path (which holds our sc2-python installation)
-
 import lib.sc2 as sc2
 from __init__ import run_ladder_game
 
@@ -30,9 +28,9 @@ MAPS = [
     'BlueshiftLE',
     'PortAleksanderLE', ]
 
-MAP_NAME = "KairosJunctionLE"
+MAP_NAME = "CeruleanFallLE"
 MICRO_MAP_NAME = "kairo_training"
-REALTIME = True
+REALTIME = False
 # REALTIME = False
 
 # BUILD = sc2.AIBuild.RandomBuild

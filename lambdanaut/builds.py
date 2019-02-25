@@ -133,6 +133,9 @@ class PullWorkersOffVespeneUntil(SpecialBuildTarget):
     NOTE: Cannot be wrapped recursively.
     This is not valid: `PullWorkersOffVespeneUntil(AtLeast(1, ZERGLING))`
 
+    NOTE: This ENDS when a build stage ends. Workers will be put back to full
+    gas saturation at the end of a build stage.
+
     Example that will only mine with 2 gas workers per geyser until a Roach
     is constructed.
         BUILD = [

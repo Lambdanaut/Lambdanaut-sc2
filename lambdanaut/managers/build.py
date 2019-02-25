@@ -601,6 +601,11 @@ class BuildManager(Manager):
                         if build_stage != self.build_stage and build_targets == []:
                             # Update build stage
                             self.build_stage = build_stage
+
+                            # Return workers to vespene that we took off from previous build stages
+                            self.publish(Messages.PULL_WORKERS_OFF_VESPENE)
+
+                            # Publish the new build stage
                             self.publish(Messages.NEW_BUILD_STAGE, build_stage)
 
                         # Return early if the next build target is a town hall.
