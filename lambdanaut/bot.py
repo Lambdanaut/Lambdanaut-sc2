@@ -243,18 +243,11 @@ class LambdaBot(sc2.BotAI):
             if friendly | enemy:
                 await self._client.debug_kill_unit(friendly | enemy)
 
-            await self._client.debug_create_unit([[const.MUTALISK, 1, self.start_location - Point2((25, 0)), 1]])
-            await self._client.debug_create_unit([[const.MARINE, 1, self.start_location + Point2((9, 0)), 2]])
-            await self._client.debug_create_unit([[const.MARINE, 1, self.start_location + Point2((9, 9)), 2]])
-            await self._client.debug_create_unit([[const.MARINE, 1, self.start_location + Point2((3, 5)), 2]])
-            await self._client.debug_create_unit([[const.MARINE, 1, self.start_location + Point2((9, 13)), 2]])
-            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 1, self.start_location + Point2((9, 0)), 2]])
-            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 1, self.start_location + Point2((9, 12)), 2]])
-            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 1, self.start_location + Point2((9, 15)), 2]])
-            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 1, self.start_location + Point2((9, 30)), 2]])
-            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 1, self.start_location + Point2((9, 45)), 2]])
-            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 1, self.start_location + Point2((9, 90)), 2]])
-            await self._client.debug_create_unit([[const.SIEGETANKSIEGED, 1, self.start_location + Point2((9, -12)), 2]])
+            await self._client.debug_create_unit([[const.RAVAGER, 5, self.start_location - Point2((5, 0)), 1]])
+            await self._client.debug_create_unit([[const.BUNKER, 5, self.start_location + Point2((6, 0)), 2]])
+            # await self._client.debug_create_unit([[const.MARINE, 12, self.start_location + Point2((6, 0)), 2]])
+            # await self._client.debug_create_unit([[const.PHOTONCANNON, 2, self.start_location + Point2((6, 0)), 2]])
+            # await self._client.debug_create_unit([[const.PYLON, 1, self.start_location + Point2((6, 0)), 2]])
         # await self._client.debug_create_unit([[const.MARINE, 17, self.start_location + Point2((7, 0)), 2]])
         #     await self._client.debug_create_unit([[const.ZERGLING, 3, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
         #     await self._client.debug_create_unit([[const.ZERGLING, 10, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
@@ -443,6 +436,32 @@ class LambdaBot(sc2.BotAI):
             self.shortest_path_to_enemy_start_location = None
         else:
             self.shortest_path_to_enemy_start_location = [p for p in shortest_path]
+
+    def get_path_around_ranges(self, units, point1: Point2, point2: Point2, path_step=2) -> List[Tuple[int, int]]:
+        """
+        Gets a path to `point` avoiding `units`
+        """
+
+        # Make a copy of a blank pixel map to draw on
+        pixel_map = copy.deepcopy(self.blank_pixel_map)
+
+        # Get enemy units that can attack air
+        enemy_units = [u.snapshot for u in self.enemy_cache.values() if u.can_attack_air]
+
+        # Flood fill the pixel map with unit ranges
+        utils.draw_unit_ranges(pixel_map, units)
+
+        # Find the path
+        pathfinder = Pathfinder(pixel_map)
+        path = pathfinder.find_path(point1, point2)
+
+        if not path:
+            return None
+
+        # Convert path to list and use only every path_step(2nd step by default)
+        path: List[Point2] = [p for p in path][::path_step]
+
+        return path
 
     async def get_open_expansions(self) -> List[Point2]:
         """Gets a sorted list of open expansions from the start location"""

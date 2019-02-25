@@ -1,4 +1,4 @@
-VERSION = '2.6.5'
+VERSION = '3.0.0'
 DEBUG = True
 CREATE_DEBUG_UNITS = False  # Only creates them if `DEBUG` is True
 

@@ -609,6 +609,14 @@ class BuildManager(Manager):
                             else:
                                 return build_targets
 
+                        # Return early if the next build target is an upgrade
+                        # This prevents queuing up multiple upgrades at a single structure.
+                        if isinstance(unit, const.UpgradeId):
+                            if not build_targets:
+                                return [unit]
+                            else:
+                                return build_targets
+
                         # Add the build target
                         build_targets.append(unit)
 
@@ -910,9 +918,9 @@ class BuildManager(Manager):
         elif isinstance(build_target, const.UpgradeId):
             upgrade_structure_type = const2.ZERG_UPGRADES_TO_STRUCTURE[build_target]
             upgrade_structures = self.bot.units(upgrade_structure_type).ready
-            if self.can_afford(build_target) and upgrade_structures.exists:
+            if self.can_afford(build_target) and upgrade_structures:
 
-                # Prefer idle upgrade structures
+                # Require idle upgrade structures
                 if upgrade_structures.idle.exists:
                     upgrade_structures = upgrade_structures.idle
 

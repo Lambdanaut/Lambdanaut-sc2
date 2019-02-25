@@ -179,7 +179,7 @@ class MicroManager(Manager):
         ravagers = self.bot.units(const.RAVAGER)
 
         bile_priorities = {
-            const.OVERLORD, const.MEDIVAC, const.SIEGETANKSIEGED,
+            const.SCV, const.OVERLORD, const.MEDIVAC, const.SIEGETANKSIEGED,
             const.PHOTONCANNON, const.SPINECRAWLER, const.PYLON, const.SUPPLYDEPOT,
         }
         bile_priorities_neutral = {
@@ -187,27 +187,29 @@ class MicroManager(Manager):
         }
 
         for ravager in ravagers:
-            nearby_enemy_units = self.bot.known_enemy_units.closer_than(9, ravager)
-            if nearby_enemy_units.exists:
+            nearby_enemy_units = self.bot.enemy_cache.values()
+            nearby_enemy_units = [u.snapshot for u in nearby_enemy_units if u.distance_to(ravager) < 14]
+            if nearby_enemy_units:
                 # Perform bile attacks
                 # Bile range is 9
-                nearby_enemy_priorities = nearby_enemy_units.of_type(bile_priorities)
-                nearby_enemy_priorities = nearby_enemy_priorities | self.bot.state.units(bile_priorities_neutral)
+                nearby_enemy_priorities = [u for u in nearby_enemy_units if u.type_id in bile_priorities]
+                nearby_enemy_priorities += self.bot.state.units(bile_priorities_neutral)
 
                 # Prefer targeting our bile_priorities
                 nearby_enemy_priorities = nearby_enemy_priorities \
-                    if nearby_enemy_priorities.exists else nearby_enemy_units
+                    if nearby_enemy_priorities else nearby_enemy_units
 
                 abilities = await self.bot.get_available_abilities(ravager)
-                for enemy_unit in nearby_enemy_priorities.sorted(
-                        lambda unit: ravager.distance_to(unit), reverse=True):
+                for enemy_unit in sorted(nearby_enemy_priorities,
+                                         key=lambda unit: ravager.distance_to(unit)):
 
                     can_cast = await self.bot.can_cast(ravager, const.AbilityId.EFFECT_CORROSIVEBILE,
                                                        enemy_unit.position,
-                                                       cached_abilities_of_unit=abilities)
+                                                       cached_abilities_of_unit=abilities,
+                                                       only_check_energy_and_cooldown=True)
                     if can_cast:
                         our_closest_unit_to_enemy = self.bot.units.closest_to(enemy_unit)
-                        if our_closest_unit_to_enemy.distance_to(enemy_unit.position) > 1.5:
+                        if our_closest_unit_to_enemy.distance_to(enemy_unit.position) > 3:
 
                             # Only bile a forcefield at most once
                             if enemy_unit.type_id == const.UnitTypeId.FORCEFIELD:
@@ -215,17 +217,48 @@ class MicroManager(Manager):
                                     continue
                                 self.biled_forcefields.add(enemy_unit.tag)
 
-                            self.bot.actions.append(ravager(const.EFFECT_CORROSIVEBILE, enemy_unit.position))
+                            # Bile at the edge of unit so we don't have to get close
+                            target = enemy_unit.position.towards(ravager.position, enemy_unit.radius)
+
+                            self.bot.actions.append(ravager(const.EFFECT_CORROSIVEBILE, target))
                             break
                 else:
                     # If we're not using bile, then micro back ravagers
-                    closest_enemy = nearby_enemy_units.closest_to(ravager)
-                    if ravager.weapon_cooldown and closest_enemy.distance_to(ravager) < ravager.ground_range:
-                        away_from_enemy = ravager.position.towards(closest_enemy, -2)
+                    enemies_to_avoid = {const.PHOTONCANNON, const.BUNKER, const.SPINECRAWLER}
+                    nearby_enemy_units = [u for u in nearby_enemy_units
+                                          if u.can_attack_ground or u.type_id in enemies_to_avoid]
+                    if nearby_enemy_units:
+                        closest_enemy = ravager.position.closest(nearby_enemy_units)
+                        nearby_friendly_units = self.bot.units.closer_than(15, ravager)
 
-                        distance = await self.bot._client.query_pathing(ravager, away_from_enemy)
-                        if distance and distance < 5:
-                            self.bot.actions.append(ravager.move(away_from_enemy))
+                        if closest_enemy.type_id in enemies_to_avoid and len(nearby_friendly_units) < 12:
+                            # Keep out of range of dangerous enemy structures if our ravager army is small
+                            # Disregard unpowered photon cannons
+                            if closest_enemy.type_id is not const.PHOTONCANNON \
+                                    or (closest_enemy.type_id is const.PHOTONCANNON and closest_enemy.is_powered):
+
+                                if closest_enemy.type_id is const.BUNKER:
+                                    # Assume the maximum bunker range of 7 (Marauder +1)
+                                    enemy_range = 7
+                                else:
+                                    enemy_range = closest_enemy.ground_range
+
+                                distance_to_enemy = ravager.distance_to(closest_enemy)
+                                ravager_in_range = distance_to_enemy < enemy_range + 3.5
+
+                                if ravager_in_range:
+                                    away_from_enemy = ravager.position.towards(closest_enemy, -2)
+                                    self.bot.actions.append(ravager.move(away_from_enemy))
+                                    self.bot.actions.append(ravager.hold_position(queue=True))
+
+                        elif ravager.weapon_cooldown \
+                                and closest_enemy.distance_to(ravager) < ravager.ground_range:
+                            away_from_enemy = ravager.position.towards(closest_enemy, -2)
+
+                            pathable = not self.bot.game_info.pathing_grid.is_set(away_from_enemy.rounded)
+                            if pathable:
+                                self.bot.actions.append(ravager.move(away_from_enemy))
+                                self.bot.actions.append(ravager.attack(closest_enemy.position, queue=True))
 
     async def manage_infestors(self):
         infestors = self.bot.units(const.INFESTOR)
@@ -361,14 +394,9 @@ class MicroManager(Manager):
                                         for enemy in enemy_units)]
 
             if enemy_priorities:
-                # Iterable of tuples ((unit position, unit air range))
-                enemy_ranges: Iterable[Tuple[Point2, int]] = \
-                    ((u.position.rounded, round(u.air_range * 1.1))
-                     for u in enemy_units)
 
                 # Flood fill the pixel map with enemy unit ranges
-                for pos, air_range in enemy_ranges:
-                    utils.draw_circle(pixel_map, pos, air_range, val=0xFF)
+                utils.draw_unit_ranges(enemy_units)
 
                 # Get mutalisks that are in range of enemy units.
                 mutalisks_in_range_of_enemy = [mu for mu in mutalisks
@@ -421,7 +449,7 @@ class MicroManager(Manager):
                     self.bot.actions.append(overseer(
                         const.SPAWNCHANGELING_SPAWNCHANGELING))
 
-            if army.exists:
+            if army:
                 # Keep overseer slightly ahead center of army
                 if overseer.distance_to(army.center) > 6:
                     position = army.center.towards(self.bot.enemy_start_location, 8)
@@ -536,7 +564,7 @@ class MicroManager(Manager):
             for position in bile.positions:
                 units = self.bot.units.closer_than(1.5, position)
 
-                if units.exists:
+                if units:
                     for unit in units:
                         target = position.towards(unit.position, 2)
                         self.bot.actions.append(unit.move(target))
@@ -617,10 +645,11 @@ class MicroManager(Manager):
                             #     self.bot.actions.append(unit.move(away_from_enemy))
                             #     self.bot.actions.append(unit.attack(unit.position, queue=True))
 
-                            # Close the distance if our cluster is stronger
+                            # Close the distance if our cluster isn't in range
                             elif unit_is_combatant and ranged_units_in_attack_range_ratio < 0.8 \
+                                    and len(army_cluster) > 6 \
                                     and unit.weapon_cooldown \
-                                    and unit.distance_to(nearest_enemy_unit) > unit.ground_range * 0.35 \
+                                    and unit.distance_to(nearest_enemy_unit) - nearest_enemy_unit.radius > unit.ground_range * 0.35 \
                                     and not self.bot.is_melee(unit) \
                                     and not unit.is_moving:
                                 how_far_to_move = 1

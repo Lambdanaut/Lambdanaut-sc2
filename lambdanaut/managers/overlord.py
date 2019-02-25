@@ -44,6 +44,9 @@ class OverlordManager(StatefulManager):
         self.enemy_proxy_found = False
         self.proxy_search_concluded = False
 
+        # Move second overlord to enemy ramp if this is true
+        self.move_overlord_scout_2_to_enemy_ramp = False
+
         # Tags of overlords with creep turned on
         self.overlord_tags_with_creep_turned_on = set()
 
@@ -69,19 +72,23 @@ class OverlordManager(StatefulManager):
             if message in move_overlord_scout_to_enemy_ramp:
                 self.ack(message)
 
+                self.move_overlord_scout_2_to_enemy_ramp = True
                 if self.proxy_scouting_overlord_tag is not None:
                     overlords = self.bot.units(const.OVERLORD)
-                    if overlords.exists:
+                    if overlords:
                         overlord = overlords.find_by_tag(self.proxy_scouting_overlord_tag)
                         if overlord:
-                            # Move them to the nearest ramp
+                            self.move_overlord_to_enemy_ramp(overlord)
 
-                            ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
-                            nearby_ramp = self.bot.enemy_start_location.towards(
-                                self.bot.start_location, 6).closest(ramps)
+    def move_overlord_to_enemy_ramp(self, overlord):
+        # Move them to the enemy ramp
+        ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
+        if ramps:
+            nearby_ramp = self.bot.enemy_start_location.towards(
+                self.bot.start_location, 2).closest(ramps)
 
-                            target = nearby_ramp.towards(self.bot.start_location, 10.5)
-                            self.bot.actions.append(overlord.move(target))
+            target = nearby_ramp.towards(self.bot.start_location, 10.5)
+            self.bot.actions.append(overlord.move(target))
 
     async def turn_on_generate_creep(self):
         # Spread creep on last scouted expansion location like a fucking dick head
@@ -140,9 +147,13 @@ class OverlordManager(StatefulManager):
     async def proxy_scout_with_second_overlord(self):
         overlords = self.bot.units(const.OVERLORD)
 
-        if self.proxy_scouting_overlord_tag is None:
-            if len(overlords) == 2:
-                overlord = overlords.filter(lambda ov: ov.tag not in self.scouting_overlord_tags).first
+        if self.proxy_scouting_overlord_tag is None and len(overlords) == 2:
+            overlord = overlords.filter(lambda ov: ov.tag not in self.scouting_overlord_tags).first
+
+            if self.move_overlord_scout_2_to_enemy_ramp:
+                # Move the scouting overlord directly to the enemy ramp for vision
+                self.move_overlord_to_enemy_ramp(overlord)
+            else:
                 self.proxy_scouting_overlord_tag = overlord.tag
 
                 # Move Overlord around different expansion locations
@@ -231,7 +242,7 @@ class OverlordManager(StatefulManager):
         overlords = self.bot.units(const.OVERLORD).tags_not_in(dont_flee_tags)
 
         for overlord in overlords:
-            nearby_enemy_units = self.bot.units.enemy. \
+            nearby_enemy_units = self.bot.known_enemy_units. \
                 closer_than(11, overlord).filter(
                     lambda unit: unit.can_attack_air
                     and overlord.distance_to(unit) < unit.air_range * 1.5)
@@ -375,7 +386,7 @@ class OverlordManager(StatefulManager):
         enemy_natural_expansion = self.bot.get_enemy_natural_expansion()
 
         overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
-        if overlord:
+        if overlord and overlord.is_idle:
             # Move towards natural expansion
             self.bot.actions.append(overlord.move(enemy_natural_expansion))
 
@@ -399,7 +410,7 @@ class OverlordManager(StatefulManager):
 
     async def do_suicide_dive(self):
         overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
-        if overlord:
+        if overlord and overlord.is_idle:
             self.bot.actions.append(
                 overlord.move(self.bot.enemy_start_location, queue=True))
 

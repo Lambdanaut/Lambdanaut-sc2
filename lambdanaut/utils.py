@@ -1,4 +1,4 @@
-from typing import Callable, List, Set, Union
+from typing import Callable, Iterable, List, Set, Tuple, Union
 import math
 
 from lib.sc2.unit import Unit
@@ -119,3 +119,16 @@ def draw_circle(pixel_map: PixelMap, center: Point2, radius: int, val=0xFF):
     for p in flood_fill_(pixel_map, center, lambda v: v != val):
         pixel_map[p] = [val]
 
+
+def draw_unit_ranges(pixel_map, units):
+    """
+    Draws unit ranges. Only works with air ranges at the moment.
+    """
+    # Iterable of tuples ((unit position, unit air range))
+    enemy_ranges: Iterable[Tuple[Point2, int]] = \
+        ((u.position.rounded, round(u.air_range * 1.15))
+         for u in units)
+
+    # Flood fill the pixel map with enemy unit ranges
+    for pos, air_range in enemy_ranges:
+        draw_circle(pixel_map, pos, air_range, val=0xFF)

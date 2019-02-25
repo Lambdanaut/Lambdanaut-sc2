@@ -188,6 +188,7 @@ EARLY_GAME_DEFAULT_OPENER = [
 RAVAGER_ALL_IN = [
     PublishMessage(Messages.DONT_DEFEND),  # Publish a message saying we shouldn't switch to DEFENDING
     PullWorkersOffVespeneUntil(ROACH, n=2),  # Mine with only 2 workers until we have a roach
+    PublishMessage(Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP),  # Send the second overlord to the enemy's main ramp
     HATCHERY,  # 1
     OVERLORD,  # 1
     DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,  # 12
@@ -204,7 +205,6 @@ RAVAGER_ALL_IN = [
     ROACH,
     IfHasThenDontBuild(RAVAGER, ROACH, 2),
     RAVAGER, RAVAGER, RAVAGER,
-    PublishMessage(Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP),  # Send the second overlord to the enemy's main ramp
     RAVAGER, RAVAGER, RAVAGER, RAVAGER,
     QUEEN,
 ]
@@ -224,8 +224,10 @@ def opener_ravager_harass_when_to_stop_attacking(manager) -> bool:
 
 
 OPENER_RAVAGER_HARASS = [
-    PublishMessage(Messages.DONT_DEFEND),  # Publish a message saying we shouldn't switch to DEFENDING
     PullWorkersOffVespeneUntil(ROACH, n=2),  # Mine with only 2 workers until we have a roach
+    PublishMessage(Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP),  # Send the second overlord to the enemy's main ramp
+    # Start attacking and don't stop until we have no ravagers left
+    PublishMessage(Messages.DONT_STOP_ATTACKING_UNTIL_CONDITION, opener_ravager_harass_when_to_stop_attacking),
     HATCHERY,  # 1
     OVERLORD,  # 1
     DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,  # 12
@@ -234,19 +236,15 @@ OPENER_RAVAGER_HARASS = [
     SPAWNINGPOOL,
     EXTRACTOR,  # 1
     OVERLORD,  # 2
-    EXTRACTOR, # 2
-    DRONE,  # 15
+    EXTRACTOR,  # 2
     OVERLORD,  # 3
+    DRONE,  # 15
     ROACHWARREN,
+    ROACH,
     IfHasThenDontBuild(RAVAGER, ROACH, 3),
-    RAVAGER, RAVAGER,
-    # Start attacking and don't stop until we have no ravagers left
-    RAVAGER,
-    PublishMessage(Messages.DONT_STOP_ATTACKING_UNTIL_CONDITION, opener_ravager_harass_when_to_stop_attacking),
+    RAVAGER, RAVAGER, RAVAGER, RAVAGER, RAVAGER,
     QUEEN,
     DRONE, DRONE, DRONE,  # 18
-    PublishMessage(Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP),  # Send the second overlord to the enemy's main ramp
-    PublishMessage(Messages.ALLOW_DEFENDING),  # Publish a message saying we can switch to DEFENDING
 ]
 
 # Suspect enemy cheese but no proof. Get a spawning pool first with Zerglings
@@ -436,11 +434,11 @@ MID_GAME_ROACH_HYDRA_LURKER = [
     DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
     AtLeast(3, EXTRACTOR),
     AtLeast(1, ROACHWARREN),
+    EVOLUTIONCHAMBER,
+    EVOLUTIONCHAMBER,
     DRONE, DRONE, DRONE, DRONE,
     EXTRACTOR,
     EXTRACTOR,
-    EVOLUTIONCHAMBER,
-    EVOLUTIONCHAMBER,
     DRONE, DRONE, DRONE, DRONE,
     ROACH, ROACH, ROACH, ROACH, ROACH, RAVAGER, ROACH, ROACH, ROACH, RAVAGER,
     CanAfford(ZERGMISSILEWEAPONSLEVEL1),
