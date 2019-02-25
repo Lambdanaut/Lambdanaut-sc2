@@ -673,7 +673,7 @@ class LambdaBot(sc2.BotAI):
             priority_bonus = 1 if u.type_id in priorities else 5
 
             # Multiply structure values so we prefer non-structures
-            non_structure_bonus = 5 if u.is_structure else 1
+            non_structure_bonus = 10 if u.is_structure else 1
 
             return health * u.distance_to(unit) * priority_bonus * non_structure_bonus
 

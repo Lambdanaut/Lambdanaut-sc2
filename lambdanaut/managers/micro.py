@@ -214,7 +214,8 @@ class MicroManager(Manager):
                             # Bile at the edge of structure's radius so we don't have to get close
                             target = enemy_unit.position.towards(ravager.position, enemy_unit.radius)
                         else:
-                            target = enemy_unit.position
+                            # Bile slightly behind the enemy unit so they are forced forwards
+                            target = enemy_unit.position.towards(ravager.position, -enemy_unit.radius * 0.8)
 
                         our_closest_unit_to_enemy = self.bot.units.closest_to(target)
                         if our_closest_unit_to_enemy.distance_to(enemy_unit.position) > 3:
@@ -280,7 +281,7 @@ class MicroManager(Manager):
                 const.BROODLORD,
                 const.MARINE, const.MARAUDER, const.REAPER, const.GHOST, const.VIKING, const.BANSHEE, const.MEDIVAC,
                 const.HELLION, const.HELLIONTANK,
-                const.ZEALOT, const.DARKTEMPLAR, const.STALKER, const.ADEPT, const.VOIDRAY, const.TEMPEST,
+                const.ZEALOT, const.STALKER, const.ADEPT, const.DARKTEMPLAR, const.VOIDRAY, const.TEMPEST,
                 const.SENTRY, const.HIGHTEMPLAR, const.PHOENIX,}
 
             infested_terran_priorities = const2.TOWNHALLS | {
@@ -680,8 +681,8 @@ class MicroManager(Manager):
 
                             # Handle combat priority targeting
                             else:
-                                priorities = {
-                                    const.STARPORTTECHLAB,
+                                priorities = const2.WORKERS | {
+                                    const.STARPORTTECHLAB, const.FACTORYTECHLAB,
                                     const.SIEGETANK, const.SIEGETANKSIEGED, const.MEDIVAC, const.CYCLONE,
                                     const.COLOSSUS, const.WARPPRISM, const.ARCHON, const.HIGHTEMPLAR,
                                     const.DARKTEMPLAR, const.DISRUPTOR,
