@@ -374,7 +374,7 @@ class ForceManager(StatefulManager):
                         nearest_townhall = townhalls.closest_to(worker.position)
                         if worker.distance_to(nearest_townhall.position) > 18:
                             workers_defending_to_remove.add(worker_id)
-                            self.bot.actions.append(worker.return_resource(nearest_townhall))
+                            self.bot.actions.append(worker.move(nearest_townhall))
                 else:
                     workers_defending_to_remove.add(worker_id)
 
@@ -388,7 +388,7 @@ class ForceManager(StatefulManager):
 
             if worker.tag in self.workers_defending:
                 self.bot.actions.append(worker.move(nearest_townhall.position))
-            elif worker.distance_to(nearest_townhall) > 25:
+            elif worker.distance_to(nearest_townhall) > 14:
                 self.bot.actions.append(worker.move(nearest_townhall.position))
 
         self.workers_defending.clear()  # Remove worker ids from set

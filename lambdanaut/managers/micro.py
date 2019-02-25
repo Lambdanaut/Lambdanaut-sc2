@@ -584,10 +584,6 @@ class MicroManager(Manager):
     async def manage_priority_targeting(self, unit: Unit, attack_priorities=None) -> bool:
         """Handles combat priority targeting for the given unit"""
 
-        if unit.is_collecting:
-            # Don't priority target if it's a mining worker
-            return False
-
         enemy_units = self.bot.known_enemy_units
         if enemy_units:
             if self.bot.is_melee(unit):
