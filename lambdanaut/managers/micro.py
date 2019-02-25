@@ -623,15 +623,16 @@ class MicroManager(Manager):
 
                             # If there are no enemies that we want to attack nearby, but there are workers,
                             # then attack the workers
-                            attackable_enemy = [u for u in nearest_enemy_cluster
-                                                if self.bot.can_attack(unit, u) and
-                                                (not u.is_structure or u.type_id in const2.DEFENSIVE_STRUCTURES)]
+                            attackable_non_workers = [u for u in self.bot.known_enemy_units.ready
+                                                      if self.bot.can_attack(unit, u)
+                                                      and u not in const2.WORKERS
+                                                      (not u.is_structure or u.type_id in const2.DEFENSIVE_STRUCTURES)]
 
                             nearest_enemy_unit = unit.position.closest(nearest_enemy_cluster)
                             unit_is_combatant = unit.type_id not in const2.NON_COMBATANTS
 
                             # Attack the closest worker if there are no attackable nearby units
-                            if not attackable_enemy and nearby_workers:
+                            if not attackable_non_workers and nearby_workers:
                                 closest_worker = unit.position.closest(nearby_workers)
                                 self.bot.actions.append(unit.attack(closest_worker))
 
