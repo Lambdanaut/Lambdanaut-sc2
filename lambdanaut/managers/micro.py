@@ -181,6 +181,7 @@ class MicroManager(Manager):
         bile_priorities = {
             const.SCV, const.OVERLORD, const.MEDIVAC, const.SIEGETANKSIEGED, const.BANSHEE,
             const.PHOTONCANNON, const.SPINECRAWLER, const.PYLON, const.SUPPLYDEPOT,
+            const.FACTORYTECHLAB, const.STARPORTTECHLAB,
         }
         bile_priorities_neutral = {
             const.UnitTypeId.FORCEFIELD,

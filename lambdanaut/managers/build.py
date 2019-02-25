@@ -198,6 +198,8 @@ class BuildManager(Manager):
                 self.ack(message)
                 self.add_build(Builds.EARLY_GAME_SPORE_CRAWLERS)
 
+
+
             # Messages indicating roach_hydra mid game is ideal
             roach_hydra_mid_game = {
                 Messages.OVERLORD_SCOUT_FOUND_ENEMY_DEFENSIVE_STRUCTURES,

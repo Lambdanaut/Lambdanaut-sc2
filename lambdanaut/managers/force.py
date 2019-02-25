@@ -317,8 +317,8 @@ class ForceManager(StatefulManager):
                 army_clusters = self.bot.army_clusters
 
                 # The harder we're attacked, the further-out army to pull back
-                # 1 Enemy: 0.2 of map. 2 enemy: 0.4 of map. 5 or more enemy: 1.0 of map
-                distance_ratio_to_pull_back = max(1.0, len(enemies_nearby) * 0.2)
+                # 1 Enemy: 0.05 of map. 2 enemy: 0.1 of map. 10 or more enemy: 1.0 of map
+                distance_ratio_to_pull_back = max(1.0, len(enemies_nearby) * 0.05)
                 if len(enemies_nearby) < 5:
                     army_clusters = \
                         [cluster for cluster in army_clusters
@@ -337,7 +337,7 @@ class ForceManager(StatefulManager):
 
                                 if army_strength >= -1 \
                                         or (army_strength > -6 and
-                                            nearest_enemy_cluster.position.distance_to(army_cluster.position) < 10)\
+                                            nearest_enemy_cluster.position.distance_to(army_cluster.position) < 10) \
                                         or self.bot.supply_used > 185:
                                     # Attack enemy if we stand a chance or
                                     # if we hardly stand a chance and they're in our face or
