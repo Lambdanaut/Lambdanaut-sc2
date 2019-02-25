@@ -557,8 +557,9 @@ class MicroManager(Manager):
                 self.bot.actions.append(structure(const.CANCEL))
 
     async def manage_eggs(self):
-        egg_types = {const.BROODLORDCOCOON, const.RAVAGERCOCOON, const.BANELINGCOCOON,
-                     const.LURKERMPEGG, const.UnitTypeId.EGG}
+        # egg_types = {const.BROODLORDCOCOON, const.RAVAGERCOCOON, const.BANELINGCOCOON,
+        #              const.LURKERMPEGG, const.UnitTypeId.EGG}
+        egg_types = {const.UnitTypeId.EGG}
         eggs = self.bot.units(egg_types)
 
         # Cancel damaged not-ready structures

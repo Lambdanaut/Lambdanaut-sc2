@@ -92,7 +92,10 @@ class ResourceManager(Manager):
                 townhall = townhalls.closest_to(worker.position)
                 mineral = self.bot.state.mineral_field.closest_to(townhall)
 
-                self.bot.actions.append(worker.gather(mineral))
+                if worker.is_carrying_minerals or worker.is_carrying_vespene:
+                    self.bot.actions.append(worker.return_resource(townhall))
+                else:
+                    self.bot.actions.append(worker.gather(mineral))
 
     async def manage_vespene(self):
         # If we have over 5 times the vespene than we do minerals, hold off on gas
