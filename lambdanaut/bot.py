@@ -239,6 +239,8 @@ class LambdaBot(sc2.BotAI):
             if friendly | enemy:
                 await self._client.debug_kill_unit(friendly | enemy)
 
+            self.force_manager.dont_stop_attacking = True; self.force_manager.state = const2.ForcesStates.ATTACKING
+
             await self._client.debug_create_unit([[const.RAVAGER, 5, self.start_location - Point2((5, 0)), 1]])
             await self._client.debug_create_unit([[const.PHOTONCANNON, 4, self.start_location + Point2((6, 0)), 2]])
             await self._client.debug_create_unit([[const.PYLON, 1, self.start_location + Point2((6, 0)), 2]])
@@ -568,6 +570,26 @@ class LambdaBot(sc2.BotAI):
     def is_melee(self, unit: Unit) -> bool:
         return unit.ground_range < 1.5 and unit.can_attack_ground
 
+    def health_percentage_adjusted(self, unit: Unit) -> float:
+        """
+        Adjusts unit's health based on its build progress.
+
+        Structures in progress have less health than structures
+        """
+        if unit.is_ready:
+            return unit.health_percentage
+        elif unit.is_structure:
+            return unit.health_percentage + unit.build_progress
+
+    def shield_percentage_adjusted(self, unit: Unit) -> float:
+        """
+        Adjusts unit's shield based on its build progress.
+        """
+        if unit.is_ready:
+            return unit.shield_percentage
+        elif unit.is_structure:
+            return unit.shield_percentage + unit.build_progress
+
     def splash_on_enemies(
             self,
             units: Units,
@@ -665,15 +687,15 @@ class LambdaBot(sc2.BotAI):
 
         def metric(u):
             if u.shield_max > 0:
-                health = (u.health_percentage + u.shield_percentage) // 2
+                health = (self.health_percentage_adjusted(u) + self.shield_percentage_adjusted(u)) // 2
             else:
-                health = u.health_percentage
+                health = self.health_percentage_adjusted(u)
 
             # Multiply non-priorities value so we prefer priorities
             priority_bonus = 1 if u.type_id in priorities else 5
 
             # Multiply structure values so we prefer non-structures
-            non_structure_bonus = 10 if u.is_structure else 1
+            non_structure_bonus = 5 if u.is_structure else 1
 
             return health * u.distance_to(unit) * priority_bonus * non_structure_bonus
 

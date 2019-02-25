@@ -103,9 +103,6 @@ class ForceManager(StatefulManager):
         self.dont_stop_attacking = False
         self.dont_stop_attacking_condition: Callable[[Manager], bool] = None
 
-        # Uncomment the below line for debugging purposes
-        self.dont_stop_attacking = True; self.state = ForcesStates.ATTACKING
-
         # Subscribe to messages
         self.subscribe(Messages.NEW_BUILD_STAGE)
         self.subscribe(Messages.DONT_STOP_ATTACKING_UNTIL_CONDITION)
@@ -386,11 +383,14 @@ class ForceManager(StatefulManager):
 
     async def stop_defending(self):
         # Cleanup workers that were defending and send them back to their townhalls
-        for worker_id in self.workers_defending:
-            worker = self.bot.workers.find_by_tag(worker_id)
-            if worker:
-                nearest_townhall = self.bot.townhalls.closest_to(worker.position)
+        for worker in self.bot.workers:
+            nearest_townhall = self.bot.townhalls.closest_to(worker.position)
+
+            if worker.tag in self.workers_defending:
                 self.bot.actions.append(worker.move(nearest_townhall.position))
+            elif worker.distance_to(nearest_townhall) > 25:
+                self.bot.actions.append(worker.move(nearest_townhall.position))
+
         self.workers_defending.clear()  # Remove worker ids from set
 
         # Reset flag saying that we're defending against multiple enemies

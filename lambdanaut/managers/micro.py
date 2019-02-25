@@ -190,7 +190,7 @@ class MicroManager(Manager):
 
         for ravager in ravagers:
             nearby_enemy_units = self.bot.enemy_cache.values()
-            nearby_enemy_units = [u.snapshot for u in nearby_enemy_units if u.distance_to(ravager) < 14]
+            nearby_enemy_units = [u.snapshot for u in nearby_enemy_units if u.distance_to(ravager) < 14 + u.radius]
             if nearby_enemy_units:
                 # Perform bile attacks
                 # Bile range is 9
@@ -591,7 +591,7 @@ class MicroManager(Manager):
         if enemy_units:
             if self.bot.is_melee(unit):
                 # Search for further priorities if unit is melee
-                enemy_units = enemy_units.closer_than(3, unit)
+                enemy_units = enemy_units.closer_than(2, unit)
             else:
                 enemy_units = enemy_units.closer_than(unit.ground_range * 1.8, unit)
 
