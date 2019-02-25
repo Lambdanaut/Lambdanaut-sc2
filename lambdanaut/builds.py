@@ -238,13 +238,15 @@ OPENER_RAVAGER_HARASS = [
     OVERLORD,  # 2
     EXTRACTOR,  # 2
     OVERLORD,  # 3
-    DRONE,  # 15
+    OVERLORD,  # 4  ( Get an extra in case we lose our aggressive overlords)
     ROACHWARREN,
     ROACH,
     IfHasThenDontBuild(RAVAGER, ROACH, 3),
-    RAVAGER, RAVAGER, RAVAGER, RAVAGER, RAVAGER,
+    RAVAGER, RAVAGER, RAVAGER, RAVAGER,
+    # Pull workers off vespene for 60 seconds
+    PublishMessage(Messages.PULL_WORKERS_OFF_VESPENE_FOR_X_SECONDS, 60),
     QUEEN,
-    DRONE, DRONE, DRONE,  # 18
+    DRONE, DRONE, DRONE, DRONE # 18
 ]
 
 # Suspect enemy cheese but no proof. Get a spawning pool first with Zerglings

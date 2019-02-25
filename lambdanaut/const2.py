@@ -168,18 +168,19 @@ class Messages(enum.Enum):
     DRONE_LEAVING_TO_CREATE_HATCHERY = 23  # Value is Drone's tag
     OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 24  # Move the second overlord scout to the enemy's main ramp
     PULL_WORKERS_OFF_VESPENE = 25  # Value is int of workers to mine vespene. None if return to default.
-    UNROOT_ALL_SPINECRAWLERS = 26  # Message indicating we should uproot and reposition spinecrawlers
+    PULL_WORKERS_OFF_VESPENE_FOR_X_SECONDS = 26  # Value is float of seconds to pull off vespene
+    UNROOT_ALL_SPINECRAWLERS = 27  # Message indicating we should uproot and reposition spinecrawlers
 
     # STATE MACHINE
-    STATE_ENTERED = 27  # Value is State being left
-    STATE_EXITED = 28  # Value is State entered
-    DONT_ATTACK = 29  # Indicates that we shouldn't ever enter ATTACKING or MOVING_TO_ATTACK forces state
-    DONT_DEFEND = 30  # Indicates that we shouldn't ever enter DEFENDING forces state
-    ALLOW_DEFENDING = 31  # Indicates that we can enter the DEFENDING forces state
-    ALLOW_ATTACKING_THROUGH_NYDUS = 32  # Indicates that we can enter the ATTACKING_THROUGH_NYDUS state
+    STATE_ENTERED = 28  # Value is State being left
+    STATE_EXITED = 29  # Value is State entered
+    DONT_ATTACK = 30  # Indicates that we shouldn't ever enter ATTACKING or MOVING_TO_ATTACK forces state
+    DONT_DEFEND = 31  # Indicates that we shouldn't ever enter DEFENDING forces state
+    ALLOW_DEFENDING = 32  # Indicates that we can enter the DEFENDING forces state
+    ALLOW_ATTACKING_THROUGH_NYDUS = 33  # Indicates that we can enter the ATTACKING_THROUGH_NYDUS state
     # Starts an attack and doesn't stop until condition returns True.
     # Val is a function of type [[manager], bool]. It takes the manager that receives the message as input.
-    DONT_STOP_ATTACKING_UNTIL_CONDITION = 33
+    DONT_STOP_ATTACKING_UNTIL_CONDITION = 34
 
 
 # Build Manager Commands

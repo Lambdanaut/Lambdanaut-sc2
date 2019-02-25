@@ -95,9 +95,10 @@ class BuildManager(Manager):
         # Chance of cheese on smaller maps (2 player start locations)
         if len(self.bot.enemy_start_locations) < 3:
             # Start with Ravager harass against terran if the rush distance is short
-            # Average rush distance is around 155. Rush maps with shorter rush distances
+            # Average rush distance is around 155. Longer rush distances are over 160.
+            # Rush maps with shorter rush distances.
             if self.bot.enemy_race in {sc2.Race.Terran, sc2.Race.Protoss} \
-                    and len(self.bot.shortest_path_to_enemy_start_location) < 155:
+                    and len(self.bot.shortest_path_to_enemy_start_location) < 160:
                 self.starting_build = Builds.OPENER_RAVAGER_HARASS
 
     def add_build(self, build: Builds):
@@ -245,7 +246,8 @@ class BuildManager(Manager):
     def parse_special_build_target(self,
                                    unit: builds.SpecialBuildTarget,
                                    existing_unit_counts: Counter,
-                                   build_order_counts: Counter) -> Union[const.UnitTypeId, const.UpgradeId, None]:
+                                   build_order_counts: Counter,
+                                   build_targets: List) -> Union[const.UnitTypeId, const.UpgradeId, None]:
 
         """
         Parses a SpecialBuildTarget `unit` and performs relevant mutations on
@@ -266,7 +268,8 @@ class BuildManager(Manager):
 
             if build_order_counts[unit] < amount_required:
                 if isinstance(unit, builds.SpecialBuildTarget):
-                    return self.parse_special_build_target(unit, existing_unit_counts, build_order_counts)
+                    return self.parse_special_build_target(
+                        unit, existing_unit_counts, build_order_counts, build_targets)
                 else:
                     build_order_counts[unit] = amount_required
                     return unit
@@ -285,7 +288,8 @@ class BuildManager(Manager):
 
             if existing_unit_counts[conditional_unit_type] >= 1:
                 if isinstance(unit, builds.SpecialBuildTarget):
-                    return self.parse_special_build_target(unit, existing_unit_counts, build_order_counts)
+                    return self.parse_special_build_target(
+                        unit, existing_unit_counts, build_order_counts, build_targets)
                 else:
                     build_order_counts[unit] += amount_to_add
                     return unit
@@ -303,7 +307,8 @@ class BuildManager(Manager):
 
             if existing_unit_counts[conditional_unit_type] == 0:
                 if isinstance(unit, builds.SpecialBuildTarget):
-                    return self.parse_special_build_target(unit, existing_unit_counts, build_order_counts)
+                    return self.parse_special_build_target(
+                        unit, existing_unit_counts, build_order_counts, build_targets)
                 else:
                     build_order_counts[unit] += amount_to_add
                     return unit
@@ -326,7 +331,8 @@ class BuildManager(Manager):
 
             if existing_for_each_units:
                 if isinstance(unit, builds.SpecialBuildTarget):
-                    return self.parse_special_build_target(unit, existing_unit_counts, build_order_counts)
+                    return self.parse_special_build_target(
+                        unit, existing_unit_counts, build_order_counts, build_targets)
                 else:
                     build_order_counts[unit] += existing_for_each_units
                     return unit
@@ -341,7 +347,8 @@ class BuildManager(Manager):
             unit = can_afford.unit_type
 
             if isinstance(unit, builds.SpecialBuildTarget):
-                result = self.parse_special_build_target(unit, existing_unit_counts, build_order_counts)
+                result = self.parse_special_build_target(
+                    unit, existing_unit_counts, build_order_counts, build_targets)
                 if self.can_afford(result):
                     return result
             elif self.can_afford(unit):
@@ -374,14 +381,17 @@ class BuildManager(Manager):
 
         elif isinstance(unit, builds.PublishMessage):
             # PublishMessage is a "special" unittype that publishes a message
-            # the first time this build target is hit
+            # the first time this build target is hit.
+            # We ensure `build_targets` is empty so that this is called only when
+            # it's hit for the first time.
 
             publish_message = unit
             message = publish_message.message
             value = publish_message.value
             special_id = publish_message.id
 
-            if special_id not in self.active_special_build_target_ids:
+            if special_id not in self.active_special_build_target_ids \
+                    and not build_targets:
                 self.active_special_build_target_ids.add(special_id)
                 self.publish(message, value)
 
@@ -504,7 +514,7 @@ class BuildManager(Manager):
         # Set the number of hatcheries to be the number of town halls with minerals left
         # (We want to count Lairs and Hives as hatcheries too. They're all expansions)
         townhalls = self.bot.townhalls
-        if townhalls.exists:
+        if townhalls:
             townhall_count = 0
             for townhall in townhalls:
                 minerals = self.bot.state.mineral_field
@@ -540,7 +550,7 @@ class BuildManager(Manager):
                 # Check if the unit is a special conditional unittype
                 if isinstance(unit, builds.SpecialBuildTarget):
                     result = self.parse_special_build_target(
-                        unit, existing_unit_counts, build_order_counts)
+                        unit, existing_unit_counts, build_order_counts, build_targets)
                     if result is not None:
                         unit = result
                 else:

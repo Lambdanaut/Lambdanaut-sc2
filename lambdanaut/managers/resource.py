@@ -34,6 +34,7 @@ class ResourceManager(Manager):
         self.subscribe(Messages.NEW_BUILD)
         self.subscribe(Messages.UPGRADE_STARTED)
         self.subscribe(Messages.PULL_WORKERS_OFF_VESPENE)
+        self.subscribe(Messages.PULL_WORKERS_OFF_VESPENE_FOR_X_SECONDS)
 
         # If this flag is set, pull off gas when zergling speed is researched
         self.pull_off_gas_early = True
@@ -294,6 +295,14 @@ class ResourceManager(Manager):
                 self.ack(message)
 
                 self._ideal_vespene_worker_count = val
+
+            pull_workers_off_vespene_for_x_seconds = {Messages.PULL_WORKERS_OFF_VESPENE_FOR_X_SECONDS}
+            if message in pull_workers_off_vespene_for_x_seconds:
+                # Pull workers off vespene for `n` seconds
+                self.ack(message)
+                self._recent_commands.add(
+                    ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
+                    self.bot.state.game_loop, expiry=val)
 
     async def run(self):
         await super(ResourceManager, self).run()
