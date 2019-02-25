@@ -34,6 +34,8 @@ BUILD = Builds.EARLY_GAME_DEFAULT_OPENER
 
 class LambdaBot(sc2.BotAI):
     def __init__(self):
+        # super(LambdaBot, self).__init__()
+
         self.debug = DEBUG
 
         self.intel_manager = None
@@ -84,6 +86,13 @@ class LambdaBot(sc2.BotAI):
 
         # Copy of self.game_info.pathing_grid except the starting structures are removed
         self.pathing_grid: PixelMap = None
+
+        # Sets enemy_race.
+        # This is a hack to fix a bug on our test maps.
+        try:
+            self.enemy_race = super(LambdaBot, self).enemy_race
+        except AttributeError:
+            self.enemy_race = sc2.data.Race.Zerg
 
     async def on_step(self, iteration):
         self.iteration = iteration
@@ -184,17 +193,6 @@ class LambdaBot(sc2.BotAI):
         self.publish(None, Messages.STRUCTURE_COMPLETE, unit)
 
     @property
-    def enemy_race(self) -> sc2.data.Race:
-        """
-        On testing maps the enemy_race bugs out. Just set their race to Zerg
-        if we get a KeyError.
-        """
-        try:
-            return super(LambdaBot, self).enemy_race
-        except KeyError:
-            return sc2.data.Race.Zerg
-
-    @property
     def start_location(self) -> Point2:
         """Set start location to map center if there is not one"""
         return self.game_info.player_start_location or self.game_info.map_center
@@ -242,12 +240,12 @@ class LambdaBot(sc2.BotAI):
                 await self._client.debug_kill_unit(friendly | enemy)
 
             await self._client.debug_create_unit([[const.RAVAGER, 5, self.start_location - Point2((5, 0)), 1]])
-            await self._client.debug_create_unit([[const.ZEALOT, 3, self.start_location + Point2((9, 0)), 2]])
-            await self._client.debug_create_unit([[const.PROBE, 20, self.start_location + Point2((9, 0)), 2]])
-            await self._client.debug_create_unit([[const.NEXUS, 1, self.start_location + Point2((2, 0)), 2]])
+            await self._client.debug_create_unit([[const.PHOTONCANNON, 4, self.start_location + Point2((6, 0)), 2]])
+            await self._client.debug_create_unit([[const.PYLON, 1, self.start_location + Point2((6, 0)), 2]])
+            await self._client.debug_create_unit([[const.ZEALOT, 5, self.start_location + Point2((9, 0)), 2]])
+            # await self._client.debug_create_unit([[const.PROBE, 20, self.start_location + Point2((9, 0)), 2]])
+            # await self._client.debug_create_unit([[const.NEXUS, 1, self.start_location + Point2((2, 0)), 2]])
             # await self._client.debug_create_unit([[const.MARINE, 12, self.start_location + Point2((6, 0)), 2]])
-            # await self._client.debug_create_unit([[const.PHOTONCANNON, 2, self.start_location + Point2((6, 0)), 2]])
-            # await self._client.debug_create_unit([[const.PYLON, 1, self.start_location + Point2((6, 0)), 2]])
         # await self._client.debug_create_unit([[const.MARINE, 17, self.start_location + Point2((7, 0)), 2]])
         #     await self._client.debug_create_unit([[const.ZERGLING, 3, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
         #     await self._client.debug_create_unit([[const.ZERGLING, 10, self.start_location + Point2((7, random.randint(-7, +7))), 2]])
@@ -329,7 +327,7 @@ class LambdaBot(sc2.BotAI):
                 cached_unit = cache.get(unit.tag)
                 if cached_unit:
                     # Update cached unit health and shield
-                    cached_unit.update(unit)
+                    cached_unit.update(unit, self.state.effects)
 
                 else:
                     new_cached_unit = unit_cache.UnitCached(unit)
@@ -675,7 +673,7 @@ class LambdaBot(sc2.BotAI):
             priority_bonus = 1 if u.type_id in priorities else 5
 
             # Multiply structure values so we prefer non-structures
-            non_structure_bonus = 5 if u.is_structure and u.type_id not in const2.DEFENSIVE_STRUCTURES else 1
+            non_structure_bonus = 5 if u.is_structure else 1
 
             return health * u.distance_to(unit) * priority_bonus * non_structure_bonus
 

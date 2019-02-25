@@ -4,6 +4,7 @@ from typing import Iterable, List, Tuple
 
 import lib.sc2 as sc2
 from lib.sc2.position import Point2
+from lib.sc2.unit import Unit
 import lib.sc2.constants as const
 
 import lambdanaut.const2 as const2
@@ -209,7 +210,13 @@ class MicroManager(Manager):
                                                        cached_abilities_of_unit=abilities,
                                                        only_check_energy_and_cooldown=True)
                     if can_cast:
-                        our_closest_unit_to_enemy = self.bot.units.closest_to(enemy_unit)
+                        if enemy_unit.is_structure:
+                            # Bile at the edge of structure's radius so we don't have to get close
+                            target = enemy_unit.position.towards(ravager.position, enemy_unit.radius)
+                        else:
+                            target = enemy_unit.position
+
+                        our_closest_unit_to_enemy = self.bot.units.closest_to(target)
                         if our_closest_unit_to_enemy.distance_to(enemy_unit.position) > 3:
 
                             # Only bile a forcefield at most once
@@ -217,9 +224,6 @@ class MicroManager(Manager):
                                 if enemy_unit.tag in self.biled_forcefields:
                                     continue
                                 self.biled_forcefields.add(enemy_unit.tag)
-
-                            # Bile at the edge of unit so we don't have to get close
-                            target = enemy_unit.position.towards(ravager.position, enemy_unit.radius)
 
                             self.bot.actions.append(ravager(const.EFFECT_CORROSIVEBILE, target))
                             break
@@ -253,7 +257,7 @@ class MicroManager(Manager):
                                     self.bot.actions.append(ravager.hold_position(queue=True))
 
                         elif ravager.weapon_cooldown \
-                                and closest_enemy.distance_to(ravager) < ravager.ground_range:
+                                and closest_enemy.distance_to(ravager) <= ravager.ground_range:
 
                             # Move a bit further if the enemy is a unit rather than a structure
                             distance_to_move = 1 if closest_enemy.is_structure else 2
@@ -561,25 +565,26 @@ class MicroManager(Manager):
             if egg.health_percentage < 0.1 and 0.03 < egg.build_progress < 0.95:
                 self.bot.actions.append(egg(const.CANCEL))
 
-    async def avoid_biles(self):
-        """Avoid incoming bile attacks"""
-        for bile in filter(lambda e: e.id == const.EffectId.RAVAGERCORROSIVEBILECP,
-                           self.bot.state.effects):
+    def avoid_effects(self):
+        """
+        Avoid incoming enemy effects (Biles, Psi storms, Lurkers, etc)
 
-            for position in bile.positions:
-                units = self.bot.units.closer_than(3, position)
+        This value should be set in the cached unit
+        """
 
-                if units:
-                    for unit in units:
-                        target = position.towards(unit.position, 1)
-                        self.bot.actions.append(unit.move(target))
+        units = self.bot.unit_cache.values()
 
-    async def manage_priority_targeting(self, unit, attack_priorities=None):
+        for unit in units:
+            if unit.avoiding_effect is not None:
+                target = unit.avoiding_effect.towards(unit.position, 4)
+                self.bot.actions.append(unit.move(target))
+
+    async def manage_priority_targeting(self, unit: Unit, attack_priorities=None) -> bool:
         """Handles combat priority targeting for the given unit"""
 
         if unit.is_collecting:
             # Don't priority target if it's a mining worker
-            return
+            return False
 
         enemy_units = self.bot.known_enemy_units
         if enemy_units:
@@ -594,6 +599,8 @@ class MicroManager(Manager):
                     enemy_units, unit, priorities=attack_priorities)
                 if target:
                     self.bot.actions.append(unit.attack(target))
+                    return True
+        return False
 
     async def manage_combat_micro(self):
         """Does default combat micro for units"""
@@ -609,7 +616,7 @@ class MicroManager(Manager):
             nearest_enemy_cluster = army_center.closest(self.bot.enemy_clusters)
             enemy_army_center = nearest_enemy_cluster.position
 
-            nearby_army = [u.snapshot for u in army_cluster if u.type_id not in types_not_to_micro]
+            nearby_army = [u for u in army_cluster if u.type_id not in types_not_to_micro]
             if army_center.distance_to(enemy_army_center) < 17:
                 # Micro against enemy clusters
                 if nearby_army and nearest_enemy_cluster:
@@ -636,17 +643,21 @@ class MicroManager(Manager):
                             nearest_enemy_unit = unit.position.closest(nearest_enemy_cluster)
                             unit_is_combatant = unit.type_id not in const2.NON_COMBATANTS
 
+                            # Don't micro a unit if he's avoiding an effect
+                            if unit.avoiding_effect is not None:
+                                pass
+
                             # Attack the closest worker if there are no attackable nearby units
-                            if not attackable_non_workers and nearby_workers and not unit.is_moving:
+                            elif not attackable_non_workers and nearby_workers and not unit.is_moving:
                                 closest_worker = unit.position.closest(nearby_workers)
-                                self.bot.actions.append(unit.attack(closest_worker))
+                                self.bot.actions.append(unit.snapshot.attack(closest_worker))
 
                             # Back off from enemy if our cluster is much weaker
                             elif army_strength < -5 and unit_is_combatant:
                                 if self.bot.is_melee(unit):
                                     away_from_enemy = unit.position.towards(
                                         nearest_enemy_unit, -2)
-                                    self.bot.actions.append(unit.move(away_from_enemy))
+                                    self.bot.actions.append(unit.snapshot.move(away_from_enemy))
                                     # away_from_enemy = army_center.towards(
                                     #     nearest_enemy_unit, -7)
                                     # self.bot.actions.append(unit.move(away_from_enemy))
@@ -654,7 +665,7 @@ class MicroManager(Manager):
                                     # Ranged units only move back while we're on cooldown
                                     away_from_enemy = unit.position.towards(
                                         nearest_enemy_unit, -2)
-                                    self.bot.actions.append(unit.move(away_from_enemy))
+                                    self.bot.actions.append(unit.snapshot.move(away_from_enemy))
                             # Close the distance if our cluster isn't in range
                             elif unit_is_combatant and ranged_units_in_attack_range_ratio < 0.8 \
                                     and len(army_cluster) > 6 \
@@ -665,7 +676,7 @@ class MicroManager(Manager):
                                 how_far_to_move = 1
                                 towards_enemy = unit.position.towards(
                                     nearest_enemy_unit, how_far_to_move)
-                                self.bot.actions.append(unit.move(towards_enemy))
+                                self.bot.actions.append(unit.snapshot.move(towards_enemy))
 
                             # Handle combat priority targeting
                             else:
@@ -677,7 +688,7 @@ class MicroManager(Manager):
                                     const.INFESTOR, const.QUEEN, const.LURKERMP, const.LURKERMPBURROWED,
                                     const.ULTRALISK, const.BROODLORD,
                                 }
-                                await self.manage_priority_targeting(unit, attack_priorities=priorities)
+                                await self.manage_priority_targeting(unit.snapshot, attack_priorities=priorities)
 
     async def read_messages(self):
         """
@@ -703,7 +714,8 @@ class MicroManager(Manager):
         # Do combat micro (moving closer/further away from enemy units)
         await self.manage_combat_micro()
 
-        await self.avoid_biles()
+        self.avoid_effects()
+
         await self.manage_workers()
         await self.manage_zerglings()
         await self.manage_banelings()

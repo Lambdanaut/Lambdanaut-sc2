@@ -415,7 +415,8 @@ class ForceManager(StatefulManager):
         nearby_target = self.bot.find_nearby_pathable_point(nearby_target)
 
         for unit in army:
-            self.bot.actions.append(unit.attack(nearby_target))
+            if not unit.is_attacking and not unit.is_moving:
+                self.bot.actions.append(unit.attack(nearby_target))
 
     async def start_attacking(self):
         # Command for when attacking starts
