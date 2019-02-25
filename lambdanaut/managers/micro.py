@@ -632,7 +632,7 @@ class MicroManager(Manager):
                                       if u.type_id in const2.WORKERS and u.distance_to(army_center) < 35]
 
                     for unit in nearby_army:
-                        if unit.movement_speed > 0 and not unit.is_collecting:
+                        if unit.movement_speed > 0 and not unit.type_id in const2.WORKERS:
 
                             # If there are no enemies that we want to attack nearby, but there are workers,
                             # then attack the workers
