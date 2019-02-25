@@ -558,6 +558,16 @@ class LambdaBot(sc2.BotAI):
 
         return adjacents
 
+    def point_between_townhall_and_resources(self, townhall):
+        nearest_minerals = self.state.mineral_field.closer_than(8, townhall.position)
+        nearest_gas = self.state.vespene_geyser.closer_than(8, townhall.position)
+        nearest_resources = nearest_minerals | nearest_gas
+
+        if nearest_resources:
+            return nearest_resources.center
+        else:
+            return townhall.position
+
     def is_melee(self, unit: Unit) -> bool:
         return unit.ground_range < 1.5 and unit.can_attack_ground
 

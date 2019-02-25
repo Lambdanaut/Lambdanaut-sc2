@@ -198,7 +198,7 @@ class BuildManager(Manager):
                 self.ack(message)
                 self.add_build(Builds.EARLY_GAME_SPORE_CRAWLERS)
 
-
+            if True: self.add_build(Builds.EARLY_GAME_SPORE_CRAWLERS)
 
             # Messages indicating roach_hydra mid game is ideal
             roach_hydra_mid_game = {
@@ -328,10 +328,9 @@ class BuildManager(Manager):
             unit = one_for_each.unit_type
             for_each_unit_type = one_for_each.for_each_unit_type
 
-            try:
-                existing_for_each_units = existing_unit_counts[for_each_unit_type]
-            except IndexError:
-                existing_for_each_units = 0
+            assert isinstance(for_each_unit_type, const.UnitTypeId)
+
+            existing_for_each_units = len(self.bot.units(for_each_unit_type).ready)
 
             if existing_for_each_units:
                 if isinstance(unit, builds.SpecialBuildTarget):
@@ -778,32 +777,43 @@ class BuildManager(Manager):
         elif build_target == const.SPORECRAWLER:
             townhalls = self.bot.townhalls.ready
 
-            if townhalls.exists:
+            if townhalls:
                 if self.can_afford(build_target):
                     spore_crawlers = self.bot.units(const.SPORECRAWLER)
 
-                    if spore_crawlers.exists:
+                    target = None
+                    if spore_crawlers:
                         # Attempt to find a townhall with no sporecrawlers
                         for townhall in townhalls:
-                            nearest_sc = spore_crawlers.closest_to(townhall)
-                            distance_to_sc = townhall.distance_to(nearest_sc)
-                            if distance_to_sc > 10:
+                            near_sc = spore_crawlers.closer_than(6, townhall)
+                            if not len(near_sc):
+                                target = self.bot.point_between_townhall_and_resources(townhall)
+                                towards_resources = townhall.position.towards_with_random_angle(target, 2)
+                                target = towards_resources
+
                                 break
-                    else:
-                        townhall = townhalls.random
+                        else:
+                            # If all townhalls are saturated with spore crawlers, find a nearby ramp
+                            nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
+                            nearby_ramps = [ramp for ramp in nearby_ramps
+                                            if townhalls.closer_than(20, ramp)]
+                            if nearby_ramps:
+                                # Sort ramps closest to start location
+                                nearby_ramps = sorted(
+                                    nearby_ramps,
+                                    key=lambda r: r.distance_to(self.bot.start_location))
 
-                    location = townhall.position
-                    nearest_minerals = self.bot.state.mineral_field.closer_than(8, townhall)
-                    nearest_gas = self.bot.state.vespene_geyser.closer_than(8, townhall)
-                    nearest_resources = nearest_minerals | nearest_gas
+                                for ramp in nearby_ramps:
+                                    if not spore_crawlers.closer_than(6, ramp):
+                                        target = ramp
 
-                    if nearest_resources.exists:
+                    if target is None:
+                        townhall = townhalls.random.position
+                        target = self.bot.point_between_townhall_and_resources(townhall)
+                        towards_resources = townhall.position.towards_with_random_angle(target, 2)
+                        target = towards_resources
 
-                        towards_resources = townhall.position.towards_with_random_angle(
-                            nearest_resources.center, 2)
-                        location = towards_resources
-
-                    await self.bot.build(build_target, near=location)
+                    await self.bot.build(build_target, near=target)
 
                     return True
 

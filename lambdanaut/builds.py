@@ -85,6 +85,10 @@ class OneForEach(SpecialBuildTarget):
     Functionally it means that for each `for_each_unit_type` we have built,
     add on a `unit_type` to the build queue.
 
+    NOTE: This checks on units we've created that are finished and ready.
+          An in-construction hatchery doesn't count.
+          Also, `for_each_unit_type` MUST be a UnitTypeId. No Upgrades.
+
     Example that will build a baneling for each Zergling with have. If we
     have 5 zerglings, build 5 banelings.
         BUILD = [
@@ -94,7 +98,7 @@ class OneForEach(SpecialBuildTarget):
     def __init__(self, unit_type, for_each_unit_type):
         super(OneForEach, self).__init__()
 
-        self.for_each_unit_type = for_each_unit_type
+        self.for_each_unit_type: UnitTypeId = for_each_unit_type
         self.unit_type = unit_type
 
 
@@ -328,6 +332,8 @@ EARLY_GAME_SPORE_CRAWLERS = [
     ZERGLINGMOVEMENTSPEED,
     ZERGLING, ZERGLING,
     OneForEach(SPORECRAWLER, HATCHERY),  # One Spore Crawler for each Hatchery we own
+    OneForEach(SPORECRAWLER, HATCHERY),  # Another Spore Crawler for each Hatchery we own
+    SPORECRAWLER,  # One more because who needs drones anyways
     QUEEN,  # 2
     QUEEN,  # 3
     QUEEN,  # 4

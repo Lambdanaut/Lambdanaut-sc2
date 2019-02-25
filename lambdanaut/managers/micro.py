@@ -631,7 +631,6 @@ class MicroManager(Manager):
                             unit_is_combatant = unit.type_id not in const2.NON_COMBATANTS
 
                             # Attack the closest worker if there are no attackable nearby units
-                            print(attackable_enemy)
                             if not attackable_enemy and nearby_workers:
                                 closest_worker = unit.position.closest(nearby_workers)
                                 self.bot.actions.append(unit.attack(closest_worker))
