@@ -33,7 +33,8 @@ MAPS = [
 
 MAP_NAME = "KairosJunctionLE"
 MICRO_MAP_NAME = "kairo_training"
-REALTIME = False
+REALTIME = True
+# REALTIME = False
 
 # BUILD = sc2.AIBuild.RandomBuild
 # BUILD = sc2.AIBuild.Rush
@@ -62,7 +63,6 @@ if not BUILD:
 TESTING_MICRO = lambdanaut.CREATE_DEBUG_UNITS
 if TESTING_MICRO:
     MAP_NAME = MICRO_MAP_NAME
-
 
 
 # Start game

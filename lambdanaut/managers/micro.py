@@ -567,7 +567,7 @@ class MicroManager(Manager):
 
                 if units:
                     for unit in units:
-                        target = position.towards(unit.position, 2)
+                        target = position.towards(unit.position, 1)
                         self.bot.actions.append(unit.move(target))
 
     async def manage_priority_targeting(self, unit, attack_priorities=None):
@@ -626,14 +626,14 @@ class MicroManager(Manager):
                             attackable_non_workers = \
                                 [u for u in self.bot.known_enemy_units.ready
                                  if self.bot.can_attack(unit, u)
-                                 and u not in const2.WORKERS
+                                 and u.type_id not in const2.WORKERS
                                  and (not u.is_structure or u.type_id in const2.DEFENSIVE_STRUCTURES)]
 
                             nearest_enemy_unit = unit.position.closest(nearest_enemy_cluster)
                             unit_is_combatant = unit.type_id not in const2.NON_COMBATANTS
 
                             # Attack the closest worker if there are no attackable nearby units
-                            if not attackable_non_workers and nearby_workers:
+                            if not attackable_non_workers and nearby_workers and not unit.is_moving:
                                 closest_worker = unit.position.closest(nearby_workers)
                                 self.bot.actions.append(unit.attack(closest_worker))
 
@@ -668,7 +668,7 @@ class MicroManager(Manager):
                                 priorities = {
                                     const.SIEGETANK, const.SIEGETANKSIEGED, const.MEDIVAC, const.CYCLONE,
                                     const.COLOSSUS, const.WARPPRISM, const.ARCHON, const.HIGHTEMPLAR,
-                                    const.DARKTEMPLAR, const.DISRUPTOR, const.IMMORTAL,
+                                    const.DARKTEMPLAR, const.DISRUPTOR,
                                     const.INFESTOR, const.QUEEN, const.LURKERMP, const.LURKERMPBURROWED,
                                     const.ULTRALISK, const.BROODLORD,
                                 }

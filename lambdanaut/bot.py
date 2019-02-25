@@ -244,7 +244,7 @@ class LambdaBot(sc2.BotAI):
                 await self._client.debug_kill_unit(friendly | enemy)
 
             await self._client.debug_create_unit([[const.RAVAGER, 5, self.start_location - Point2((5, 0)), 1]])
-            await self._client.debug_create_unit([[const.SCV, 20, self.start_location + Point2((13, 0)), 2]])
+            await self._client.debug_create_unit([[const.SCV, 20, self.start_location + Point2((9, 0)), 2]])
             await self._client.debug_create_unit([[const.SUPPLYDEPOT, 5, self.start_location + Point2((2, 0)), 2]])
             # await self._client.debug_create_unit([[const.MARINE, 12, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.PHOTONCANNON, 2, self.start_location + Point2((6, 0)), 2]])
