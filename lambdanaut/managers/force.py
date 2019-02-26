@@ -192,8 +192,10 @@ class ForceManager(StatefulManager):
         townhalls = self.bot.townhalls
 
         if townhalls:
-            # Call back army that is far away
-            for unit in army.idle:
+            # Call back army that is far away if they don't have nearby enemies
+            army_away_from_enemies = army.filter(
+                lambda u: self.bot.known_enemy_units.closer_than(11, u) == 0)
+            for unit in army_away_from_enemies:
                 closest_townhall = townhalls.closest_to(unit)
                 if closest_townhall.distance_to(unit) > 30:
                     self.bot.actions.append(unit.attack(closest_townhall.position))
@@ -272,7 +274,7 @@ class ForceManager(StatefulManager):
                 # Workers attack enemy
                 ground_enemies = [enemy for enemy in enemies_nearby if not enemy.is_flying]
                 workers = self.bot.workers.closer_than(14, enemies_nearby[0].position)
-                if len(workers) > len(ground_enemies):
+                if ground_enemies and len(workers) > len(ground_enemies):
                     for worker in workers:
                         if worker.tag in self.bot.workers_defending:
                             target = self.bot.closest_and_most_damaged(ground_enemies, worker)

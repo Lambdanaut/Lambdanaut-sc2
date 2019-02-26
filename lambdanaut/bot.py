@@ -182,8 +182,9 @@ class LambdaBot(sc2.BotAI):
         self.publish(None, Messages.UNIT_CREATED, unit)
 
         # Always allow banelings to attack structures
-        if unit.type_id == const.BANELING:
-            self.actions.append(unit(const.BEHAVIOR_BUILDINGATTACKON))
+        # Commented out
+        # if unit.type_id == const.BANELING:
+        #     self.actions.append(unit(const.BEHAVIOR_BUILDINGATTACKON))
 
     async def on_unit_destroyed(self, unit_tag):
         # Remove destroyed units from caches
@@ -655,6 +656,8 @@ class LambdaBot(sc2.BotAI):
                     # If the enemy has enough enemies around him, then call
                     # `action` on it
                     action(unit, greatest_priority)
+                    return True
+        return False
 
     def count_units_in_attack_range(self, units1, units2, ranged_only=False):
         """
