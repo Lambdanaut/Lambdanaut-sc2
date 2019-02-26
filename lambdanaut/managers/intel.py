@@ -187,10 +187,16 @@ class IntelManager(Manager):
                         const.ZEALOT, const.ADEPT, const.STALKER}
 
             enemy_counter = Counter()
+            nearby_enemy_counter = Counter()
 
             for unit in enemy:
                 if unit.type_id in units_to_count:
                     enemy_counter[unit.type_id] += 1
+
+                    proximity = unit.position.distance_to(self.bot.start_location)
+                    if proximity < self.bot.start_location_to_enemy_start_location_distance * 0.7:
+                        nearby_enemy_counter[unit.type_id] += 1
+
 
             if (enemy_counter[const.ZERGLING] >= 6
                     or enemy_counter[const.ROACH] >= 1
