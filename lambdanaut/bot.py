@@ -311,8 +311,9 @@ class LambdaBot(sc2.BotAI):
         Updates the position of k-means clusters we keep of units
         """
 
-        types_to_exclude = {const.OVERLORD, const.CREEPTUMORBURROWED, const.CREEPTUMOR, const.SPINECRAWLERUPROOTED,
-                            const.LARVA, const.UnitTypeId.EGG}
+        types_to_exclude = const2.CHANGELING | {
+            const.OVERLORD, const.CREEPTUMORBURROWED, const.CREEPTUMOR, const.SPINECRAWLERUPROOTED, const.LARVA,
+            const.UnitTypeId.EGG}
 
         our_army = [u for u in self.unit_cache.values() if u.type_id not in types_to_exclude]
         enemy_army = [u for u in self.enemy_cache.values() if u.type_id not in types_to_exclude]

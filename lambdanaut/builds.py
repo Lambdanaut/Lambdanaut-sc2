@@ -312,10 +312,10 @@ EARLY_GAME_POOL_FIRST_DEFENSIVE = [
     DRONE,
     CanAfford(ZERGLINGMOVEMENTSPEED),
     DRONE, DRONE,
-    IfHasThenDontBuild(ROACHWARREN, BANELING, 8),
+    IfHasThenDontBuild(ROACHWARREN, BANELING, 4),
     EXTRACTOR,
     QUEEN,
-    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 16),
+    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 20),
 ]
 
 # Get a spawning pool first with Zerglings for an all-in rush

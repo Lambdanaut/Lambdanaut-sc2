@@ -198,7 +198,8 @@ class IntelManager(Manager):
                         nearby_enemy_counter[unit.type_id] += 1
 
 
-            if (enemy_counter[const.ZERGLING] >= 6
+            # Count any and all enemy units
+            if (enemy_counter[const.ZERGLING] >= 7
                     or enemy_counter[const.ROACH] >= 1
                     or enemy_counter[const.MARINE] >= 5
                     or enemy_counter[const.REAPER] >= 2
@@ -207,6 +208,18 @@ class IntelManager(Manager):
                     or enemy_counter[const.ADEPT] >= 3
                     or enemy_counter[const.STALKER] >= 3):
                 return True
+
+            # Count nearby enemy units
+            elif (nearby_enemy_counter[const.ZERGLING] >= 4
+                    or nearby_enemy_counter[const.ROACH] >= 1
+                    or nearby_enemy_counter[const.MARINE] >= 1
+                    or nearby_enemy_counter[const.REAPER] >= 2
+                    or nearby_enemy_counter[const.MARAUDER] >= 1
+                    or nearby_enemy_counter[const.ZEALOT] >= 1
+                    or nearby_enemy_counter[const.ADEPT] >= 2
+                    or nearby_enemy_counter[const.STALKER] >= 1):
+                return True
+
             return False
 
     async def assess_game(self):
