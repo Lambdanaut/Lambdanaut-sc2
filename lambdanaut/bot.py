@@ -66,6 +66,9 @@ class LambdaBot(sc2.BotAI):
         # Townhall tag -> Queen tag mapping of what queens belong to what townhalls
         self.townhall_queens: Dict[int, int] = {}
 
+        # Set of worker ids of workers currently defending an attack.
+        self.workers_defending = set()
+
         # Map of all our unit's tags to UnitCached objects with their remembered
         # properties (Last health, shields, location, etc)
         self.unit_cache = {}

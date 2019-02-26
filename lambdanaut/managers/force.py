@@ -79,9 +79,6 @@ class ForceManager(StatefulManager):
         # enemies since we last switched to the DEFENDING state
         self.published_defending_against_multiple_enemies = False
 
-        # Set of worker ids of workers defending an attack.
-        self.workers_defending = set()
-
         # Set of banelings attacking mineral lines
         self.banelings_harassing = set()
 
@@ -277,23 +274,23 @@ class ForceManager(StatefulManager):
                 workers = self.bot.workers.closer_than(14, enemies_nearby[0].position)
                 if len(workers) > len(ground_enemies):
                     for worker in workers:
-                        if worker.tag in self.workers_defending:
+                        if worker.tag in self.bot.workers_defending:
                             target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
                             if target.type_id not in worker_non_targets:
                                 self.bot.actions.append(worker.attack(target))
 
                         else:
                             # Add workers to defending workers and attack nearby enemy
-                            if len(self.workers_defending) <= len(ground_enemies):
+                            if len(self.bot.workers_defending) <= len(ground_enemies):
                                 target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
                                 if target.type_id not in worker_non_targets:
-                                    self.workers_defending.add(worker.tag)
+                                    self.bot.workers_defending.add(worker.tag)
                                     self.bot.actions.append(worker.attack(target.position))
                 else:
                     # If they have more than us, stop the worker from defending
                     for worker in workers:
-                        if worker.tag in self.workers_defending:
-                            self.workers_defending.remove(worker.tag)
+                        if worker.tag in self.bot.workers_defending:
+                            self.bot.workers_defending.remove(worker.tag)
                             self.bot.actions.append(worker.stop())
 
                 # Have nearest queen defend
@@ -365,7 +362,7 @@ class ForceManager(StatefulManager):
 
             # Bring back defending workers that have drifted too far from town halls
             workers_defending_to_remove = set()
-            for worker_id in self.workers_defending:
+            for worker_id in self.bot.workers_defending:
                 worker = self.bot.workers.find_by_tag(worker_id)
                 if worker:
                     townhalls = self.bot.townhalls.ready
@@ -378,19 +375,19 @@ class ForceManager(StatefulManager):
                     workers_defending_to_remove.add(worker_id)
 
             # Remove workers from defending set
-            self.workers_defending -= workers_defending_to_remove
+            self.bot.workers_defending -= workers_defending_to_remove
 
     async def stop_defending(self):
         # Cleanup workers that were defending and send them back to their townhalls
         for worker in self.bot.workers:
             nearest_townhall = self.bot.townhalls.ready.closest_to(worker.position)
 
-            if worker.tag in self.workers_defending:
+            if worker.tag in self.bot.workers_defending:
                 self.bot.actions.append(worker.move(nearest_townhall.position))
             elif worker.distance_to(nearest_townhall) > 14:
                 self.bot.actions.append(worker.move(nearest_townhall.position))
 
-        self.workers_defending.clear()  # Remove worker ids from set
+        self.bot.workers_defending.clear()  # Remove worker ids from set
 
         # Reset flag saying that we're defending against multiple enemies
         self.published_defending_against_multiple_enemies = False
