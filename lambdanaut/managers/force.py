@@ -383,7 +383,7 @@ class ForceManager(StatefulManager):
     async def stop_defending(self):
         # Cleanup workers that were defending and send them back to their townhalls
         for worker in self.bot.workers:
-            nearest_townhall = self.bot.townhalls.closest_to(worker.position)
+            nearest_townhall = self.bot.townhalls.ready.closest_to(worker.position)
 
             if worker.tag in self.workers_defending:
                 self.bot.actions.append(worker.move(nearest_townhall.position))

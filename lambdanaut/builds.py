@@ -191,6 +191,20 @@ EARLY_GAME_DEFAULT_OPENER = [
     DRONE,  # 18
 ]
 
+# Early game cautious opener
+EARLY_GAME_CAUTIOUS_OPENER = [
+    HATCHERY,  # 1
+    OVERLORD,  # 1
+    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,  # 12
+    DRONE,  # 13
+    OVERLORD,  # 2
+    DRONE,  # 14
+    DRONE,  # 15
+    DRONE,  # 16
+    DRONE,  # 17
+    DRONE,  # 18
+]
+
 # Ravager all-in with no transition
 RAVAGER_ALL_IN = [
     PublishMessage(Messages.DONT_DEFEND),  # Publish a message saying we shouldn't switch to DEFENDING
@@ -287,8 +301,8 @@ EARLY_GAME_POOL_FIRST_DEFENSIVE = [
     IfHasThenDontBuild(ROACHWARREN, CanAfford(BANELINGNEST)),
     ZERGLING, ZERGLING,
     ZERGLING, ZERGLING,
-    CanAfford(SPINECRAWLER),
     IfHasThenDontBuild(ROACHWARREN, BANELING, 4),  # Build 4 banelings until we get a roach warren
+    CanAfford(SPINECRAWLER),
     HATCHERY,
     QUEEN,
     CanAfford(SPINECRAWLER),

@@ -656,9 +656,6 @@ class MicroManager(Manager):
                                     away_from_enemy = unit.position.towards(
                                         nearest_enemy_unit, -2)
                                     self.bot.actions.append(unit.snapshot.move(away_from_enemy))
-                                    # away_from_enemy = army_center.towards(
-                                    #     nearest_enemy_unit, -7)
-                                    # self.bot.actions.append(unit.move(away_from_enemy))
                                 elif unit.weapon_cooldown:
                                     # Ranged units only move back while we're on cooldown
                                     away_from_enemy = unit.position.towards(
