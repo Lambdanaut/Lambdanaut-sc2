@@ -116,32 +116,33 @@ class MicroManager(Manager):
         banelings = self.bot.units(const.BANELING)
         burrowed_banelings = self.bot.units(const.UnitTypeId.BANELINGBURROWED)
 
-        attack_priorities = const2.WORKERS | {
-            const.MARINE, const.ZERGLING, const.ZEALOT}
+        if banelings:
+            attack_priorities = const2.WORKERS | {
+                const.MARINE, const.ZERGLING, const.ZEALOT}
 
-        structure_attack_priorities = {const.SUPPLYDEPOT, const.BUNKER,
-                                       const.PYLON, const.PHOTONCANNON, const.SHIELDBATTERY,
-                                       const.SPINECRAWLER}
+            structure_attack_priorities = {const.SUPPLYDEPOT, const.BUNKER, const.STARPORTTECHLAB, const.FACTORYTECHLAB,
+                                           const.PYLON, const.PHOTONCANNON, const.SHIELDBATTERY,
+                                           const.SPINECRAWLER}
 
-        # Splash action to perform on enemies
-        def splash_action(baneling, enemy):
-            if baneling.distance_to(enemy) < 2:
-                self.bot.actions.append(baneling.attack(enemy))
-            else:
-                self.bot.actions.append(baneling.move(enemy.position))
+            # Splash action to perform on enemies
+            def splash_action(baneling, enemy):
+                if baneling.distance_to(enemy) < 2:
+                    self.bot.actions.append(baneling.attack(enemy))
+                else:
+                    self.bot.actions.append(baneling.move(enemy.position))
 
-        # Micro banelings towards priority targets, calling `splash_action` on them.
-        if not self.bot.splash_on_enemies(
-            units=banelings,
-            action=splash_action,
-            search_range=10,
-            priorities=attack_priorities,):
+            # Micro banelings towards priority targets, calling `splash_action` on them.
+            if not self.bot.splash_on_enemies(
+                    units=banelings,
+                    action=splash_action,
+                    search_range=10,
+                    priorities=attack_priorities):
 
-            # Attack buildings if we're not utilizing our splash
-            for baneling in banelings:
-                for structure in self.bot.known_enemy_units(
-                        structure_attack_priorities).closer_than(8, baneling):
-                    self.bot.actions.append(baneling.attack(structure))
+                # Attack buildings if we're not utilizing our splash
+                structures_to_attack = self.bot.known_enemy_units(structure_attack_priorities)
+                for baneling in banelings:
+                    for structure in structures_to_attack.closer_than(8, baneling):
+                        self.bot.actions.append(baneling.attack(structure))
 
         # Unburrow banelings if enemy nearby
         for baneling in burrowed_banelings:
@@ -673,6 +674,7 @@ class MicroManager(Manager):
                                     away_from_enemy = unit.position.towards(
                                         nearest_enemy_unit, -2)
                                     self.bot.actions.append(unit.snapshot.move(away_from_enemy))
+
                             # Close the distance if our cluster isn't in range
                             elif unit_is_combatant and ranged_units_in_attack_range_ratio < 0.8 \
                                     and len(army_cluster) > 6 \

@@ -3,7 +3,7 @@ DEBUG = True
 
 # Creates debug units and uses debug map if True
 # `DEBUG` must also be true
-CREATE_DEBUG_UNITS = False
+CREATE_DEBUG_UNITS = True
 
 # Shell script `zip_project.sh` relies on these print statements
 print("lambdanaut-v{}".format(VERSION))

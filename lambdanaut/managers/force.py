@@ -262,7 +262,7 @@ class ForceManager(StatefulManager):
 
         for th in self.bot.townhalls:
             enemies_nearby = [u.snapshot for u in self.bot.enemy_cache.values()
-                              if u.distance_to(th) < 30]
+                              if u.distance_to(th) < 60]
 
             if enemies_nearby:
                 # Publish message if there are multiple enemies
@@ -750,7 +750,11 @@ class ForceManager(StatefulManager):
                     # Enemies found, don't change state.
                     break
             else:
-                return await self.change_state(self.previous_state)
+                units_attacking = self.bot.units.filter(lambda u: u.is_attacking and not u.is_moving)
+
+                # If none of our units are still attacking, change state
+                if not units_attacking:
+                    return await self.change_state(self.previous_state)
 
         # MOVING_TO_ATTACK
         elif self.state == ForcesStates.MOVING_TO_ATTACK:
