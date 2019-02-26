@@ -148,10 +148,10 @@ class IntelManager(Manager):
         enemy_units = self.bot.known_enemy_units
         exclude_nonarmy_types = const2.WORKERS | {const.OVERLORD, const.OVERSEER}
         enemy_units = enemy_units.exclude_type(exclude_nonarmy_types).not_structure.\
-            closer_than(80, self.bot.enemy_start_location)
+            closer_than(60, self.bot.enemy_start_location)
 
         closer_enemy_counts = 0
-        if len(enemy_units) > 3:
+        if len(enemy_units) > 2:
             for enemy_unit in enemy_units:
                 if self.bot.moving_closer_to(
                         unit=enemy_unit,

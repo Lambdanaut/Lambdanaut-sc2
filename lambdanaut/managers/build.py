@@ -229,6 +229,7 @@ class BuildManager(Manager):
                     self.stop_townhall_production = True
                     self.stop_worker_production = True
 
+            # Switch to Defensive build if early game
             # Stop townhall and worker production for a short duration
             stop_non_army_production = {
                 Messages.ENEMY_MOVING_OUT_SCOUTED}
@@ -237,6 +238,11 @@ class BuildManager(Manager):
 
                 self._stop_nonarmy_production.add(
                     True, self.bot.state.game_loop, expiry=25)
+
+                if self.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
+                    if Builds.EARLY_GAME_SPORE_CRAWLERS not in self.builds:
+                        # Switch to a defensive build
+                        self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
 
             # Restart townhall and worker production when defending stops
             exit_state = {Messages.STATE_EXITED, }
