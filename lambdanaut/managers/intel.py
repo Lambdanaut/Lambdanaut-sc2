@@ -1,5 +1,8 @@
+from collections import Counter
+
 import lib.sc2.constants as const
 
+from lambdanaut.builds import BuildStages
 from lambdanaut.expiringlist import ExpiringList
 import lambdanaut.const2 as const2
 from lambdanaut.const2 import ForcesStates, Messages
@@ -23,6 +26,7 @@ class IntelManager(Manager):
         self.has_scouted_enemy_air_tech = False
         self.has_scouted_enemy_counter_with_roaches = False
         self.has_scouted_enemy_counter_midgame_broodlord_rush = False
+        self.has_scouted_enemy_rush = False
         self.has_scouted_enemy_greater_force = ExpiringList()  # Will contain True or nothing
 
         self.subscribe(Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION)
@@ -73,7 +77,7 @@ class IntelManager(Manager):
                 self.bot.enemy_start_location = new_enemy_start_location
                 self.bot.update_shortest_path_to_enemy_start_location()
 
-    def enemy_counter_with_midgame_broodlord_rush(self):
+    def enemy_counter_with_midgame_broodlord_rush(self) -> bool:
         """Checks the map to see if there are any visible units we should counter with a broodlord rush"""
         if not self.has_scouted_enemy_counter_midgame_broodlord_rush:
 
@@ -87,7 +91,7 @@ class IntelManager(Manager):
 
         return False
 
-    def enemy_counter_with_midgame_roach_spotted(self):
+    def enemy_counter_with_midgame_roach_spotted(self) -> bool:
         """Checks the map to see if there are any visible units we should counter with roach/hydra"""
         if not self.has_scouted_enemy_counter_with_roaches:
             enemy_counter_with_roach_types = {
@@ -108,7 +112,7 @@ class IntelManager(Manager):
 
         return False
 
-    def enemy_air_tech_scouted(self):
+    def enemy_air_tech_scouted(self) -> bool:
         """Checks the map to see if there are any visible enemy air tech"""
         if not self.has_scouted_enemy_air_tech:
             enemy_air_tech_types = {
@@ -126,7 +130,7 @@ class IntelManager(Manager):
 
         return False
 
-    def greater_enemy_force_scouted(self):
+    def greater_enemy_force_scouted(self) -> bool:
         if not self.has_scouted_enemy_greater_force.contains(
                 True, self.bot.state.game_loop):
 
@@ -141,14 +145,14 @@ class IntelManager(Manager):
 
             return False
 
-    def enemy_moving_out_scouted(self):
+    def enemy_moving_out_scouted(self) -> bool:
         """
         Checks to see if enemy units are moving out towards us
         """
         enemy_units = self.bot.known_enemy_units
         exclude_nonarmy_types = const2.WORKERS | {const.OVERLORD, const.OVERSEER}
         enemy_units = enemy_units.exclude_type(exclude_nonarmy_types).not_structure.\
-            closer_than(60, self.bot.enemy_start_location)
+            closer_than(80, self.bot.enemy_start_location)
 
         closer_enemy_counts = 0
         if len(enemy_units) > 2:
@@ -159,13 +163,43 @@ class IntelManager(Manager):
                         point=self.bot.start_location):
                     closer_enemy_counts += 1
 
-            # At least 6 enemy units were spotted moving closer to us for 10 iterations
+            # At least 4 enemy units were spotted moving closer to us for 10 iterations
             # Also the force manager is not currently attacking or moving to attack
             if self.bot.force_manager.state not in {ForcesStates.ATTACKING, ForcesStates.MOVING_TO_ATTACK} and \
-                    closer_enemy_counts > 5:
+                    closer_enemy_counts > 3:
+                self.has_scouted_enemy_rush = True
                 return True
 
         return False
+
+    def enemy_rush_scouted(self) -> bool:
+        """
+        Checks to see if we're being rushed
+        """
+
+        if self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
+            enemy = self.bot.cached_known_enemy_units.values()
+
+            units_to_count = {const.ZERGLING, const.ROACH, const.RAVAGER,
+                        const.MARINE, const.REAPER, const.MARAUDER,
+                        const.ZEALOT, const.ADEPT, const.STALKER}
+
+            enemy_counter = Counter()
+
+            for unit in enemy:
+                if unit.type_id in units_to_count:
+                    enemy_counter[unit.type_id] += 1
+
+            if (enemy_counter[const.ZERGLING] >= 4
+                    or enemy_counter[const.ROACH] >= 1
+                    or enemy_counter[const.MARINE] >= 6
+                    or enemy_counter[const.REAPER] >= 2
+                    or enemy_counter[const.MARAUDER] >= 3
+                    or enemy_counter[const.ZEALOT] >= 4
+                    or enemy_counter[const.ADEPT] >= 3
+                    or enemy_counter[const.STALKER] >= 3):
+                return True
+            return False
 
     async def assess_game(self):
         """
@@ -184,6 +218,8 @@ class IntelManager(Manager):
                 self.publish(Messages.FOUND_ENEMY_EARLY_AGGRESSION)
         if self.enemy_moving_out_scouted():
             self.publish(Messages.ENEMY_MOVING_OUT_SCOUTED)
+        if self.enemy_rush_scouted():
+            self.publish(Messages.FOUND_ENEMY_RUSH)
 
     async def run(self):
         await self.read_messages()

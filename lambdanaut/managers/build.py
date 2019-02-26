@@ -175,7 +175,8 @@ class BuildManager(Manager):
             rush_detected = {
                 Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY,
                 Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH,
-                Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH}
+                Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH,
+                Messages.FOUND_ENEMY_RUSH}
             if message in rush_detected:
                 self.ack(message)
 

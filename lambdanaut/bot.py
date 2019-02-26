@@ -38,12 +38,12 @@ class LambdaBot(sc2.BotAI):
 
         self.debug = DEBUG
 
-        self.intel_manager = None
-        self.build_manager = None
-        self.resource_manager = None
-        self.overlord_manager = None
-        self.force_manager = None
-        self.micro_manager = None
+        self.intel_manager: IntelManager = None
+        self.build_manager: BuildManager = None
+        self.resource_manager: ResourceManager = None
+        self.overlord_manager: OverlordManager = None
+        self.force_manager: ForceManager = None
+        self.micro_manager: MicroManager = None
 
         self.managers = set()
 

@@ -145,42 +145,43 @@ class Messages(enum.Enum):
     OVERLORD_SCOUT_FOUND_ENEMY_RUSH = 6
     OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH = 7
     OVERLORD_SCOUT_FOUND_NO_RUSH = 8
-    FOUND_ENEMY_EARLY_AGGRESSION = 9
-    FOUND_ENEMY_GREATER_FORCE = 10
-    ENEMY_AIR_TECH_SCOUTED = 11
-    ENEMY_COUNTER_WITH_ROACHES_SCOUTED = 12
-    ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD = 13
-    DEFENDING_AGAINST_MULTIPLE_ENEMIES = 14
-    ENEMY_MOVING_OUT_SCOUTED = 15
+    FOUND_ENEMY_RUSH = 9
+    FOUND_ENEMY_EARLY_AGGRESSION = 10
+    FOUND_ENEMY_GREATER_FORCE = 11
+    ENEMY_AIR_TECH_SCOUTED = 12
+    ENEMY_COUNTER_WITH_ROACHES_SCOUTED = 13
+    ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD = 14
+    DEFENDING_AGAINST_MULTIPLE_ENEMIES = 15
+    ENEMY_MOVING_OUT_SCOUTED = 16
 
     # STRATEGIC NOTES MESSAGES
-    ENEMY_EARLY_NATURAL_EXPAND_TAKEN = 16
-    ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN = 17
-    NEW_BUILD = 18  # New build added
-    NEW_BUILD_STAGE = 19  # New build stage entered
+    ENEMY_EARLY_NATURAL_EXPAND_TAKEN = 17
+    ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN = 18
+    NEW_BUILD = 19  # New build added
+    NEW_BUILD_STAGE = 20  # New build stage entered
 
     # UNITS TRAINED MESSAGES
-    UNIT_CREATED = 20
-    STRUCTURE_COMPLETE = 21
-    UPGRADE_STARTED = 22
+    UNIT_CREATED = 21
+    STRUCTURE_COMPLETE = 22
+    UPGRADE_STARTED = 23
 
     # UNIT ORDER MESSAGES
-    DRONE_LEAVING_TO_CREATE_HATCHERY = 23  # Value is Drone's tag
-    OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 24  # Move the second overlord scout to the enemy's main ramp
-    PULL_WORKERS_OFF_VESPENE = 25  # Value is int of workers to mine vespene. None if return to default.
-    PULL_WORKERS_OFF_VESPENE_FOR_X_SECONDS = 26  # Value is float of seconds to pull off vespene
-    UNROOT_ALL_SPINECRAWLERS = 27  # Message indicating we should uproot and reposition spinecrawlers
+    DRONE_LEAVING_TO_CREATE_HATCHERY = 24  # Value is Drone's tag
+    OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 25  # Move the second overlord scout to the enemy's main ramp
+    PULL_WORKERS_OFF_VESPENE = 26  # Value is int of workers to mine vespene. None if return to default.
+    PULL_WORKERS_OFF_VESPENE_FOR_X_SECONDS = 27  # Value is float of seconds to pull off vespene
+    UNROOT_ALL_SPINECRAWLERS = 28  # Message indicating we should uproot and reposition spinecrawlers
 
     # STATE MACHINE
-    STATE_ENTERED = 28  # Value is State being left
-    STATE_EXITED = 29  # Value is State entered
-    DONT_ATTACK = 30  # Indicates that we shouldn't ever enter ATTACKING or MOVING_TO_ATTACK forces state
-    DONT_DEFEND = 31  # Indicates that we shouldn't ever enter DEFENDING forces state
-    ALLOW_DEFENDING = 32  # Indicates that we can enter the DEFENDING forces state
-    ALLOW_ATTACKING_THROUGH_NYDUS = 33  # Indicates that we can enter the ATTACKING_THROUGH_NYDUS state
+    STATE_ENTERED = 29  # Value is State being left
+    STATE_EXITED = 30  # Value is State entered
+    DONT_ATTACK = 31  # Indicates that we shouldn't ever enter ATTACKING or MOVING_TO_ATTACK forces state
+    DONT_DEFEND = 32  # Indicates that we shouldn't ever enter DEFENDING forces state
+    ALLOW_DEFENDING = 33  # Indicates that we can enter the DEFENDING forces state
+    ALLOW_ATTACKING_THROUGH_NYDUS = 34  # Indicates that we can enter the ATTACKING_THROUGH_NYDUS state
     # Starts an attack and doesn't stop until condition returns True.
     # Val is a function of type [[manager], bool]. It takes the manager that receives the message as input.
-    DONT_STOP_ATTACKING_UNTIL_CONDITION = 34
+    DONT_STOP_ATTACKING_UNTIL_CONDITION = 35
 
 
 # Build Manager Commands
