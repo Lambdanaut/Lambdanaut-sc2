@@ -192,11 +192,11 @@ class IntelManager(Manager):
                 if unit.type_id in units_to_count:
                     enemy_counter[unit.type_id] += 1
 
-            if (enemy_counter[const.ZERGLING] >= 4
+            if (enemy_counter[const.ZERGLING] >= 6
                     or enemy_counter[const.ROACH] >= 1
-                    or enemy_counter[const.MARINE] >= 6
+                    or enemy_counter[const.MARINE] >= 5
                     or enemy_counter[const.REAPER] >= 2
-                    or enemy_counter[const.MARAUDER] >= 3
+                    or enemy_counter[const.MARAUDER] >= 2
                     or enemy_counter[const.ZEALOT] >= 4
                     or enemy_counter[const.ADEPT] >= 3
                     or enemy_counter[const.STALKER] >= 3):
