@@ -177,8 +177,10 @@ class IntelManager(Manager):
         Checks to see if we're being rushed
         """
 
-        if self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
-            enemy = self.bot.cached_known_enemy_units.values()
+        if not self.has_scouted_enemy_rush and \
+                self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
+
+            enemy = self.bot.enemy_cache.values()
 
             units_to_count = {const.ZERGLING, const.ROACH, const.RAVAGER,
                         const.MARINE, const.REAPER, const.MARAUDER,

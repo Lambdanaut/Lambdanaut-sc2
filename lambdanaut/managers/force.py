@@ -275,14 +275,14 @@ class ForceManager(StatefulManager):
                 if len(workers) > len(ground_enemies):
                     for worker in workers:
                         if worker.tag in self.bot.workers_defending:
-                            target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
+                            target = self.bot.closest_and_most_damaged(ground_enemies, worker)
                             if target.type_id not in worker_non_targets:
                                 self.bot.actions.append(worker.attack(target))
 
                         else:
                             # Add workers to defending workers and attack nearby enemy
                             if len(self.bot.workers_defending) <= len(ground_enemies):
-                                target = self.bot.closest_and_most_damaged(enemies_nearby, worker)
+                                target = self.bot.closest_and_most_damaged(ground_enemies, worker)
                                 if target.type_id not in worker_non_targets:
                                     self.bot.workers_defending.add(worker.tag)
                                     self.bot.actions.append(worker.attack(target.position))
