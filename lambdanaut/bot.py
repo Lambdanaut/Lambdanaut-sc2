@@ -16,6 +16,7 @@ import lambdanaut.const2 as const2
 import lambdanaut.clustering as clustering
 from lambdanaut.managers import Manager
 from lambdanaut.managers.build import BuildManager
+from lambdanaut.managers.defense import DefenseManager
 from lambdanaut.managers.force import ForceManager
 from lambdanaut.managers.intel import IntelManager
 from lambdanaut.managers.micro import MicroManager
@@ -43,6 +44,7 @@ class LambdaBot(sc2.BotAI):
         self.resource_manager: ResourceManager = None
         self.overlord_manager: OverlordManager = None
         self.force_manager: ForceManager = None
+        self.defense_manager: DefenseManager = None
         self.micro_manager: MicroManager = None
 
         self.managers = set()
@@ -132,6 +134,7 @@ class LambdaBot(sc2.BotAI):
             self.resource_manager = ResourceManager(self)
             self.overlord_manager = OverlordManager(self)
             self.force_manager = ForceManager(self)
+            self.defense_manager = DefenseManager(self)
             self.micro_manager = MicroManager(self)
 
             self.managers = {
@@ -140,6 +143,7 @@ class LambdaBot(sc2.BotAI):
                 self.resource_manager,
                 self.overlord_manager,
                 self.force_manager,
+                self.defense_manager,
                 self.micro_manager,
             }
 
@@ -157,6 +161,7 @@ class LambdaBot(sc2.BotAI):
         await self.resource_manager.run()
         await self.build_manager.run()
         await self.force_manager.run()
+        await self.defense_manager.run()
         await self.micro_manager.run()
 
         # Do this more rarely. Less important. Start on third iteration.
@@ -164,7 +169,7 @@ class LambdaBot(sc2.BotAI):
             await self.overlord_manager.run()
 
         # Update the unit clusters
-        if iteration % 9 == 0:
+        if iteration % 5 == 0:
             self.update_clusters()
 
         if self.debug:
@@ -584,19 +589,17 @@ class LambdaBot(sc2.BotAI):
 
         Structures in progress have less health than structures
         """
-        if unit.is_ready:
-            return unit.health_percentage
-        elif unit.is_structure:
+        if unit.is_structure and not unit.is_ready:
             return unit.health_percentage + unit.build_progress
+        return unit.health_percentage
 
     def shield_percentage_adjusted(self, unit: Unit) -> float:
         """
         Adjusts unit's shield based on its build progress.
         """
-        if unit.is_ready:
-            return unit.shield_percentage
-        elif unit.is_structure:
+        if unit.is_structure and not unit.is_ready:
             return unit.shield_percentage + unit.build_progress
+        return unit.shield_percentage
 
     def splash_on_enemies(
             self,

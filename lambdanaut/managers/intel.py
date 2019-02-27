@@ -197,7 +197,6 @@ class IntelManager(Manager):
                     if proximity < self.bot.start_location_to_enemy_start_location_distance * 0.7:
                         nearby_enemy_counter[unit.type_id] += 1
 
-
             # Count any and all enemy units
             if (enemy_counter[const.ZERGLING] >= 7
                     or enemy_counter[const.ROACH] >= 1

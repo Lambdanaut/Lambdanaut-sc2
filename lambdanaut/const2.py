@@ -219,6 +219,12 @@ class ForcesStates(enum.Enum):
     SEARCHING = 7
 
 
+# Defense Manager States
+class DefenseStates(enum.Enum):
+    NOT_DEFENDING = 0  # Default inactive state
+    DEFENDING = 1
+
+
 # Overlord Scout States
 class OverlordStates(enum.Enum):
     INITIAL = 0  # Initial peek into natural expansion

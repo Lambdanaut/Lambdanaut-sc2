@@ -6,11 +6,13 @@ from typing import List, Union
 
 import lib.sc2 as sc2
 import lib.sc2.constants as const
+from lib.sc2.ids.unit_typeid import UnitTypeId
+from lib.sc2.ids.upgrade_id import UpgradeId
 
 import lambdanaut.builds as builds
 import lambdanaut.const2 as const2
 from lambdanaut.builds import Builds, BuildStages, BUILD_MAPPING, DEFAULT_NEXT_BUILDS
-from lambdanaut.const2 import BuildManagerCommands, ForcesStates, Messages
+from lambdanaut.const2 import BuildManagerCommands, DefenseStates, Messages
 from lambdanaut.expiringlist import ExpiringList
 from lambdanaut.managers import Manager
 
@@ -24,18 +26,18 @@ class BuildManager(Manager):
 
         assert isinstance(starting_build, Builds)
 
-        self.starting_build = starting_build
+        self.starting_build: Builds = starting_build
 
-        self.builds = [
+        self.builds: List[Builds] = [
             None,  # Opener
             None,  # Early-game
             None,  # Mid-game
             None,  # Late-game
         ]
-        self.build_stage = builds.get_build_stage(starting_build)
+        self.build_stage: BuildStages = builds.get_build_stage(starting_build)
 
-        self.build_target = None
-        self.last_build_target = None
+        self.build_target: Union[UpgradeId, UnitTypeId] = None
+        self.last_build_target: Union[UpgradeId, UnitTypeId] = None
 
         # Flag for if we've already changed the midgame. We only want to do this once
         self.has_switched_midgame = False
@@ -47,6 +49,9 @@ class BuildManager(Manager):
         # If True is in this list, it's equivalent to having stop_worker_production
         # and stop_townhall_production set
         self._stop_nonarmy_production = ExpiringList()
+
+        # Recent commands issued. Uses constants defined in const2.py
+        self._recent_commands = ExpiringList()
 
         # Message subscriptions
         self.subscribe(Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN)
@@ -64,10 +69,7 @@ class BuildManager(Manager):
         self.subscribe(Messages.STATE_EXITED)
 
         # Expansion index used for trying other expansions if the one we're trying is blocked
-        self.next_expansion_index = 0
-
-        # Recent commands issued. Uses constants defined in const2.py
-        self._recent_commands = ExpiringList()
+        self.next_expansion_index: int = 0
 
         # Set of the ids of the special build targets that are currently active
         self.active_special_build_target_ids = set()
@@ -92,21 +94,43 @@ class BuildManager(Manager):
             can_afford.have_enough_supply
 
     def determine_opening_builds(self):
-        # Chance of cheese on smaller maps (2 player start locations)
+        """
+        Sets the self.starting_build and adds other builds based on factors such as:
+
+        * Enemy race
+        * Rush distance
+        * By-air distance to enemy location
+        * Map features
+        """
         if len(self.bot.enemy_start_locations) < 3:
 
-            if self.bot.enemy_race in {sc2.Race.Terran, sc2.Race.Protoss}:
+            rush_distance = len(self.bot.shortest_path_to_enemy_start_location)
+
+            # Note: Average rush distance is around 153. Longest rush distances are over 160.
+            if self.bot.enemy_race is sc2.Race.Terran:
                 # Use rush distance to determine build
                 # Average rush distance is around 155. Longer rush distances are over 160.
-                if len(self.bot.shortest_path_to_enemy_start_location) < 130:
+                if rush_distance < 130:
                     # Do ravager all ins on short rush distance maps
                     self.starting_build = Builds.RAVAGER_ALL_IN
-                elif len(self.bot.shortest_path_to_enemy_start_location) < 160:
+                elif rush_distance < 160:
                     # Do ravager harass into macro on small to medium rush distance maps
                     self.starting_build = Builds.OPENER_RAVAGER_HARASS
 
-            if self.bot.enemy_race in {sc2.Race.Zerg,}:
-                if len(self.bot.shortest_path_to_enemy_start_location) < 135:
+            elif self.bot.enemy_race is sc2.Race.Protoss:
+                # Use rush distance to determine build
+                if rush_distance < 130:
+                    # Do ravager all ins on short rush distance maps
+                    self.starting_build = Builds.RAVAGER_ALL_IN
+                elif rush_distance < 150:
+                    # Do ravager harass into macro on small rush distance maps
+                    self.starting_build = Builds.OPENER_RAVAGER_HARASS
+                elif rush_distance > 160:
+                    # Rush distance is long. Play more greedily.
+                    self.add_build(Builds.EARLY_GAME_HATCHERY_FIRST_GREEDY)
+
+            elif self.bot.enemy_race is sc2.Race.Zerg:
+                if rush_distance < 135:
                     # Be more cautious against Zerg on maps with short rush distances
                     self.add_build(Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS)
 
@@ -258,7 +282,7 @@ class BuildManager(Manager):
             exit_state = {Messages.STATE_EXITED, }
             if message in exit_state:
                 self.ack(message)
-                if val == ForcesStates.DEFENDING:
+                if val == DefenseStates.DEFENDING:
                     self.stop_townhall_production = False
                     self.stop_worker_production = False
 

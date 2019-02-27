@@ -37,7 +37,6 @@ class ForceManager(StatefulManager):
         self.state_map = {
             ForcesStates.HOUSEKEEPING: self.do_housekeeping,
             ForcesStates.ESCORTING: self.do_escorting,
-            ForcesStates.DEFENDING: self.do_defending,
             ForcesStates.MOVING_TO_ATTACK: self.do_moving_to_attack,
             ForcesStates.ATTACKING: self.do_attacking,
             ForcesStates.ATTACKING_THROUGH_NYDUS: self.do_attacking_through_nydus,
@@ -53,7 +52,6 @@ class ForceManager(StatefulManager):
 
         # Map of functions to do when leaving the state
         self.state_stop_map = {
-            ForcesStates.DEFENDING: self.stop_defending,
             ForcesStates.ATTACKING: self.stop_attacking,
         }
 
@@ -75,10 +73,6 @@ class ForceManager(StatefulManager):
         # Last enemy army position seen
         self.last_enemy_army_position = None
 
-        # Flag to set if we've published a message about defending against multiple
-        # enemies since we last switched to the DEFENDING state
-        self.published_defending_against_multiple_enemies = False
-
         # Set of banelings attacking mineral lines
         self.banelings_harassing = set()
 
@@ -92,9 +86,6 @@ class ForceManager(StatefulManager):
         # Is false by default
         self.allow_attacking_through_nydus = False
 
-        # If this flag is false, we wont switch to DEFENDING state
-        self.allow_defending = True
-
         # If this flag is set, don't stop attacking and don't change it to False until
         # self.dont_stop_attacking_condition returns True
         self.dont_stop_attacking = False
@@ -103,9 +94,7 @@ class ForceManager(StatefulManager):
         # Subscribe to messages
         self.subscribe(Messages.NEW_BUILD_STAGE)
         self.subscribe(Messages.DONT_STOP_ATTACKING_UNTIL_CONDITION)
-        self.subscribe(Messages.ALLOW_DEFENDING)
         self.subscribe(Messages.DONT_ATTACK)
-        self.subscribe(Messages.DONT_DEFEND)
         self.subscribe(Messages.ALLOW_ATTACKING_THROUGH_NYDUS)
         self.subscribe(Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION)
         self.subscribe(Messages.DRONE_LEAVING_TO_CREATE_HATCHERY)
@@ -216,7 +205,7 @@ class ForceManager(StatefulManager):
                     far_army = army.further_than(22, townhall.position)
                     if far_army:
                         unit = far_army.random
-                        if not(unit.is_attacking and not unit.is_moving):
+                        if not unit.is_attacking and not unit.is_moving:
                             # Move them to the nearest ramp
                             target = townhall.position
 
@@ -252,148 +241,6 @@ class ForceManager(StatefulManager):
 
                     for unit in army:
                         self.bot.actions.append(unit.attack(position))
-
-    async def do_defending(self):
-        """
-        Defend townhalls from nearby enemies
-        """
-
-        worker_non_targets = {const.BANELING, const.REAPER}
-
-        for th in self.bot.townhalls:
-            enemies_nearby = [u.snapshot for u in self.bot.enemy_cache.values()
-                              if u.distance_to(th) < 45]
-
-            if enemies_nearby:
-                # Publish message if there are multiple enemies
-                if not self.published_defending_against_multiple_enemies and \
-                        len(enemies_nearby) > 4:
-                    self.publish(Messages.DEFENDING_AGAINST_MULTIPLE_ENEMIES)
-                    self.published_defending_against_multiple_enemies = True
-
-                # Workers attack enemy
-                ground_enemies = [enemy for enemy in enemies_nearby if not enemy.is_flying]
-                workers = self.bot.workers.closer_than(14, enemies_nearby[0].position)
-                if ground_enemies and len(workers) > len(ground_enemies):
-                    for worker in workers:
-                        if worker.tag in self.bot.workers_defending:
-                            target = self.bot.closest_and_most_damaged(ground_enemies, worker)
-                            if target.type_id not in worker_non_targets:
-                                self.bot.actions.append(worker.attack(target))
-
-                        else:
-                            # Add workers to defending workers and attack nearby enemy
-                            if len(self.bot.workers_defending) <= len(ground_enemies):
-                                target = self.bot.closest_and_most_damaged(ground_enemies, worker)
-                                if target.type_id not in worker_non_targets:
-                                    self.bot.workers_defending.add(worker.tag)
-                                    self.bot.actions.append(worker.attack(target.position))
-                else:
-                    # If they have more than us, stop the worker from defending
-                    for worker in workers:
-                        if worker.tag in self.bot.workers_defending:
-                            self.bot.workers_defending.remove(worker.tag)
-                            self.bot.actions.append(worker.stop())
-
-                # Have nearest queen defend
-                queen_tag = self.bot.townhall_queens.get(th.tag)
-                if queen_tag is not None:
-                    queen = self.bot.units.find_by_tag(queen_tag)
-                    if queen is not None and len(enemies_nearby) < 3:
-                        # Only send the closest queen if the enemy is only a couple units
-                        target = self.bot.closest_and_most_damaged(enemies_nearby, queen)
-
-                        if target and 8 < queen.distance_to(target) < 15 and not queen.weapon_cooldown:
-                            if target.distance_to(queen) < queen.ground_range:
-                                self.bot.actions.append(queen.attack(target))
-                            else:
-                                self.bot.actions.append(queen.attack(target.position))
-                        elif queen.distance_to(th) > 10:
-                            self.bot.actions.append(queen.attack(th.position))
-
-                # Have army clusters defend
-                army_clusters = self.bot.army_clusters
-
-                # The harder we're attacked, the further-out army to pull back
-                # 1-3 Enemies: 0.3 of map. 4 enemy: 0.4 of map. 5 enemy: 0.5 of map. 6 enemy: 0.6 of map...
-                # 10 or more enemy: 1.0 of map
-                distance_ratio_to_pull_back = max(0.3, max(1.0, len(enemies_nearby) * 0.1))
-                if len(enemies_nearby) < 5:
-                    army_clusters = \
-                        [cluster for cluster in army_clusters
-                         if self.bot.start_location.distance_to(cluster.position) <
-                         self.bot.start_location_to_enemy_start_location_distance * distance_ratio_to_pull_back]
-
-                if army_clusters:
-                    nearest_enemy_cluster = self.bot.start_location.closest(self.bot.enemy_clusters)
-
-                    if nearest_enemy_cluster:
-                        for army_cluster in army_clusters:
-                            if army_cluster:
-
-                                army_strength = self.bot.relative_army_strength(
-                                    army_cluster, nearest_enemy_cluster)
-
-                                if army_strength >= -1 \
-                                        or (army_strength > -6 and
-                                            nearest_enemy_cluster.position.distance_to(army_cluster.position) < 10) \
-                                        or self.bot.supply_used > 185:
-                                    # Attack enemy if we stand a chance or
-                                    # if we hardly stand a chance and they're in our face or
-                                    # if we're near supply max
-                                    for unit in army_cluster:
-                                        if unit.type_id not in const2.NON_COMBATANTS \
-                                                and unit.tag not in self.bot.townhall_queens.values():
-                                            target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
-
-                                            if target and unit.weapon_cooldown <= 0 and not unit.is_attacking:
-                                                self.bot.actions.append(unit.attack(target))
-
-                                elif army_strength < -2:
-                                    # If enemy is greater regroup to center of largest cluster towards friendly townhall
-                                    largest_army_cluster = functools.reduce(
-                                        lambda c1, c2: c1 if len(c1) >= len(c2) else c2,
-                                        army_clusters[1:],
-                                        army_clusters[0])
-
-                                    for unit in army_cluster:
-                                        if unit.type_id not in const2.NON_COMBATANTS:
-                                            nearest_townhall = self.bot.townhalls.closest_to(unit.position)
-                                            if unit.distance_to(nearest_townhall) > 6:
-                                                towards_townhall = largest_army_cluster.position.towards(nearest_townhall, +2)
-                                                self.bot.actions.append(unit.move(towards_townhall))
-
-            # Bring back defending workers that have drifted too far from town halls
-            workers_defending_to_remove = set()
-            for worker_id in self.bot.workers_defending:
-                worker = self.bot.workers.find_by_tag(worker_id)
-                if worker:
-                    townhalls = self.bot.townhalls.ready
-                    if townhalls:
-                        nearest_townhall = townhalls.closest_to(worker.position)
-                        if worker.distance_to(nearest_townhall.position) > 18:
-                            workers_defending_to_remove.add(worker_id)
-                            self.bot.actions.append(worker.move(nearest_townhall.position))
-                else:
-                    workers_defending_to_remove.add(worker_id)
-
-            # Remove workers from defending set
-            self.bot.workers_defending -= workers_defending_to_remove
-
-    async def stop_defending(self):
-        # Cleanup workers that were defending and send them back to their townhalls
-        for worker in self.bot.workers:
-            nearest_townhall = self.bot.townhalls.ready.closest_to(worker.position)
-
-            if worker.tag in self.bot.workers_defending:
-                self.bot.actions.append(worker.move(nearest_townhall.position))
-            elif worker.distance_to(nearest_townhall) > 14:
-                self.bot.actions.append(worker.move(nearest_townhall.position))
-
-        self.bot.workers_defending.clear()  # Remove worker ids from set
-
-        # Reset flag saying that we're defending against multiple enemies
-        self.published_defending_against_multiple_enemies = False
 
     async def do_moving_to_attack(self):
         army_units = const2.ZERG_ARMY_UNITS
@@ -652,9 +499,8 @@ class ForceManager(StatefulManager):
         for message, val in self.messages.items():
             # Start searching for an enemy location if we can't find it
             if message in {Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION}:
-                if self.state != ForcesStates.DEFENDING:
-                    self.ack(message)
-                    return await self.change_state(ForcesStates.SEARCHING)
+                self.ack(message)
+                return await self.change_state(ForcesStates.SEARCHING)
 
             elif message in {Messages.DRONE_LEAVING_TO_CREATE_HATCHERY}:
                 self.ack(message)
@@ -677,16 +523,6 @@ class ForceManager(StatefulManager):
                 # Update distance to moving_to_attack meetup center required to attack
                 new_distance_to_moving_to_attack = self.get_army_center_distance_to_attack(val)
                 self.distance_to_moving_to_attack = new_distance_to_moving_to_attack
-
-            elif message in {Messages.ALLOW_DEFENDING}:
-                self.ack(message)
-
-                self.allow_defending = True
-
-            elif message in {Messages.DONT_DEFEND}:
-                self.ack(message)
-
-                self.allow_defending = False
 
             elif message in {Messages.DONT_ATTACK}:
                 self.ack(message)
@@ -739,23 +575,6 @@ class ForceManager(StatefulManager):
                 # Worker made it to the destination.
                 if escorting_worker.distance_to(expansion_location) < 1:
                     return await self.change_state(ForcesStates.HOUSEKEEPING)
-
-        # DEFENDING
-        elif self.state == ForcesStates.DEFENDING:
-            # Loop through all townhalls. If enemies are near any of them, don't change state.
-            for th in self.bot.townhalls:
-                enemies_nearby = self.bot.known_enemy_units.closer_than(
-                    23, th.position).exclude_type(const2.ENEMY_NON_ARMY)
-
-                if enemies_nearby:
-                    # Enemies found, don't change state.
-                    break
-            else:
-                units_attacking = self.bot.units.filter(lambda u: u.is_attacking and not u.is_moving)
-
-                # If none of our units are still attacking, change state
-                if not units_attacking:
-                    return await self.change_state(self.previous_state)
 
         # MOVING_TO_ATTACK
         elif self.state == ForcesStates.MOVING_TO_ATTACK:
@@ -825,15 +644,6 @@ class ForceManager(StatefulManager):
 
             if units_at_enemy_location:
                 self.publish(Messages.ARMY_COULDNT_FIND_ENEMY_BASE)
-
-        # Switching to DEFENDING from any other state
-        if self.state != ForcesStates.DEFENDING and self.allow_defending:
-            for th in self.bot.townhalls:
-                enemies_nearby = self.bot.known_enemy_units.closer_than(
-                    23, th).exclude_type(const2.ENEMY_NON_ARMY)
-
-                if enemies_nearby:
-                    return await self.change_state(ForcesStates.DEFENDING)
 
         # If self.dont_stop_attacking is set, then
         # Check if we're ready to allow attacking again

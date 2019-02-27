@@ -47,8 +47,8 @@
 
 ## HIGH PRIORITY
 
-  * Fix Defending state so it doesn't leave some units sitting halfways across the map idle
-    * We pull units back if they're far enough out, but otherwise we leave some out there doing nothing
+  * Create a new manager class called DefenseManager that takes over the defending work done by ForceManager. 
+    This will allow us to be defending and attacking simultaneously. 
    
   * Fix Moving To Attack state so that the units move straight to the current Moving to Attack position
   
@@ -57,10 +57,6 @@
   * Fix Overlord scouting to work with ravager rushing
 
   * Write mutalisk micro and re-add mutalisk to ling-bane-muta build
-  
-  * Add COUNTERING forces state
-    * If the opponent is attacking our base and has more than we have, then attack their main 
-      base and don't come back to defend. 
   
   * Keep non-busy queens on creep during housekeeping. Right now they walk right out into the nether to die. 
 
@@ -71,8 +67,12 @@
     ravagers get distracted by a forward Nexus rather than going for probes.
 
   * Do zergling rushes against zerg on maps with short rush distance
-
+  
   * Do air builds on maps where the rush distance is much shorter than the direct distance (Stasis LE)
+
+  * Add COUNTERING forces state
+    * If the opponent is attacking our base and has more than we have, then attack their main 
+      base and don't come back to defend. 
 
   * Refactor relative_army_strength. It's our slowest function
     * Seems most of the calcs are done in all those `sum` functions. Maybe numpy can speed up sums? 
