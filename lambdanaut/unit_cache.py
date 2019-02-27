@@ -61,7 +61,7 @@ class UnitCached(object):
 
             for effect in filter(lambda e: e.id in effects_to_avoid, effects):
                 for position in effect.positions:
-                    if unit.distance_to(position) < 3 + unit.radius:
+                    if unit.distance_to(position) < 4 + unit.radius:
                         return position
 
         return None

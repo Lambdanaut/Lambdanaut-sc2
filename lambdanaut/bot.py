@@ -245,12 +245,11 @@ class LambdaBot(sc2.BotAI):
 
             self.force_manager.dont_stop_attacking = True; self.force_manager.state = const2.ForcesStates.ATTACKING
 
-            await self._client.debug_create_unit([[const.BANELING, 50, self.start_location - Point2((5, 0)), 1]])
-            await self._client.debug_create_unit([[const.PHOTONCANNON, 4, self.start_location + Point2((6, 0)), 2]])
-            await self._client.debug_create_unit([[const.PYLON, 1, self.start_location + Point2((6, 0)), 2]])
-            await self._client.debug_create_unit([[const.NEXUS, 1, self.start_location + Point2((9, 0)), 2]])
+            await self._client.debug_create_unit([[const.RAVAGER, 8, self.start_location - Point2((5, 0)), 1]])
+            await self._client.debug_create_unit([[const.PHOTONCANNON, 6, self.start_location + Point2((6, 0)), 2]])
+            await self._client.debug_create_unit([[const.PYLON, 2, self.start_location + Point2((6, 0)), 2]])
             await self._client.debug_create_unit([[const.SUPPLYDEPOT, 3, self.start_location + Point2((6, 0)), 2]])
-            await self._client.debug_create_unit([[const.ZEALOT, 10, self.start_location + Point2((9, 0)), 2]])
+            await self._client.debug_create_unit([[const.SCV, 10, self.start_location + Point2((5, 0)), 2]])
             # await self._client.debug_create_unit([[const.PROBE, 20, self.start_location + Point2((9, 0)), 2]])
             # await self._client.debug_create_unit([[const.NEXUS, 1, self.start_location + Point2((2, 0)), 2]])
             # await self._client.debug_create_unit([[const.MARINE, 12, self.start_location + Point2((6, 0)), 2]])
@@ -789,17 +788,6 @@ class LambdaBot(sc2.BotAI):
 
         u1_dps = sum(self.adjusted_dps(u) for u in u1)
         u2_dps = sum(self.adjusted_dps(u) for u in u2)
-
-        if not ignore_workers:
-            # Add in our nearby workers as army
-            u1_nearby_workers = self.units(const2.WORKERS).closer_than(14, units_1.center)
-            # u2_nearby_workers = self.known_enemy_units(const2.WORKERS).closer_than(14, u2.center)
-
-            u1_nearby_workers_dps = sum(self.adjusted_dps(u) for u in u1_nearby_workers)
-            # u2_nearby_workers_dps = sum(self.adjusted_dps(u) for u in u2_nearby_drones)
-
-            u1_dps += u1_nearby_workers_dps
-            # u2_dps += u2_nearby_workers_dps
 
         if u1_dps == 0 and u2_dps == 0:
             return 0

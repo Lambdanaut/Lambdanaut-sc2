@@ -43,57 +43,28 @@
 
 ## BUGS
 
-  * Saw this weird exception
-    * ERROR:lib.sc2.main:AI step threw an error
-Traceback (most recent call last):
-  File "/Users/jthomas/git/lambdanaut-sc2/lib/sc2/main.py", line 144, in _play_game_ai
-    await ai.on_step(iteration)
-  File "/Users/jthomas/git/lambdanaut-sc2/lambdanaut/bot.py", line 150, in on_step
-    await self.micro_manager.run()
-  File "/Users/jthomas/git/lambdanaut-sc2/lambdanaut/managers/micro.py", line 696, in run
-    await self.manage_combat_micro()
-  File "/Users/jthomas/git/lambdanaut-sc2/lambdanaut/managers/micro.py", line 611, in manage_combat_micro
-    army_strength = self.bot.relative_army_strength(army_cluster, nearest_enemy_cluster)
-  File "/Users/jthomas/git/lambdanaut-sc2/lambdanaut/bot.py", line 752, in relative_army_strength
-    u1_nearby_workers = self.units(const2.WORKERS).closer_than(14, units_1.center)
-  File "/Users/jthomas/git/lambdanaut-sc2/lib/sc2/units.py", line 25, in __call__
-    return UnitSelection(self, *args, **kwargs)
-  File "/Users/jthomas/git/lambdanaut-sc2/lib/sc2/units.py", line 349, in __init__
-    ), f"Not all ids in unit_type_id are of type UnitTypeId"
-AssertionError: Not all ids in unit_type_id are of type UnitTypeId
-ERROR:lib.sc2.main:Error: Not all ids in unit_type_id are of type UnitTypeId
 
 
 ## HIGH PRIORITY
 
-  * Fix bile avoidance. Find a way to make bile avoidance a top priority. 
-    * We could use pathfinding. But that's really expensive and might not work
-    * We could set "is_avoiding_bile" on the cached unit, but that wouldn't be a global solution and it's a big fix
-    * We could edit all other micro and movement code in some way so that we avoid biles
-
   * Fix Overlord scouting to work with ravager rushing
 
-  * Test micro on a test map. Get better micro through this.
-  
-  * Test that burrowing banelings still work after pathfinding integration
-  
-  * Make use of Pathfinding
-    * For Microing around seiged tanks and flanking them
-    * For moving-to-attacking
-    * For mutalisk micro
-  
   * Write mutalisk micro and re-add mutalisk to ling-bane-muta build
-  
-  * Better defending micro. Need to beat cheezerg's cheezy cheese 
   
   * Add COUNTERING forces state
     * If the opponent is attacking our base and has more than we have, then attack their main 
       base and don't come back to defend. 
-
-  * Try out Agglomerative Clustering in SKLearn to get better clusters
-    * https://hdbscan.readthedocs.io/en/latest/comparing_clustering_algorithms.html#agglomerative-clustering
+  
+  * Keep non-busy queens on creep during housekeeping. Right now they walk right out into the nether to die. 
 
 ## MEDIUM PRIORITY
+
+  * Refactor relative_army_strength. It's our slowest function
+    * Seems most of the calcs are done in all those `sum` functions. Maybe numpy can speed up sums? 
+    * Lots of calc is done in `adjusted_dps` as well. Not sure how much simpler we can make that function...
+ 
+  * Try out Agglomerative Clustering in SKLearn to get better clusters
+    * https://hdbscan.readthedocs.io/en/latest/comparing_clustering_algorithms.html#agglomerative-clustering
 
   * Add 2 base nydus build
     * Add nydus outside enemy natural
@@ -101,6 +72,11 @@ ERROR:lib.sc2.main:Error: Not all ids in unit_type_id are of type UnitTypeId
     * Add attack through nydus
     * Add pull all queens through nydus
 
+  * Make use of Pathfinding
+    * For Microing around seiged tanks and flanking them
+    * For moving-to-attacking
+    * For mutalisk micro
+  
   * Make midgame rush to brood lords not sucky
   
   * Create an influence map to use for strategizing and micro
@@ -124,8 +100,6 @@ ERROR:lib.sc2.main:Error: Not all ids in unit_type_id are of type UnitTypeId
   * Add late game builds that are triggered based on scouting info
     * Corruptor BroodLord
     * Ultralisk Corruptor
-    
-  * Add infestors and infestor micro
 
   * Add lurker and lurker micro
   
@@ -280,3 +254,16 @@ ERROR:lib.sc2.main:Error: Not all ids in unit_type_id are of type UnitTypeId
     * Has to have something to do with clustering, possibly the DEFENDING state. Perhaps something about moving to the center of a cluster
    
   * Micro infestors behind the cluster they're in
+  
+  * Fix bile avoidance. Find a way to make bile avoidance a top priority. 
+    * We could use pathfinding. But that's really expensive and might not work
+    * We could set "is_avoiding_bile" on the cached unit, but that wouldn't be a global solution and it's a big fix
+    * We could edit all other micro and movement code in some way so that we avoid biles
+
+  * Test micro on a test map. Get better micro through this.
+  
+  * Test that burrowing banelings still work after pathfinding integration
+  
+  * Better defending micro. Need to beat cheezerg's cheezy cheese 
+    
+  * Add infestors and infestor micro

@@ -216,7 +216,7 @@ class ForceManager(StatefulManager):
                     far_army = army.further_than(22, townhall.position)
                     if far_army:
                         unit = far_army.random
-                        if unit.is_attacking and not unit.is_moving:
+                        if not(unit.is_attacking and not unit.is_moving):
                             # Move them to the nearest ramp
                             target = townhall.position
 
@@ -414,7 +414,7 @@ class ForceManager(StatefulManager):
         nearby_target = self.bot.find_nearby_pathable_point(nearby_target)
 
         for unit in army:
-            if not unit.is_attacking and not unit.is_moving:
+            if not (unit.is_attacking and not unit.is_moving):
                 self.bot.actions.append(unit.attack(nearby_target))
 
     async def start_attacking(self):

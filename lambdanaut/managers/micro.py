@@ -139,7 +139,7 @@ class MicroManager(Manager):
                     priorities=attack_priorities):
 
                 # Attack buildings if we're not utilizing our splash
-                structures_to_attack = self.bot.known_enemy_units(structure_attack_priorities)
+                structures_to_attack = self.bot.known_enemy_units(structure_attack_priorities).visible
                 for baneling in banelings:
                     for structure in structures_to_attack.closer_than(8, baneling):
                         self.bot.actions.append(baneling.attack(structure))
@@ -201,7 +201,7 @@ class MicroManager(Manager):
 
         for ravager in ravagers:
             nearby_enemy_units = self.bot.enemy_cache.values()
-            nearby_enemy_units = [u.snapshot for u in nearby_enemy_units if u.distance_to(ravager) < 14 + u.radius]
+            nearby_enemy_units = [u.snapshot for u in nearby_enemy_units if u.distance_to(ravager) < 13 + u.radius]
             if nearby_enemy_units:
                 # Perform bile attacks
                 # Bile range is 9
@@ -245,26 +245,35 @@ class MicroManager(Manager):
                     nearby_enemy_units = [u for u in nearby_enemy_units
                                           if u.can_attack_ground or u.type_id in enemies_to_avoid]
                     if nearby_enemy_units:
+                        # Get list of nearby enemies to avoid
+                        nearby_enemies_to_avoid = [u for u in nearby_enemy_units if u.type_id in enemies_to_avoid]
+                        closest_enemy_to_avoid = ravager.position.closest(nearby_enemies_to_avoid) \
+                            if nearby_enemies_to_avoid else None
+
+                        # Get the closest enemy to the ravager
                         closest_enemy = ravager.position.closest(nearby_enemy_units)
+
+                        # Get the count of nearby friendly units
                         nearby_friendly_units = self.bot.units.closer_than(15, ravager)
 
-                        if closest_enemy.type_id in enemies_to_avoid and len(nearby_friendly_units) < 12:
+                        if closest_enemy_to_avoid is not None and len(nearby_friendly_units) < 12:
                             # Keep out of range of dangerous enemy structures if our ravager army is small
                             # Disregard unpowered photon cannons
-                            if closest_enemy.type_id is not const.PHOTONCANNON \
-                                    or (closest_enemy.type_id is const.PHOTONCANNON and closest_enemy.is_powered):
+                            if closest_enemy_to_avoid.type_id is not const.PHOTONCANNON \
+                                    or (closest_enemy_to_avoid.type_id is const.PHOTONCANNON and
+                                        closest_enemy_to_avoid.is_powered):
 
-                                if closest_enemy.type_id is const.BUNKER:
+                                if closest_enemy_to_avoid.type_id is const.BUNKER:
                                     # Assume the maximum bunker range of 7 (Marauder +1)
                                     enemy_range = 7
                                 else:
-                                    enemy_range = closest_enemy.ground_range
+                                    enemy_range = closest_enemy_to_avoid.ground_range
 
-                                distance_to_enemy = ravager.distance_to(closest_enemy)
+                                distance_to_enemy = ravager.distance_to(closest_enemy_to_avoid)
                                 ravager_in_range = distance_to_enemy < enemy_range + 3.5
 
                                 if ravager_in_range:
-                                    away_from_enemy = ravager.position.towards(closest_enemy, -2)
+                                    away_from_enemy = ravager.position.towards(closest_enemy_to_avoid, -2)
                                     self.bot.actions.append(ravager.move(away_from_enemy))
                                     self.bot.actions.append(ravager.hold_position(queue=True))
 
