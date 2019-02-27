@@ -60,6 +60,7 @@ class BuildManager(Manager):
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY)
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH)
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH)
+        self.subscribe(Messages.FOUND_ENEMY_RUSH)
         self.subscribe(Messages.ENEMY_MOVING_OUT_SCOUTED)
         self.subscribe(Messages.FOUND_ENEMY_EARLY_AGGRESSION)
         self.subscribe(Messages.ENEMY_AIR_TECH_SCOUTED)

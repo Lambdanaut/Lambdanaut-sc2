@@ -194,7 +194,7 @@ class IntelManager(Manager):
                     enemy_counter[unit.type_id] += 1
 
                     proximity = unit.position.distance_to(self.bot.start_location)
-                    if proximity < self.bot.start_location_to_enemy_start_location_distance * 0.7:
+                    if proximity < self.bot.start_location_to_enemy_start_location_distance * 0.75:
                         nearby_enemy_counter[unit.type_id] += 1
 
             # Count any and all enemy units
