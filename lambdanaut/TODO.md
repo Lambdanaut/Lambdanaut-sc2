@@ -73,7 +73,7 @@
     * Add pull all queens through nydus
 
   * Make use of Pathfinding
-    * For Microing around seiged tanks and flanking them
+    * For Microing around sieged tanks and flanking them
     * For moving-to-attacking
     * For mutalisk micro
   

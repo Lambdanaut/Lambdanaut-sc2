@@ -58,8 +58,22 @@ class MicroManager(Manager):
                     return True
         return False
 
-    async def manage_workers(self):
-        pass
+    async def manage_drones(self):
+        # Burrow damaged workers if enemies are nearby
+        if const.BURROW in self.bot.state.upgrades:
+            drones = self.bot.units(const.UnitTypeId.DRONE)
+            drones_burrowed = self.bot.units(const.UnitTypeId.DRONEBURROWED)
+            for drone in drones:
+                if drone.health_percentage < 0.6:
+                    nearby_enemy_units = self.bot.known_enemy_units.closer_than(9, drone).filter(
+                        lambda u: u.can_attack_ground)
+                    if nearby_enemy_units:
+                        self.bot.actions.append(drone(const.AbilityId.BURROWDOWN_DRONE))
+            for drone in drones_burrowed:
+                nearby_enemy_units = self.bot.known_enemy_units.closer_than(9, drone).filter(
+                    lambda u: u.can_attack_ground)
+                if not nearby_enemy_units:
+                    self.bot.actions.append(drone(const.AbilityId.BURROWUP_DRONE))
 
     async def manage_zerglings(self):
         zerglings = self.bot.units(const.ZERGLING)
@@ -624,7 +638,7 @@ class MicroManager(Manager):
         """Does default combat micro for units"""
 
         types_not_to_micro = {const.LURKERMP, const.MUTALISK, const.INFESTEDTERRAN, const.ROACHBURROWED,
-                              const.INFESTORBURROWED, const.BROODLORD}
+                              const.INFESTORBURROWED, const.BROODLORD, const.BANELING}
 
         # Micro closer to nearest enemy army cluster if our dps is higher
         # Micro further from nearest enemy army cluster if our dps is lower
@@ -734,7 +748,7 @@ class MicroManager(Manager):
 
         self.avoid_effects()
 
-        await self.manage_workers()
+        await self.manage_drones()
         await self.manage_zerglings()
         await self.manage_banelings()
         await self.manage_roaches()

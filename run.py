@@ -30,7 +30,7 @@ MAPS = [
 
 MAP_NAME = "CeruleanFallLE"
 MICRO_MAP_NAME = "kairo_training"
-REALTIME = False
+REALTIME = True
 
 # BUILD = sc2.AIBuild.RandomBuild
 BUILD = sc2.AIBuild.Rush

@@ -245,11 +245,11 @@ class LambdaBot(sc2.BotAI):
 
             self.force_manager.dont_stop_attacking = True; self.force_manager.state = const2.ForcesStates.ATTACKING
 
-            await self._client.debug_create_unit([[const.RAVAGER, 8, self.start_location - Point2((5, 0)), 1]])
-            await self._client.debug_create_unit([[const.PHOTONCANNON, 6, self.start_location + Point2((6, 0)), 2]])
-            await self._client.debug_create_unit([[const.PYLON, 2, self.start_location + Point2((6, 0)), 2]])
-            await self._client.debug_create_unit([[const.SUPPLYDEPOT, 3, self.start_location + Point2((6, 0)), 2]])
-            await self._client.debug_create_unit([[const.SCV, 10, self.start_location + Point2((5, 0)), 2]])
+            await self._client.debug_create_unit([[const.DRONE, 50, self.start_location - Point2((5, 0)), 1]])
+            await self._client.debug_create_unit([[const.REAPER, 10, self.start_location + Point2((1, 0)), 2]])
+            # await self._client.debug_create_unit([[const.PHOTONCANNON, 6, self.start_location + Point2((6, 0)), 2]])
+            # await self._client.debug_create_unit([[const.PYLON, 2, self.start_location + Point2((6, 0)), 2]])
+            # await self._client.debug_create_unit([[const.SUPPLYDEPOT, 3, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.PROBE, 20, self.start_location + Point2((9, 0)), 2]])
             # await self._client.debug_create_unit([[const.NEXUS, 1, self.start_location + Point2((2, 0)), 2]])
             # await self._client.debug_create_unit([[const.MARINE, 12, self.start_location + Point2((6, 0)), 2]])
