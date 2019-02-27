@@ -317,7 +317,7 @@ class ForceManager(StatefulManager):
                 # The harder we're attacked, the further-out army to pull back
                 # 1-3 Enemies: 0.3 of map. 4 enemy: 0.4 of map. 5 enemy: 0.5 of map. 6 enemy: 0.6 of map...
                 # 10 or more enemy: 1.0 of map
-                distance_ratio_to_pull_back = min(0.3, max(1.0, len(enemies_nearby) * 0.1))
+                distance_ratio_to_pull_back = max(0.3, max(1.0, len(enemies_nearby) * 0.1))
                 if len(enemies_nearby) < 5:
                     army_clusters = \
                         [cluster for cluster in army_clusters
