@@ -262,7 +262,7 @@ class ForceManager(StatefulManager):
 
         for th in self.bot.townhalls:
             enemies_nearby = [u.snapshot for u in self.bot.enemy_cache.values()
-                              if u.distance_to(th) < 60]
+                              if u.distance_to(th) < 45]
 
             if enemies_nearby:
                 # Publish message if there are multiple enemies
@@ -315,8 +315,9 @@ class ForceManager(StatefulManager):
                 army_clusters = self.bot.army_clusters
 
                 # The harder we're attacked, the further-out army to pull back
-                # 1 Enemy: 0.05 of map. 2 enemy: 0.1 of map. 10 or more enemy: 1.0 of map
-                distance_ratio_to_pull_back = max(1.0, len(enemies_nearby) * 0.05)
+                # 1-3 Enemies: 0.3 of map. 4 enemy: 0.4 of map. 5 enemy: 0.5 of map. 6 enemy: 0.6 of map...
+                # 10 or more enemy: 1.0 of map
+                distance_ratio_to_pull_back = min(0.3, max(1.0, len(enemies_nearby) * 0.1))
                 if len(enemies_nearby) < 5:
                     army_clusters = \
                         [cluster for cluster in army_clusters
