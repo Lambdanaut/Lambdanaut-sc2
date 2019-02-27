@@ -78,7 +78,7 @@ class BuildManager(Manager):
             unit_id: unit.creation_ability for unit_id, unit in self.bot._game_data.units.items()}
 
     async def init(self):
-        self.determine_opening_build()
+        self.determine_opening_builds()
         self.add_build(self.starting_build)
 
     def can_afford(self, unit):
@@ -91,15 +91,24 @@ class BuildManager(Manager):
             can_afford.can_afford_vespene and \
             can_afford.have_enough_supply
 
-    def determine_opening_build(self):
+    def determine_opening_builds(self):
         # Chance of cheese on smaller maps (2 player start locations)
         if len(self.bot.enemy_start_locations) < 3:
-            # Start with Ravager harass against terran if the rush distance is short
-            # Average rush distance is around 155. Longer rush distances are over 160.
-            # Rush maps with shorter rush distances.
-            if self.bot.enemy_race in {sc2.Race.Terran, sc2.Race.Protoss} \
-                    and len(self.bot.shortest_path_to_enemy_start_location) < 160:
-                self.starting_build = Builds.OPENER_RAVAGER_HARASS
+
+            if self.bot.enemy_race in {sc2.Race.Terran, sc2.Race.Protoss}:
+                # Use rush distance to determine build
+                # Average rush distance is around 155. Longer rush distances are over 160.
+                if len(self.bot.shortest_path_to_enemy_start_location) < 130:
+                    # Do ravager all ins on short rush distance maps
+                    self.starting_build = Builds.RAVAGER_ALL_IN
+                elif len(self.bot.shortest_path_to_enemy_start_location) < 160:
+                    # Do ravager harass into macro on small to medium rush distance maps
+                    self.starting_build = Builds.OPENER_RAVAGER_HARASS
+
+            if self.bot.enemy_race in {sc2.Race.Zerg,}:
+                if len(self.bot.shortest_path_to_enemy_start_location) < 135:
+                    # Be more cautious against Zerg on maps with short rush distances
+                    self.add_build(Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS)
 
     def add_build(self, build: Builds):
         self.print("Adding build order: {}".format(build.name))

@@ -47,6 +47,13 @@
 
 ## HIGH PRIORITY
 
+  * Fix Defending state so it doesn't leave some units sitting halfways across the map idle
+    * We pull units back if they're far enough out, but otherwise we leave some out there doing nothing
+   
+  * Fix Moving To Attack state so that the units move straight to the current Moving to Attack position
+  
+  * Fix zergling micro so that zerglings don't run from enemies if they're 
+
   * Fix Overlord scouting to work with ravager rushing
 
   * Write mutalisk micro and re-add mutalisk to ling-bane-muta build
@@ -58,6 +65,14 @@
   * Keep non-busy queens on creep during housekeeping. Right now they walk right out into the nether to die. 
 
 ## MEDIUM PRIORITY
+
+  * Add attention function that keeps army moving towards a target destination during attacks. 
+    We want to walk by low priority targets. Would be useful against additional pylons during ravager rushes when the
+    ravagers get distracted by a forward Nexus rather than going for probes.
+
+  * Do zergling rushes against zerg on maps with short rush distance
+
+  * Do air builds on maps where the rush distance is much shorter than the direct distance (Stasis LE)
 
   * Refactor relative_army_strength. It's our slowest function
     * Seems most of the calcs are done in all those `sum` functions. Maybe numpy can speed up sums? 

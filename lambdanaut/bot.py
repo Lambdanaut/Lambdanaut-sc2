@@ -446,6 +446,8 @@ class LambdaBot(sc2.BotAI):
     def get_path_around_ranges(self, units, point1: Point2, point2: Point2, path_step=2) -> List[Tuple[int, int]]:
         """
         Gets a path to `point` avoiding `units`
+
+        TODO: This doesn't use `units` right now, and only works on enemies that attack air
         """
 
         # Make a copy of a blank pixel map to draw on
@@ -764,8 +766,7 @@ class LambdaBot(sc2.BotAI):
             units_1: Union[clustering.Cluster, sc2.units.Units],
             units_2: Union[clustering.Cluster, sc2.units.Units],
             ignore_workers=False,
-            ignore_defensive_structures=False,
-        ) -> float:
+            ignore_defensive_structures=False) -> float:
         """
         Returns a positive value if u1 is stronger, and negative if u2 is stronger.
         A value of +12 would be very good and a value of -12 would be very bad.

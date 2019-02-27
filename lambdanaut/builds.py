@@ -1,3 +1,11 @@
+"""
+Build Orders
+============
+
+* Opener build orders should always end with 17 drones if they intend to transition into another build
+"""
+
+
 import uuid
 
 import lib.sc2 as sc2
@@ -188,21 +196,6 @@ EARLY_GAME_DEFAULT_OPENER = [
     DRONE,  # 15
     DRONE,  # 16
     DRONE,  # 17
-    DRONE,  # 18
-]
-
-# Early game cautious opener
-EARLY_GAME_CAUTIOUS_OPENER = [
-    HATCHERY,  # 1
-    OVERLORD,  # 1
-    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,  # 12
-    DRONE,  # 13
-    OVERLORD,  # 2
-    DRONE,  # 14
-    DRONE,  # 15
-    DRONE,  # 16
-    DRONE,  # 17
-    DRONE,  # 18
 ]
 
 # Ravager all-in with no transition
@@ -263,11 +256,12 @@ OPENER_RAVAGER_HARASS = [
     ROACHWARREN,
     ROACH,
     IfHasThenDontBuild(RAVAGER, ROACH, 3),
-    RAVAGER, RAVAGER, RAVAGER, RAVAGER,
+    RAVAGER, RAVAGER, RAVAGER, RAVAGER, RAVAGER,
     # Pull workers off vespene for 60 seconds
-    PublishMessage(Messages.PULL_WORKERS_OFF_VESPENE_FOR_X_SECONDS, 60),
     QUEEN,
-    DRONE, DRONE, DRONE,  # 18
+    DRONE,  # 16
+    PublishMessage(Messages.PULL_WORKERS_OFF_VESPENE_FOR_X_SECONDS, 60),
+    DRONE,  # 17
 ]
 
 # Suspect enemy cheese but no proof. Get a spawning pool first with Zerglings
@@ -285,7 +279,7 @@ EARLY_GAME_POOL_FIRST_CAUTIOUS = [
     ZERGLING, ZERGLING, ZERGLING, ZERGLING,
     # If we don't yet have a lair but we have a baneling nest, build 7 cautionary banes
     IfHasThenDontBuild(LAIR, IfHasThenBuild(BANELINGNEST, BANELING, 7)),
-    DRONE, DRONE, DRONE,
+    DRONE, DRONE, DRONE, DRONE,
     IfHasThenDontBuild(LAIR, IfHasThenBuild(BANELINGNEST, ZERGLING, 8)),
     QUEEN,
 ]
@@ -311,7 +305,7 @@ EARLY_GAME_POOL_FIRST_DEFENSIVE = [
     QUEEN,
     DRONE,
     CanAfford(ZERGLINGMOVEMENTSPEED),
-    DRONE, DRONE,
+    DRONE, DRONE, DRONE,
     IfHasThenDontBuild(ROACHWARREN, BANELING, 4),
     QUEEN,
     EXTRACTOR,
@@ -340,10 +334,10 @@ EARLY_GAME_POOL_FIRST_OFFENSIVE = [
 # Seen enemy air units / air tech (Banshees, Mutas, Liberators, Oracle...)
 EARLY_GAME_SPORE_CRAWLERS = [
     HATCHERY,  # 2 (First expand)
-    DRONE,  # 19
+    DRONE,  # 18
     EXTRACTOR,  # 1
     AtLeast(1, SPAWNINGPOOL),
-    DRONE, DRONE,  # 21
+    DRONE, DRONE, DRONE,  # 21
     OVERLORD,  # 3
     QUEEN,  # 1
     ZERGLINGMOVEMENTSPEED,
@@ -361,30 +355,30 @@ EARLY_GAME_POOL_FIRST = [
     AtLeast(1, SPAWNINGPOOL),
     HATCHERY,  # 2 (First expand)
     EXTRACTOR,  # 1
-    DRONE,  # 19
+    DRONE,  # 18
     QUEEN,  # 1
     ZERGLING, ZERGLING,
     OVERLORD,  # 3
     ZERGLING, ZERGLING,  # 4
     QUEEN,  # 2
     CanAfford(ZERGLINGMOVEMENTSPEED),
-    DRONE,
-    DRONE,
+    DRONE, DRONE, DRONE,  # 21
 ]
 
 # Get a hatchery first with 4 defensive Zerglings
 EARLY_GAME_HATCHERY_FIRST = [
     HATCHERY,  # 2 (First expand)
-    DRONE,  # 19
     EXTRACTOR,  # 1
     AtLeast(1, SPAWNINGPOOL),
-    DRONE, DRONE, # 21
+    DRONE,  # 18
+    DRONE, DRONE,  # 20
     OVERLORD,  # 3
     QUEEN,  # 1
     CanAfford(ZERGLINGMOVEMENTSPEED),
     ZERGLING, ZERGLING,
     QUEEN,  # 2
     ZERGLING, ZERGLING,  # 4
+    DRONE,  # 21
 ]
 
 # Get a ling-bane mid-game composition
@@ -459,13 +453,12 @@ MID_GAME_ROACH_HYDRA_LURKER = [
     IfHasThenBuild(BANELINGNEST, ZERGLING, 10),
     DRONE, DRONE, DRONE, DRONE, DRONE,
     DRONE, DRONE, DRONE, DRONE, DRONE,
-    AtLeast(3, EXTRACTOR),
     AtLeast(1, ROACHWARREN),
     HATCHERY,
     DRONE, DRONE, DRONE, DRONE,
     EVOLUTIONCHAMBER,
     EVOLUTIONCHAMBER,
-    EXTRACTOR,
+    AtLeast(3, EXTRACTOR),
     IfHasThenDontBuild(GREATERSPIRE, ROACH, 5),  # Build 5 roaches until we get late-game tech
     EXTRACTOR,
     RAVAGER, ROACH, ROACH, ROACH, RAVAGER, RAVAGER,
@@ -475,6 +468,7 @@ MID_GAME_ROACH_HYDRA_LURKER = [
     DRONE, DRONE, DRONE,
     RAVAGER,
     QUEEN,
+    EXTRACTOR,
     IfHasThenBuild(BANELINGNEST, BANELING, 8),
     QUEEN,
     DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
@@ -738,7 +732,7 @@ DEFAULT_NEXT_BUILDS_TERRAN = {
     Builds.EARLY_GAME_SPORE_CRAWLERS: Builds.MID_GAME_ROACH_HYDRA_LURKER,
 }
 DEFAULT_NEXT_BUILDS_ZERG = {
-    Builds.EARLY_GAME_DEFAULT_OPENER: Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS,
+    Builds.EARLY_GAME_DEFAULT_OPENER: Builds.EARLY_GAME_POOL_FIRST,
     Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS: Builds.MID_GAME_LING_BANE,
     Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE: Builds.MID_GAME_LING_BANE,
     Builds.EARLY_GAME_HATCHERY_FIRST: Builds.MID_GAME_LING_BANE,
