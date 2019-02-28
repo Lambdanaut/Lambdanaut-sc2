@@ -135,8 +135,8 @@ class BuildManager(Manager):
 
             elif self.bot.enemy_race is sc2.Race.Zerg:
                 if rush_distance < 135:
-                    # Cheese against zerg on maps with low rush distance
-                    self.starting_build = Builds.EARLY_GAME_POOL_SPINE_ALL_IN
+                    # Play cautiously against zerg on maps with low rush distance
+                    self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
 
     def add_build(self, build: Builds):
         self.print("Adding build order: {}".format(build.name))

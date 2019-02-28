@@ -225,6 +225,7 @@ EARLY_GAME_DEFAULT_OPENER = [
 
 
 # A ZvZ spine rush
+# This build works like shit and it should never be used seriously lmfao
 def early_game_pool_spine_all_in_send_workers_to_enemy(bot: sc2.BotAI) -> bool:
     """
     Function that sends workers to enemy base in preparation for building spine crawlers
@@ -343,8 +344,8 @@ EARLY_GAME_POOL_FIRST_CAUTIOUS = [
     OVERLORD,  # 3
     ZERGLING, ZERGLING,
     QUEEN,
-    CanAfford(ZERGLINGMOVEMENTSPEED),
     CanAfford(SPINECRAWLER),
+    CanAfford(ZERGLINGMOVEMENTSPEED),
     ZERGLING, ZERGLING, ZERGLING, ZERGLING,
     # If we don't yet have a lair but we have a baneling nest, build 7 cautionary banes
     IfHasThenDontBuild(LAIR, IfHasThenBuild(BANELINGNEST, BANELING, 7)),
@@ -456,7 +457,7 @@ EARLY_GAME_HATCHERY_FIRST = [
 ]
 
 
-# Get a hatchery first with 4 defensive Zerglings
+# Get a hatchery first with 4 defensive Zerglings. Go for another hatchery soon after.
 EARLY_GAME_HATCHERY_FIRST_GREEDY = [
     HATCHERY,  # 2 (First expand)
     EXTRACTOR,  # 1
