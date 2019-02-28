@@ -691,7 +691,7 @@ class MicroManager(Manager):
 
                             # Back off from enemy if our cluster is much weaker
                             elif army_strength < -5 and unit_is_combatant:
-                                if self.bot.is_melee(unit):
+                                if self.bot.is_melee(unit) and self.bot.is_melee(nearest_enemy_unit):
                                     away_from_enemy = unit.position.towards(
                                         nearest_enemy_unit, -2)
                                     self.bot.actions.append(unit.snapshot.move(away_from_enemy))
