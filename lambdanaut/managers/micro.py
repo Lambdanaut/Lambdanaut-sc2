@@ -34,12 +34,15 @@ class MicroManager(Manager):
 
         # Subscribe to messages
         self.subscribe(Messages.UNROOT_ALL_SPINECRAWLERS)
-        self.subscribe(Messages.STRUCTURE_COMPLETE)
+        self.subscribe(Messages.BUILD_OFFENSIVE_SPINES)
 
         # Track the last fungal growth used
         # Because the sc2 protocol doesn't let us see buffs on enemies, we only allow
         # one fungal per 2 game seconds.
         self._fungals_used = ExpiringList()
+
+        # Flag indicating whether we should unroot spines or not
+        self.should_unroot_spines = True
 
     async def micro_back_melee(self, unit) -> bool:
         """
@@ -520,7 +523,7 @@ class MicroManager(Manager):
         spine_crawlers = rooted_spine_crawlers | uprooted_spine_crawlers
         townhalls = self.bot.townhalls.ready
 
-        if spine_crawlers and townhalls:
+        if spine_crawlers and townhalls and self.should_unroot_spines:
             townhall = townhalls.furthest_to(self.bot.start_location)
 
             # Get nearby spinecrawlers that are at our elevation
@@ -736,6 +739,13 @@ class MicroManager(Manager):
                 for sc in rooted_spine_crawlers.idle:
                     self.bot.actions.append(sc(
                         const.AbilityId.SPINECRAWLERUPROOT_SPINECRAWLERUPROOT))
+
+            # Messages indicating that we should build spine crawlers in enemy base and
+            # shouldn't unroot spine crawlers
+            if message is Messages.BUILD_OFFENSIVE_SPINES:
+                self.ack(message)
+
+                self.should_unroot_spines = False
 
     async def run(self):
         await super(MicroManager, self).run()

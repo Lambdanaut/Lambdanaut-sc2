@@ -102,7 +102,7 @@ class ForceManager(StatefulManager):
     def get_army_value_to_attack(self, build_stage):
         """Given a build stage, returns the army value needed to begin an attack"""
         return {
-            BuildStages.OPENING: 4,  # Assume rush. Attack with whatever we've got.
+            BuildStages.OPENING: 1,  # Assume rush. Attack with whatever we've got.
             BuildStages.EARLY_GAME: 25,  # Attack if we banked up some units early on
             BuildStages.MID_GAME: 55,  # Attack when a sizeable army is gained
             BuildStages.LATE_GAME: 73,  # Attack when a sizeable army is gained

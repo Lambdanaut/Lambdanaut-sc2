@@ -5,7 +5,7 @@ Build Orders
 * Opener build orders should always end with 17 drones if they intend to transition into another build
 """
 
-
+from typing import Callable, List
 import uuid
 
 import lib.sc2 as sc2
@@ -170,7 +170,7 @@ class PublishMessage(SpecialBuildTarget):
     NOTE: Cannot be wrapped recursively.
     This is not valid: `PublishMessage(AtLeast(1, ZERGLING))`
 
-    Example that will publish a message to sent the second overlord to the
+    Example that will publish a message to send the second overlord to the
     enemy's main ramp
 
         BUILD = [
@@ -185,6 +185,31 @@ class PublishMessage(SpecialBuildTarget):
         self.value = value
 
 
+class RunFunction(SpecialBuildTarget):
+    """
+    Container object for use in builds
+
+    Functionally it means that we run `func` the first time this is hit in
+    a build order.
+
+    NOTE: Cannot be wrapped recursively.
+    This is not valid: `RunFunction(AtLeast(1, ZERGLING))`
+
+    Example that will run a function that returns `true` and stores it in
+    the `self.result` variable.
+
+        BUILD = [
+            RunFunction(lambda bot: True),
+        ]
+    """
+    def __init__(self, func):
+        super(RunFunction, self).__init__()
+
+        self.unit_type = None
+        self.function: Callable[[sc2.BotAI], bool] = func
+        self.result = None  # Hold the result of `self.function()`
+
+
 # A good basic macro opener. Always start here
 EARLY_GAME_DEFAULT_OPENER = [
     HATCHERY,  # 1
@@ -197,6 +222,49 @@ EARLY_GAME_DEFAULT_OPENER = [
     DRONE,  # 16
     DRONE,  # 17
 ]
+
+
+# A ZvZ spine rush
+def early_game_pool_spine_all_in_send_workers_to_enemy(bot: sc2.BotAI) -> bool:
+    """
+    Function that sends workers to enemy base in preparation for building spine crawlers
+    """
+
+    # Get workers within range of a townhall
+    workers = bot.workers.filter(lambda w: bot.townhalls.closer_than(15, w))
+
+    if workers:
+        workers = workers.take(len(workers) - 3)
+        if workers:
+            for worker in workers:
+                bot.actions.append(worker.attack(bot.enemy_start_location.position))
+            return True
+    return False
+
+
+EARLY_GAME_POOL_SPINE_ALL_IN = [
+    # Publish message to indicate we should build spines in opponents base
+    PublishMessage(Messages.BUILD_OFFENSIVE_SPINES),
+    PublishMessage(Messages.DONT_RETURN_DISTANT_WORKERS_TO_TOWNHALLS),
+    HATCHERY,  # 1
+    OVERLORD,  # 1
+    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,  # 12
+    SPAWNINGPOOL,
+    DRONE,  # 13
+    DRONE,  # 14
+    OVERLORD,  # 2
+    ZERGLING, ZERGLING,  # 2
+    ZERGLING, ZERGLING,  # 4
+    ZERGLING, ZERGLING,  # 6
+    ZERGLING, ZERGLING,  # 8
+    RunFunction(early_game_pool_spine_all_in_send_workers_to_enemy),
+    SPINECRAWLER, SPINECRAWLER, SPINECRAWLER,
+    ZERGLING, ZERGLING,
+    ZERGLING, ZERGLING,
+    OVERLORD,  # 3
+]
+EARLY_GAME_POOL_SPINE_ALL_IN += [ZERGLING] * 400
+
 
 # Ravager all-in with no transition
 RAVAGER_ALL_IN = [
@@ -264,6 +332,7 @@ OPENER_RAVAGER_HARASS = [
     DRONE,  # 17
 ]
 
+
 # Suspect enemy cheese but no proof. Get a spawning pool first with Zerglings
 EARLY_GAME_POOL_FIRST_CAUTIOUS = [
     AtLeast(1, SPAWNINGPOOL),
@@ -283,6 +352,7 @@ EARLY_GAME_POOL_FIRST_CAUTIOUS = [
     IfHasThenDontBuild(LAIR, IfHasThenBuild(BANELINGNEST, ZERGLING, 8)),
     QUEEN,
 ]
+
 
 # Enemy cheese found. Get a spawning pool first with Zerglings, Banelings, and Spine Crawlers
 EARLY_GAME_POOL_FIRST_DEFENSIVE = [
@@ -312,6 +382,7 @@ EARLY_GAME_POOL_FIRST_DEFENSIVE = [
     IfHasThenDontBuild(ROACHWARREN, ZERGLING, 20),
 ]
 
+
 # Get a spawning pool first with Zerglings for an all-in rush
 EARLY_GAME_POOL_FIRST_OFFENSIVE = [
     EXTRACTOR,
@@ -330,6 +401,7 @@ EARLY_GAME_POOL_FIRST_OFFENSIVE = [
     ZERGLING, ZERGLING,
     HATCHERY,
 ]
+
 
 # Seen enemy air units / air tech (Banshees, Mutas, Liberators, Oracle...)
 EARLY_GAME_SPORE_CRAWLERS = [
@@ -350,6 +422,7 @@ EARLY_GAME_SPORE_CRAWLERS = [
     QUEEN,  # 4
 ]
 
+
 # Early game pool first with 4 defensive Zerglings
 EARLY_GAME_POOL_FIRST = [
     AtLeast(1, SPAWNINGPOOL),
@@ -364,6 +437,7 @@ EARLY_GAME_POOL_FIRST = [
     CanAfford(ZERGLINGMOVEMENTSPEED),
     DRONE, DRONE, DRONE,  # 21
 ]
+
 
 # Get a hatchery first with 4 defensive Zerglings
 EARLY_GAME_HATCHERY_FIRST = [
@@ -381,6 +455,7 @@ EARLY_GAME_HATCHERY_FIRST = [
     DRONE,  # 21
 ]
 
+
 # Get a hatchery first with 4 defensive Zerglings
 EARLY_GAME_HATCHERY_FIRST_GREEDY = [
     HATCHERY,  # 2 (First expand)
@@ -396,6 +471,7 @@ EARLY_GAME_HATCHERY_FIRST_GREEDY = [
     QUEEN,  # 2
     DRONE,  # 21
 ]
+
 
 # Get a ling-bane mid-game composition
 MID_GAME_LING_BANE = [
@@ -515,6 +591,7 @@ MID_GAME_ROACH_HYDRA_LURKER += [HYDRALISK] * 1
 MID_GAME_ROACH_HYDRA_LURKER += [EVOLVEMUSCULARAUGMENTS]
 MID_GAME_ROACH_HYDRA_LURKER += [HATCHERY]
 
+
 # Tech up to Corruptor Brood Lord ASAP vs Tanks
 # This is a midgame build we switch into against tanks
 MID_GAME_CORRUPTOR_BROOD_LORD_RUSH = [
@@ -623,24 +700,25 @@ class Builds(enum.Enum):
     """Build Types"""
 
     EARLY_GAME_DEFAULT_OPENER = 0
-    RAVAGER_ALL_IN = 1
-    OPENER_RAVAGER_HARASS = 2
+    EARLY_GAME_POOL_SPINE_ALL_IN = 1
+    RAVAGER_ALL_IN = 2
+    OPENER_RAVAGER_HARASS = 3
 
-    EARLY_GAME_POOL_FIRST_CAUTIOUS = 3
-    EARLY_GAME_POOL_FIRST_DEFENSIVE = 4
-    EARLY_GAME_POOL_FIRST_OFFENSIVE = 5
-    EARLY_GAME_POOL_FIRST = 6
-    EARLY_GAME_HATCHERY_FIRST = 7
-    EARLY_GAME_HATCHERY_FIRST_GREEDY = 8
-    EARLY_GAME_SPORE_CRAWLERS = 9
+    EARLY_GAME_POOL_FIRST_CAUTIOUS = 4
+    EARLY_GAME_POOL_FIRST_DEFENSIVE = 5
+    EARLY_GAME_POOL_FIRST_OFFENSIVE = 6
+    EARLY_GAME_POOL_FIRST = 7
+    EARLY_GAME_HATCHERY_FIRST = 8
+    EARLY_GAME_HATCHERY_FIRST_GREEDY = 9
+    EARLY_GAME_SPORE_CRAWLERS = 10
 
-    MID_GAME_LING_BANE = 10
-    MID_GAME_ROACH_HYDRA_LURKER = 11
-    MID_GAME_TWO_BASE_ROACH_QUEEN_NYDUS_TIMING = 12
-    MID_GAME_CORRUPTOR_BROOD_LORD_RUSH = 13
+    MID_GAME_LING_BANE = 11
+    MID_GAME_ROACH_HYDRA_LURKER = 12
+    MID_GAME_TWO_BASE_ROACH_QUEEN_NYDUS_TIMING = 13
+    MID_GAME_CORRUPTOR_BROOD_LORD_RUSH = 14
 
-    LATE_GAME_CORRUPTOR_BROOD_LORD = 14
-    LATE_GAME_ULTRALISK = 15
+    LATE_GAME_CORRUPTOR_BROOD_LORD = 15
+    LATE_GAME_ULTRALISK = 16
 
 
 class BuildStages(enum.Enum):
@@ -653,6 +731,7 @@ class BuildStages(enum.Enum):
 
 OPENER_BUILDS = {
     Builds.EARLY_GAME_DEFAULT_OPENER,
+    Builds.EARLY_GAME_POOL_SPINE_ALL_IN,
     Builds.RAVAGER_ALL_IN,
     Builds.OPENER_RAVAGER_HARASS,
 }
@@ -701,6 +780,7 @@ def get_build_stage(build: Builds):
 # Mapping from Build Type to Build Targets list
 BUILD_MAPPING = {
     Builds.EARLY_GAME_DEFAULT_OPENER: EARLY_GAME_DEFAULT_OPENER,
+    Builds.EARLY_GAME_POOL_SPINE_ALL_IN: EARLY_GAME_POOL_SPINE_ALL_IN,
     Builds.RAVAGER_ALL_IN: RAVAGER_ALL_IN,
     Builds.OPENER_RAVAGER_HARASS: OPENER_RAVAGER_HARASS,
 
@@ -725,6 +805,7 @@ BUILD_MAPPING = {
 # The default build is switched to if the build is at its end
 DEFAULT_NEXT_BUILDS = {
     Builds.EARLY_GAME_DEFAULT_OPENER: Builds.EARLY_GAME_POOL_FIRST,
+    Builds.EARLY_GAME_POOL_SPINE_ALL_IN: None,
     Builds.RAVAGER_ALL_IN: None,
     Builds.OPENER_RAVAGER_HARASS: Builds.EARLY_GAME_DEFAULT_OPENER,
 

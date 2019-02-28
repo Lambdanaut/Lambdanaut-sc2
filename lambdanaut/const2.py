@@ -138,13 +138,13 @@ ATTRIBUTES = dict(data_pb2.Attribute.items())
 
 # Messages
 class Messages(enum.Enum):
-    # ENEMY START LOCATION MESSAGES
+    # # ENEMY START LOCATION MESSAGES
     OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION = 0  # Message indicating that overlord scout was sent to empty base
     OVERLORD_SCOUT_FOUND_ENEMY_BASE = 1  # Message indicating that the army can't find enemy base
     ARMY_COULDNT_FIND_ENEMY_BASE = 2  # Message indicating that the army can't find enemy base
     ARMY_FOUND_ENEMY_BASE = 3  # Message indicating that the army can't find enemy base
 
-    # ENEMY UNITS FOUND MESSAGES
+    # # ENEMY UNITS FOUND MESSAGES
     OVERLORD_SCOUT_FOUND_ENEMY_DEFENSIVE_STRUCTURES = 4
     OVERLORD_SCOUT_FOUND_ENEMY_PROXY = 5
     OVERLORD_SCOUT_FOUND_ENEMY_RUSH = 6
@@ -159,25 +159,25 @@ class Messages(enum.Enum):
     DEFENDING_AGAINST_MULTIPLE_ENEMIES = 15
     ENEMY_MOVING_OUT_SCOUTED = 16
 
-    # STRATEGIC NOTES MESSAGES
+    # # STRATEGIC NOTES MESSAGES
     ENEMY_EARLY_NATURAL_EXPAND_TAKEN = 17
     ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN = 18
     NEW_BUILD = 19  # New build added
     NEW_BUILD_STAGE = 20  # New build stage entered
 
-    # UNITS TRAINED MESSAGES
+    # # UNITS TRAINED MESSAGES
     UNIT_CREATED = 21
     STRUCTURE_COMPLETE = 22
     UPGRADE_STARTED = 23
 
-    # UNIT ORDER MESSAGES
+    # # UNIT ORDER MESSAGES
     DRONE_LEAVING_TO_CREATE_HATCHERY = 24  # Value is Drone's tag
     OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 25  # Move the second overlord scout to the enemy's main ramp
     PULL_WORKERS_OFF_VESPENE = 26  # Value is int of workers to mine vespene. None if return to default.
     PULL_WORKERS_OFF_VESPENE_FOR_X_SECONDS = 27  # Value is float of seconds to pull off vespene
     UNROOT_ALL_SPINECRAWLERS = 28  # Message indicating we should uproot and reposition spinecrawlers
 
-    # STATE MACHINE
+    # # STATE MACHINE
     STATE_ENTERED = 29  # Value is State being left
     STATE_EXITED = 30  # Value is State entered
     DONT_ATTACK = 31  # Indicates that we shouldn't ever enter ATTACKING or MOVING_TO_ATTACK forces state
@@ -187,6 +187,10 @@ class Messages(enum.Enum):
     # Starts an attack and doesn't stop until condition returns True.
     # Val is a function of type [[manager], bool]. It takes the manager that receives the message as input.
     DONT_STOP_ATTACKING_UNTIL_CONDITION = 35
+
+    # # STRATEGY CHANGE
+    BUILD_OFFENSIVE_SPINES = 36  # Builds spines in enemy base rather than at home. Turns off uprooting.
+    DONT_RETURN_DISTANT_WORKERS_TO_TOWNHALLS = 37  # Turn off returning distant workers to townhalls
 
 
 # Build Manager Commands

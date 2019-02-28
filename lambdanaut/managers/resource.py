@@ -35,8 +35,10 @@ class ResourceManager(Manager):
         self.subscribe(Messages.UPGRADE_STARTED)
         self.subscribe(Messages.PULL_WORKERS_OFF_VESPENE)
         self.subscribe(Messages.PULL_WORKERS_OFF_VESPENE_FOR_X_SECONDS)
+        self.subscribe(Messages.DONT_RETURN_DISTANT_WORKERS_TO_TOWNHALLS)
 
         # If this flag is set, pull off gas when zergling speed is researched
+        self.allow_return_distant_workers_to_townhalls = True
         self.pull_off_gas_early = True
 
     async def init(self):
@@ -50,15 +52,16 @@ class ResourceManager(Manager):
             self.bot.actions.append(worker.gather(mineral))
 
     def return_distant_workers_to_townhalls(self):
-        townhalls = self.bot.townhalls
-        if townhalls:
-            for worker in self.bot.workers:
-                closest_townhall = townhalls.closest_to(worker)
-                if closest_townhall.distance_to(worker) > 50:
-                    minerals = self.bot.state.mineral_field
-                    if minerals:
-                        mineral = self.bot.state.mineral_field.closest_to(closest_townhall)
-                        self.bot.actions.append(worker.gather(mineral))
+        if self.allow_return_distant_workers_to_townhalls:
+            townhalls = self.bot.townhalls
+            if townhalls:
+                for worker in self.bot.workers:
+                    closest_townhall = townhalls.closest_to(worker)
+                    if closest_townhall.distance_to(worker) > 50:
+                        minerals = self.bot.state.mineral_field
+                        if minerals:
+                            mineral = self.bot.state.mineral_field.closest_to(closest_townhall)
+                            self.bot.actions.append(worker.gather(mineral))
 
     async def manage_mineral_saturation(self):
         """
@@ -318,6 +321,12 @@ class ResourceManager(Manager):
                 self._recent_commands.add(
                     ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
                     self.bot.state.game_loop, expiry=val)
+
+            dont_return_distant_workers_to_townhalls = {Messages.DONT_RETURN_DISTANT_WORKERS_TO_TOWNHALLS}
+            if message in dont_return_distant_workers_to_townhalls:
+                # Turn off returning distant workers to townhalls
+                self.ack(message)
+                self.allow_return_distant_workers_to_townhalls = False
 
     async def run(self):
         await super(ResourceManager, self).run()

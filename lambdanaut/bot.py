@@ -362,8 +362,9 @@ class LambdaBot(sc2.BotAI):
         Publish a message of message_type to all subscribers.
         """
         for subscriber in self._message_subscriptions[message_type]:
-            if subscriber is not manager:
-                subscriber.inbox(message_type, value)
+            # COMMENTED OUT BECAUSE I DON'T THINK IT'S NECESSARY... LOOK OUT FOR BUGS THOUGH.
+            # if subscriber is not manager:
+            subscriber.inbox(message_type, value)
 
     def subscribe(self, manager, message_type):
         """Subscribes a manager to a type of message"""

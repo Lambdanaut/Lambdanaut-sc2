@@ -68,6 +68,7 @@ class BuildManager(Manager):
         self.subscribe(Messages.ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD)
         self.subscribe(Messages.DEFENDING_AGAINST_MULTIPLE_ENEMIES)
         self.subscribe(Messages.STATE_EXITED)
+        self.subscribe(Messages.BUILD_OFFENSIVE_SPINES)
 
         # Expansion index used for trying other expansions if the one we're trying is blocked
         self.next_expansion_index: int = 0
@@ -79,6 +80,8 @@ class BuildManager(Manager):
         # (like the creation ability for spawning a drone)
         self.unit_type_to_creation_ability_map = {
             unit_id: unit.creation_ability for unit_id, unit in self.bot._game_data.units.items()}
+
+        self.build_offensive_spines = False
 
     async def init(self):
         self.determine_opening_builds()
@@ -132,8 +135,8 @@ class BuildManager(Manager):
 
             elif self.bot.enemy_race is sc2.Race.Zerg:
                 if rush_distance < 135:
-                    # Be more cautious against Zerg on maps with short rush distances
-                    self.add_build(Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS)
+                    # Cheese against zerg on maps with low rush distance
+                    self.starting_build = Builds.EARLY_GAME_POOL_SPINE_ALL_IN
 
     def add_build(self, build: Builds):
         self.print("Adding build order: {}".format(build.name))
@@ -287,6 +290,12 @@ class BuildManager(Manager):
                     self.stop_townhall_production = False
                     self.stop_worker_production = False
 
+            # We should build spine crawlers in opponent's base rather than at home
+            build_offensive_spines = {Messages.BUILD_OFFENSIVE_SPINES, }
+            if message in build_offensive_spines:
+                self.ack(message)
+                self.build_offensive_spines = True
+
     def parse_special_build_target(self,
                                    unit: builds.SpecialBuildTarget,
                                    existing_unit_counts: Counter,
@@ -436,6 +445,25 @@ class BuildManager(Manager):
                     and not build_targets:
                 self.active_special_build_target_ids.add(special_id)
                 self.publish(message, value)
+
+            return None
+
+        elif isinstance(unit, builds.RunFunction):
+            # RunFunction is a "special" unittype that runs a function the
+            # first time this build target is hit.
+            # We ensure `build_targets` is empty so that this is called only when
+            # it's hit for the first time.
+
+            run_function = unit
+            func = run_function.function
+            special_id = run_function.id
+
+            if special_id not in self.active_special_build_target_ids \
+                    and not build_targets:
+                self.active_special_build_target_ids.add(special_id)
+
+                # Record the result in run_function
+                run_function.result = func(self.bot)
 
             return None
 
@@ -794,29 +822,39 @@ class BuildManager(Manager):
                 return True
 
         elif build_target == const.SPINECRAWLER:
-            townhalls = self.bot.townhalls.ready
-
-            if townhalls.exists:
+            if self.build_offensive_spines:
                 if self.can_afford(build_target):
-                    enemy_start_location = self.bot.enemy_start_location
-                    townhall = townhalls.random
-                    nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
-                    nearby_ramp = townhall.position.towards(
-                        enemy_start_location, 1).closest(nearby_ramps)
+                    # Build offensive spine crawlers
+                    target = self.bot.enemy_start_location.towards_with_random_angle(
+                        self.bot.start_location, 2)
 
-                    if nearby_ramp.distance_to(townhall) < 18:
-                        target = nearby_ramp
-                    else:
-                        near_townhall = townhall.position.towards_with_random_angle(
-                            enemy_start_location, 10, max_difference=(math.pi / 2.0))
-                        target = near_townhall
+                    await self.bot.build(build_target, near=target)
 
-                    position = await self.bot.find_placement(
-                        const.SPINECRAWLER, target, max_distance=25)
+            else:
+                # Build defensive spine crawlers
+                townhalls = self.bot.townhalls.ready
 
-                    await self.bot.build(build_target, near=position)
+                if townhalls.exists:
+                    if self.can_afford(build_target):
+                        enemy_start_location = self.bot.enemy_start_location
+                        townhall = townhalls.random
+                        nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
+                        nearby_ramp = townhall.position.towards(
+                            enemy_start_location, 1).closest(nearby_ramps)
 
-                    return True
+                        if nearby_ramp.distance_to(townhall) < 18:
+                            target = nearby_ramp
+                        else:
+                            near_townhall = townhall.position.towards_with_random_angle(
+                                enemy_start_location, 10, max_difference=(math.pi / 2.0))
+                            target = near_townhall
+
+                        position = await self.bot.find_placement(
+                            const.SPINECRAWLER, target, max_distance=25)
+
+                        await self.bot.build(build_target, near=position)
+
+                        return True
 
         elif build_target == const.SPORECRAWLER:
             townhalls = self.bot.townhalls.ready
