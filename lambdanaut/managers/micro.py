@@ -91,8 +91,9 @@ class MicroManager(Manager):
                 # Focus down priorities
                 nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priority_types)
                 if nearby_enemy_priorities:
-                    nearby_enemy_unit = nearby_enemy_priorities.closest_to(zergling)
-                    self.bot.actions.append(zergling.attack(nearby_enemy_unit))
+                    target = self.bot.closest_and_most_damaged(
+                        nearby_enemy_priorities, zergling)
+                    self.bot.actions.append(zergling.attack(target))
 
                 closest_enemy_unit = nearby_enemy_units.closest_to(zergling)
                 # Micro away from banelings

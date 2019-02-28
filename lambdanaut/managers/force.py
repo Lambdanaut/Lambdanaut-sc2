@@ -7,7 +7,7 @@ from lambdanaut.builds import BuildStages
 import lambdanaut.const2 as const2
 from lambdanaut.expiringlist import ExpiringList
 from lambdanaut.managers import Manager, StatefulManager
-from lambdanaut.const2 import Messages, ForceManagerCommands, ForcesStates
+from lambdanaut.const2 import DefenseStates, ForceManagerCommands, ForcesStates, Messages
 
 
 class ForceManager(StatefulManager):
@@ -93,6 +93,7 @@ class ForceManager(StatefulManager):
 
         # Subscribe to messages
         self.subscribe(Messages.NEW_BUILD_STAGE)
+        self.subscribe(Messages.STATE_ENTERED)
         self.subscribe(Messages.DONT_STOP_ATTACKING_UNTIL_CONDITION)
         self.subscribe(Messages.DONT_ATTACK)
         self.subscribe(Messages.ALLOW_ATTACKING_THROUGH_NYDUS)
@@ -478,7 +479,8 @@ class ForceManager(StatefulManager):
                 townhalls = self.bot.townhalls
                 if townhalls:
                     nearest_townhall = townhalls.closest_to(unit)
-                    self.bot.actions.append(unit.move(nearest_townhall))
+                    if nearest_townhall.distance_to(unit) > 20:
+                        self.bot.actions.append(unit.move(nearest_townhall))
 
     async def do_searching(self):
         army = self.bot.units(const2.ZERG_ARMY_UNITS).\
@@ -523,6 +525,14 @@ class ForceManager(StatefulManager):
                 # Update distance to moving_to_attack meetup center required to attack
                 new_distance_to_moving_to_attack = self.get_army_center_distance_to_attack(val)
                 self.distance_to_moving_to_attack = new_distance_to_moving_to_attack
+
+            elif message in {Messages.STATE_ENTERED}:
+                self.ack(message)
+
+                if val is DefenseStates.DEFENDING:
+                    if self.state is ForcesStates.RETREATING:
+                        # Return to housekeeping if we're retreating and we start defending
+                        return await self.change_state(ForcesStates.HOUSEKEEPING)
 
             elif message in {Messages.DONT_ATTACK}:
                 self.ack(message)
