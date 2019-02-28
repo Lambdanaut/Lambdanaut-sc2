@@ -68,7 +68,7 @@ class DefenseManager(StatefulManager):
 
                 # Workers attack enemy
                 ground_enemies = [enemy for enemy in enemies_nearby if not enemy.is_flying]
-                workers = self.bot.workers.closer_than(18, enemies_nearby[0].position)
+                workers = self.bot.workers.closer_than(18, th.position.closest(enemies_nearby).position)
                 if ground_enemies and len(workers) > len(ground_enemies):
                     for worker in workers:
                         if worker.tag in self.bot.workers_defending:
@@ -78,7 +78,12 @@ class DefenseManager(StatefulManager):
 
                         else:
                             # Add workers to defending workers and attack nearby enemy
-                            if len(self.bot.workers_defending) <= len(ground_enemies):
+                            # Use one more worker than there are enemies
+                            # OR
+                            # If the enemy is a single worker, just send one worker
+                            if len(self.bot.workers_defending) <= len(ground_enemies) \
+                                    or (len(self.bot.workers_defending) < 1 and len(ground_enemies) == 1 and
+                                        ground_enemies[0].type_id in const2.WORKERS):
                                 target = self.bot.closest_and_most_damaged(ground_enemies, worker)
                                 if target.type_id not in worker_non_targets:
                                     self.bot.workers_defending.add(worker.tag)
