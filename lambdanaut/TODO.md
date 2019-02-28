@@ -59,6 +59,10 @@
   * Write mutalisk micro and re-add mutalisk to ling-bane-muta build
   
   * Keep non-busy queens on creep during housekeeping. Right now they walk right out into the nether to die. 
+  
+  * Only spawn creep tumors with non-townhall queens
+  
+  
 
 ## MEDIUM PRIORITY
 

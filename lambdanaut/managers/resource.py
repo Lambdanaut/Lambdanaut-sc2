@@ -210,7 +210,9 @@ class ResourceManager(Manager):
 
     async def manage_queens(self):
         queens = self.bot.units(const.QUEEN)
-        townhalls = self.bot.townhalls
+
+        # Get townhalls, preferring to assign queens to ready hatcheries
+        townhalls = self.bot.townhalls.sorted(lambda th: not th.is_ready)
 
         await self.do_transfuse()
 
@@ -219,15 +221,14 @@ class ResourceManager(Manager):
                 queen_tag = self.bot.townhall_queens.get(townhall.tag)
 
                 if queen_tag is None:
-                    if len(self.bot.townhall_queens) < 5:
-                        # Tag a queen to the townhall
-                        untagged_queens = queens.tags_not_in(self.bot.townhall_queens.values())
-                        if untagged_queens:
-                            queen = untagged_queens[0]
-                            self.bot.townhall_queens[townhall.tag] = queen.tag
-                        else:
-                            # No queens available for this townhall. Continue to next townhall
-                            continue
+                    # Tag a queen to the townhall
+                    untagged_queens = queens.tags_not_in(self.bot.townhall_queens.values())
+                    if untagged_queens:
+                        queen = untagged_queens[0]
+                        self.bot.townhall_queens[townhall.tag] = queen.tag
+                    else:
+                        # No queens available for this townhall. Continue to next townhall
+                        continue
                 else:
                     queen = queens.find_by_tag(queen_tag)
 
@@ -248,8 +249,9 @@ class ResourceManager(Manager):
                                 nearby_creep_tumors = creep_tumors.closer_than(17, townhall)
 
                                 # If there are no nearby creep tumors or any at all, then spawn a creep tumor
-                                if not nearby_creep_tumors and \
-                                        not self._recent_commands.contains(
+                                if not nearby_creep_tumors \
+                                        and townhall.has_buff(const.QUEENSPAWNLARVATIMER) \
+                                        and not self._recent_commands.contains(
                                             ResourceManagerCommands.QUEEN_SPAWN_TUMOR,
                                             self.bot.state.game_loop):
 

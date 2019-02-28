@@ -467,7 +467,7 @@ class ForceManager(StatefulManager):
     async def start_retreating(self):
         # Add START_RETREATING to recent commands so we don't switch states for a bit.
         self._recent_commands.add(ForceManagerCommands.START_RETREATING,
-                                  self.bot.state.game_loop, expiry=50)
+                                  self.bot.state.game_loop, expiry=20)
 
     async def do_retreating(self):
         army = self.bot.units(const2.ZERG_ARMY_UNITS). \

@@ -198,11 +198,11 @@ class IntelManager(Manager):
                         nearby_enemy_counter[unit.type_id] += 1
 
             # Count any and all enemy units
-            if (enemy_counter[const.ZERGLING] >= 7
-                    or enemy_counter[const.ROACH] >= 1
-                    or enemy_counter[const.MARINE] >= 5
+            if (enemy_counter[const.ZERGLING] >= 10
+                    or enemy_counter[const.ROACH] >= 2
+                    or enemy_counter[const.MARINE] >= 6
                     or enemy_counter[const.REAPER] >= 2
-                    or enemy_counter[const.MARAUDER] >= 2
+                    or enemy_counter[const.MARAUDER] >= 3
                     or enemy_counter[const.ZEALOT] >= 4
                     or enemy_counter[const.ADEPT] >= 3
                     or enemy_counter[const.STALKER] >= 3):

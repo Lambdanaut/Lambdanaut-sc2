@@ -206,7 +206,7 @@ class DefenseManager(StatefulManager):
             # Loop through all townhalls. If enemies are near any of them, don't change state.
             for th in self.bot.townhalls:
                 enemies_nearby = self.bot.known_enemy_units.closer_than(
-                    24, th.position).exclude_type(const2.ENEMY_NON_ARMY).filter(lambda u: u.is_visible)
+                    30, th.position).exclude_type(const2.ENEMY_NON_ARMY).filter(lambda u: u.is_visible)
 
                 if enemies_nearby:
                     # Enemies found, don't change state.
@@ -218,7 +218,7 @@ class DefenseManager(StatefulManager):
         elif self.state != DefenseStates.DEFENDING and self.allow_defending:
             for th in self.bot.townhalls:
                 enemies_nearby = self.bot.known_enemy_units.closer_than(
-                    24, th).exclude_type(const2.ENEMY_NON_ARMY).filter(lambda u: u.is_visible)
+                    30, th).exclude_type(const2.ENEMY_NON_ARMY).filter(lambda u: u.is_visible)
 
                 if enemies_nearby:
                     return await self.change_state(DefenseStates.DEFENDING)
