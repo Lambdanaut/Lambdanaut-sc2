@@ -68,7 +68,7 @@ class DefenseManager(StatefulManager):
 
                 # Workers attack enemy
                 ground_enemies = [enemy for enemy in enemies_nearby if not enemy.is_flying]
-                workers = self.bot.workers.closer_than(14, enemies_nearby[0].position)
+                workers = self.bot.workers.closer_than(18, enemies_nearby[0].position)
                 if ground_enemies and len(workers) > len(ground_enemies):
                     for worker in workers:
                         if worker.tag in self.bot.workers_defending:
@@ -111,13 +111,12 @@ class DefenseManager(StatefulManager):
 
                 # The harder we're attacked, the further-out army to pull back
                 # 1-3 Enemies: 0.3 of map. 4 enemy: 0.4 of map. 5 enemy: 0.5 of map. 6 enemy: 0.6 of map...
-                # 10 or more enemy: 1.0 of map
-                distance_ratio_to_pull_back = max(0.3, max(1.0, len(enemies_nearby) * 0.1))
-                if len(enemies_nearby) < 5:
-                    army_clusters = \
-                        [cluster for cluster in army_clusters
-                         if self.bot.start_location.distance_to(cluster.position) <
-                         self.bot.start_location_to_enemy_start_location_distance * distance_ratio_to_pull_back]
+                # 8 or more enemy: 0.8 of map
+                distance_ratio_to_pull_back = max(0.3, min(0.8, len(enemies_nearby) * 0.1))
+                army_clusters = \
+                    [cluster for cluster in army_clusters
+                     if th.distance_to(cluster.position) <
+                     self.bot.start_location_to_enemy_start_location_distance * distance_ratio_to_pull_back]
 
                 if army_clusters:
                     nearest_enemy_cluster = self.bot.start_location.closest(self.bot.enemy_clusters)
@@ -144,7 +143,7 @@ class DefenseManager(StatefulManager):
                                             if target and unit.weapon_cooldown <= 0 and not unit.is_attacking:
                                                 self.bot.actions.append(unit.attack(target))
 
-                                elif army_strength < -2:
+                                elif army_strength < -5:
                                     # If enemy is greater regroup to center of largest cluster towards friendly townhall
                                     largest_army_cluster = functools.reduce(
                                         lambda c1, c2: c1 if len(c1) >= len(c2) else c2,
@@ -154,10 +153,9 @@ class DefenseManager(StatefulManager):
                                     for unit in army_cluster:
                                         if unit.type_id not in const2.NON_COMBATANTS:
                                             nearest_townhall = self.bot.townhalls.closest_to(unit.position)
-                                            if unit.distance_to(nearest_townhall) > 6:
-                                                towards_townhall = largest_army_cluster.position.towards(
-                                                    nearest_townhall, +2)
-                                                self.bot.actions.append(unit.move(towards_townhall))
+                                            towards_townhall = largest_army_cluster.position.towards(
+                                                nearest_townhall, +2)
+                                            self.bot.actions.append(unit.move(towards_townhall))
 
             # Bring back defending workers that have drifted too far from town halls
             workers_defending_to_remove = set()
@@ -208,7 +206,7 @@ class DefenseManager(StatefulManager):
             # Loop through all townhalls. If enemies are near any of them, don't change state.
             for th in self.bot.townhalls:
                 enemies_nearby = self.bot.known_enemy_units.closer_than(
-                    23, th.position).exclude_type(const2.ENEMY_NON_ARMY)
+                    24, th.position).exclude_type(const2.ENEMY_NON_ARMY).filter(lambda u: u.is_visible)
 
                 if enemies_nearby:
                     # Enemies found, don't change state.
@@ -220,7 +218,7 @@ class DefenseManager(StatefulManager):
         elif self.state != DefenseStates.DEFENDING and self.allow_defending:
             for th in self.bot.townhalls:
                 enemies_nearby = self.bot.known_enemy_units.closer_than(
-                    23, th).exclude_type(const2.ENEMY_NON_ARMY)
+                    24, th).exclude_type(const2.ENEMY_NON_ARMY).filter(lambda u: u.is_visible)
 
                 if enemies_nearby:
                     return await self.change_state(DefenseStates.DEFENDING)
