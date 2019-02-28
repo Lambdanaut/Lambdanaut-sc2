@@ -206,6 +206,7 @@ class IntelManager(Manager):
                     or enemy_counter[const.ZEALOT] >= 4
                     or enemy_counter[const.ADEPT] >= 3
                     or enemy_counter[const.STALKER] >= 3):
+                self.has_scouted_enemy_rush = True
                 return True
 
             # Count nearby enemy units
@@ -217,6 +218,7 @@ class IntelManager(Manager):
                     or nearby_enemy_counter[const.ZEALOT] >= 1
                     or nearby_enemy_counter[const.ADEPT] >= 2
                     or nearby_enemy_counter[const.STALKER] >= 1):
+                self.has_scouted_enemy_rush = True
                 return True
 
             return False
