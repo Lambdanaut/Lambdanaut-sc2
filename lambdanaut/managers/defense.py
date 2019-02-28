@@ -214,14 +214,10 @@ class DefenseManager(StatefulManager):
                     # Enemies found, don't change state.
                     break
             else:
-                units_attacking = self.bot.units.filter(lambda u: u.is_attacking and not u.is_moving)
-
-                # If none of our units are still attacking, change state
-                if not units_attacking:
-                    return await self.change_state(self.previous_state)
+                return await self.change_state(self.previous_state)
 
         # Switching to DEFENDING from any other state
-        if self.state != DefenseStates.DEFENDING and self.allow_defending:
+        elif self.state != DefenseStates.DEFENDING and self.allow_defending:
             for th in self.bot.townhalls:
                 enemies_nearby = self.bot.known_enemy_units.closer_than(
                     23, th).exclude_type(const2.ENEMY_NON_ARMY)

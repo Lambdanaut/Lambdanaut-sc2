@@ -139,7 +139,7 @@ class MicroManager(Manager):
 
             structure_attack_priorities = {const.SUPPLYDEPOT, const.BUNKER, const.STARPORTTECHLAB, const.FACTORYTECHLAB,
                                            const.PYLON, const.PHOTONCANNON, const.SHIELDBATTERY,
-                                           const.SPINECRAWLER}
+                                           const.SPINECRAWLER, const.SPINECRAWLERUPROOTED}
 
             # Splash action to perform on enemies
             def splash_action(baneling, enemy):

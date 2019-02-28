@@ -658,7 +658,7 @@ LATE_GAME_CORRUPTOR_BROOD_LORD = [
     # If we have a hydralisk den, build additional hydras until we have a greater spire
     # Require at least one spire unless we have a Greater Spire
     AtLeast(1, HIVE),
-    IfHasThenBuild(HYDRALISKDEN, IfHasThenDontBuild(GREATERSPIRE, HYDRALISK, 4)),
+    IfHasThenDontBuild(GREATERSPIRE, IfHasThenBuild(HYDRALISKDEN, HYDRALISK, 6)),
     AtLeast(6, HATCHERY),
     AtLeast(8, EXTRACTOR),
     # Get late game upgrades
