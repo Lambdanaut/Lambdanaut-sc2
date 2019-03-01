@@ -206,7 +206,7 @@ class ForceManager(StatefulManager):
                     far_army = army.further_than(22, townhall.position)
                     if far_army:
                         unit = far_army.random
-                        if not unit.is_attacking and not unit.is_moving:
+                        if unit.is_idle:
                             # Move them to the nearest ramp
                             target = townhall.position
 
@@ -241,7 +241,8 @@ class ForceManager(StatefulManager):
                         position = towards_enemy
 
                     for unit in army:
-                        self.bot.actions.append(unit.attack(position))
+                        if not self.bot.unit_is_busy(unit):
+                            self.bot.actions.append(unit.attack(position))
 
     async def do_moving_to_attack(self):
         army_units = const2.ZERG_ARMY_UNITS
@@ -262,7 +263,7 @@ class ForceManager(StatefulManager):
         nearby_target = self.bot.find_nearby_pathable_point(nearby_target)
 
         for unit in army:
-            if not (unit.is_attacking and not unit.is_moving):
+            if not self.bot.unit_is_busy(unit):
                 self.bot.actions.append(unit.attack(nearby_target))
 
     async def start_attacking(self):
@@ -390,23 +391,6 @@ class ForceManager(StatefulManager):
                         target = enemy_structures.random.position
                         self.bot.actions.append(mutalisk.move(target))
 
-    async def stop_attacking(self):
-        # Cleanup banelings that were harassing
-        self.banelings_harassing.clear()
-
-        # Cleanup roaches that were harassing
-        roaches = self.bot.units(const.ROACHBURROWED)
-        if roaches:
-            roaches = roaches.tags_in(self.roaches_harassing)
-            for roach in roaches:
-                self.bot.actions.append(
-                    roach(const.AbilityId.BURROWUP_ROACH))
-
-        self.roaches_harassing.clear()
-
-        # Reset the occupied units
-        self.bot.occupied_units.clear()
-
     async def do_attacking(self):
         # Don't attackmove into the enemy with these units
         no_attackmove_units = {
@@ -454,13 +438,30 @@ class ForceManager(StatefulManager):
         if not self._recent_commands.contains(
                 ForceManagerCommands.START_ATTACKING, self.bot.state.game_loop):
             for unit in backline_army:
-                if not unit.is_attacking and not unit.is_moving and unit.weapon_cooldown <= 0:
+                if not self.bot.unit_is_busy(unit):
                     self.bot.actions.append(unit.attack(target))
 
         # Send in the frontline army immediatelly
         for unit in frontline_army:
-            if not unit.is_attacking and not unit.is_moving and unit.weapon_cooldown <= 0:
+            if not self.bot.unit_is_busy(unit):
                 self.bot.actions.append(unit.attack(target))
+
+    async def stop_attacking(self):
+        # Cleanup banelings that were harassing
+        self.banelings_harassing.clear()
+
+        # Cleanup roaches that were harassing
+        roaches = self.bot.units(const.ROACHBURROWED)
+        if roaches:
+            roaches = roaches.tags_in(self.roaches_harassing)
+            for roach in roaches:
+                self.bot.actions.append(
+                    roach(const.AbilityId.BURROWUP_ROACH))
+
+        self.roaches_harassing.clear()
+
+        # Reset the occupied units
+        self.bot.occupied_units.clear()
 
     async def do_attacking_through_nydus(self):
         pass
@@ -494,7 +495,8 @@ class ForceManager(StatefulManager):
 
         for expansion in enemy_expansion_positions:
             for unit in army:
-                self.bot.actions.append(unit.move(expansion, queue=True))
+                if not self.bot.unit_is_busy(unit):
+                    self.bot.actions.append(unit.move(expansion, queue=True))
 
     async def determine_state_change(self):
         # Reacting to subscribed messages

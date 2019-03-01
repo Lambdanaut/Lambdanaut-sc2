@@ -68,7 +68,7 @@ class DefenseManager(StatefulManager):
 
                 # Workers attack enemy
                 ground_enemies = [enemy for enemy in enemies_nearby if not enemy.is_flying]
-                workers = self.bot.workers.closer_than(18, th.position.closest(enemies_nearby).position)
+                workers = self.bot.workers.closer_than(14, th.position.closest(enemies_nearby).position)
                 if ground_enemies and len(workers) > len(ground_enemies):
                     for worker in workers:
                         if worker.tag in self.bot.workers_defending:
@@ -145,10 +145,10 @@ class DefenseManager(StatefulManager):
                                                 and unit.tag not in self.bot.townhall_queens.values():
                                             target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
 
-                                            if target and unit.weapon_cooldown <= 0 and not unit.is_attacking:
+                                            if target and not self.bot.unit_is_busy(unit):
                                                 self.bot.actions.append(unit.attack(target))
 
-                                elif army_strength < -2:
+                                elif army_strength < -3:
                                     # If enemy is greater regroup to center of largest cluster towards friendly townhall
                                     largest_army_cluster = functools.reduce(
                                         lambda c1, c2: c1 if len(c1) >= len(c2) else c2,

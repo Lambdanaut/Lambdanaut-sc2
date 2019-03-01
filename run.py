@@ -28,7 +28,7 @@ MAPS = [
     'BlueshiftLE',
     'PortAleksanderLE', ]
 
-MAP_NAME = "PortAleksanderLE"
+MAP_NAME = "KairosJunctionLE"
 MICRO_MAP_NAME = "kairo_training"
 REALTIME = False
 
@@ -48,7 +48,7 @@ DIFFICULTY = sc2.Difficulty.VeryHard
 # DIFFICULTY = sc2.Difficulty.Easy
 
 RACE = sc2.Race.Zerg
-ENEMY_RACE = sc2.Race.Zerg
+ENEMY_RACE = sc2.Race.Protoss
 REPLAY_NAME = os.path.join("replays", "last_lambdanaut_replay{}.*.sc2replay".format(datetime_str))
 
 if not MAP_NAME:

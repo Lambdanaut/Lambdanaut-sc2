@@ -571,7 +571,7 @@ class LambdaBot(sc2.BotAI):
 
         return adjacents
 
-    def point_between_townhall_and_resources(self, townhall):
+    def point_between_townhall_and_resources(self, townhall: Unit):
         nearest_minerals = self.state.mineral_field.closer_than(8, townhall.position)
         nearest_gas = self.state.vespene_geyser.closer_than(8, townhall.position)
         nearest_resources = nearest_minerals | nearest_gas
@@ -580,6 +580,23 @@ class LambdaBot(sc2.BotAI):
             return nearest_resources.center
         else:
             return townhall.position
+
+    def unit_is_busy(self, unit: Unit) -> bool:
+        """
+        Determines if a unit is busy or if we can use him for another high-level
+        command(like from the ForceManager)
+
+        Logic:
+          * If the unit is on pure move command then we don't want to
+            interrupt him. He could be microing.
+          * If the unit is attacking and has a unit as target, we don't want
+            to interrupt his focus.
+          * If the unit has a weapon cooldown, we assume he's in combat
+        """
+        return \
+            (unit.is_moving and not unit.is_attacking and isinstance(unit.order_target, Point2)) \
+            or (unit.is_attacking and not isinstance(unit.order_target, int)) \
+            or unit.weapon_cooldown > 0
 
     def is_melee(self, unit: Unit) -> bool:
         return unit.ground_range < 1.5 and unit.can_attack_ground

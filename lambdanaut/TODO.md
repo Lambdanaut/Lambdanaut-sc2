@@ -62,6 +62,7 @@
   
   * Only spawn creep tumors with non-townhall queens
   
+  * Prioritize minerals that don't have a worker targetting them when sending a worker to mine minerals.
   
 
 ## MEDIUM PRIORITY

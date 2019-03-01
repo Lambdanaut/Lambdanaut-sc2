@@ -225,7 +225,7 @@ EARLY_GAME_DEFAULT_OPENER = [
 
 
 # A ZvZ spine rush
-# This build works like shit and it should never be used seriously lmfao
+# This build works like shit and it should never be used
 def early_game_pool_spine_all_in_send_workers_to_enemy(bot: sc2.BotAI) -> bool:
     """
     Function that sends workers to enemy base in preparation for building spine crawlers
@@ -238,7 +238,7 @@ def early_game_pool_spine_all_in_send_workers_to_enemy(bot: sc2.BotAI) -> bool:
         workers = workers.take(len(workers) - 3)
         if workers:
             for worker in workers:
-                bot.actions.append(worker.attack(bot.enemy_start_location.position))
+                bot.actions.append(worker.attack(bot.enemy_start_location))
             return True
     return False
 
@@ -269,7 +269,6 @@ EARLY_GAME_POOL_SPINE_ALL_IN += [ZERGLING] * 400
 
 # Ravager all-in with no transition
 RAVAGER_ALL_IN = [
-    PublishMessage(Messages.DONT_DEFEND),  # Publish a message saying we shouldn't switch to DEFENDING
     PullWorkersOffVespeneUntil(ROACH, n=2),  # Mine with only 2 workers until we have a roach
     PublishMessage(Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP),  # Send the second overlord to the enemy's main ramp
     HATCHERY,  # 1
@@ -416,7 +415,6 @@ EARLY_GAME_SPORE_CRAWLERS = [
     ZERGLINGMOVEMENTSPEED,
     ZERGLING, ZERGLING,
     OneForEach(SPORECRAWLER, HATCHERY),  # One Spore Crawler for each Hatchery we own
-    OneForEach(SPORECRAWLER, HATCHERY),  # Another Spore Crawler for each Hatchery we own
     SPORECRAWLER,  # One more because who needs drones anyways
     QUEEN,  # 2
     QUEEN,  # 3
