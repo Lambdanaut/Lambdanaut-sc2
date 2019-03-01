@@ -28,15 +28,15 @@ MAPS = [
     'BlueshiftLE',
     'PortAleksanderLE', ]
 
-MAP_NAME = "KairosJunctionLE"
+MAP_NAME = "DarknessSanctuaryLE"
 MICRO_MAP_NAME = "kairo_training"
 REALTIME = False
 
 # BUILD = sc2.AIBuild.RandomBuild
-BUILD = sc2.AIBuild.Rush
+# BUILD = sc2.AIBuild.Rush
 # BUILD = sc2.AIBuild.Timing
 # BUILD = sc2.AIBuild.Power
-# BUILD = sc2.AIBuild.Macro
+BUILD = sc2.AIBuild.Macro
 # BUILD = sc2.AIBuild.Air
 
 # DIFFICULTY = sc2.Difficulty.CheatInsane

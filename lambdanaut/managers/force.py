@@ -183,12 +183,11 @@ class ForceManager(StatefulManager):
 
         if townhalls:
             # Call back army that is far away if they don't have nearby enemies
-            army_away_from_enemies = army.filter(
-                lambda u: self.bot.known_enemy_units.closer_than(11, u) == 0)
-            for unit in army_away_from_enemies:
-                closest_townhall = townhalls.closest_to(unit)
-                if closest_townhall.distance_to(unit) > 30:
-                    self.bot.actions.append(unit.attack(closest_townhall.position))
+            for unit in army:
+                if not self.bot.unit_is_busy(unit):
+                    closest_townhall = townhalls.closest_to(unit)
+                    if closest_townhall.distance_to(unit) > 35:
+                        self.bot.actions.append(unit.attack(closest_townhall.position))
 
             # Ensure each town hall has some army nearby
             closest_townhall = townhalls.closest_to(self.bot.enemy_start_location)

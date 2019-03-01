@@ -133,7 +133,7 @@ class DefenseManager(StatefulManager):
                                 army_strength = self.bot.relative_army_strength(
                                     army_cluster, nearest_enemy_cluster)
 
-                                if army_strength >= -1 \
+                                if army_strength >= -2 \
                                         or (army_strength > -6 and
                                             nearest_enemy_cluster.position.distance_to(army_cluster.position) < 10) \
                                         or self.bot.supply_used > 185:

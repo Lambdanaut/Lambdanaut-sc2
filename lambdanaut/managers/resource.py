@@ -2,6 +2,7 @@ import math
 import random
 from typing import Optional
 
+import lib.sc2.units as Units
 import lib.sc2.constants as const
 
 from lambdanaut.builds import Builds
@@ -51,6 +52,27 @@ class ResourceManager(Manager):
             mineral = minerals.closest_to(worker)
             self.bot.actions.append(worker.gather(mineral))
 
+    def get_untargeted_minerals(self, minerals: Units):
+        """
+        Filters a unit group of minerals for minerals that are not targeted by a worker
+
+        If all of the minerals are targeted, return all minerals on map.
+        """
+        workers = self.bot.workers.collecting
+
+        targeted_mineral_tags = set()
+
+        for worker in workers:
+            if isinstance(worker.order_target, int):
+                targeted_mineral_tags.add(worker.order_target)
+
+        untargeted_minerals = minerals.tags_not_in(targeted_mineral_tags)
+
+        if untargeted_minerals:
+            return untargeted_minerals
+        else:
+            return self.bot.state.mineral_field
+
     def return_distant_workers_to_townhalls(self):
         if self.allow_return_distant_workers_to_townhalls:
             townhalls = self.bot.townhalls
@@ -90,7 +112,9 @@ class ResourceManager(Manager):
             if mineral_workers.exists:
                 worker = mineral_workers.closest_to(saturated_townhall)
                 unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)
-                mineral = self.bot.state.mineral_field.closest_to(unsaturated_townhall)
+                minerals = self.get_untargeted_minerals(
+                    self.bot.state.mineral_field.closer_than(9, unsaturated_townhall))
+                mineral = minerals.closest_to(unsaturated_townhall)
 
                 self.bot.actions.append(worker.return_resource(unsaturated_townhall))
                 self.bot.actions.append(worker.gather(mineral, queue=True))
@@ -103,8 +127,10 @@ class ResourceManager(Manager):
             townhalls = self.bot.townhalls.ready
 
             if townhalls:
-                townhall = townhalls.closest_to(worker.position)
-                mineral = self.bot.state.mineral_field.closest_to(townhall)
+                townhall = townhalls.closest_to(worker)
+                minerals = self.get_untargeted_minerals(
+                    self.bot.state.mineral_field.closer_than(9, townhall))
+                mineral = minerals.closest_to(townhall)
 
                 if worker.is_carrying_minerals or worker.is_carrying_vespene:
                     self.bot.actions.append(worker.return_resource(townhall))
