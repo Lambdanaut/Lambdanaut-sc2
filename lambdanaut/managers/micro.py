@@ -734,7 +734,6 @@ class MicroManager(Manager):
                                     if unit.distance_to(target) > 8:
                                         self.bot.actions.append(unit.snapshot.move(target))
 
-
                             # Handle combat priority targeting
                             else:
                                 priorities = const2.WORKERS | {
