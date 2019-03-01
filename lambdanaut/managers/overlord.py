@@ -173,31 +173,6 @@ class OverlordManager(StatefulManager):
             if not self.enemy_proxy_found and not self.proxy_search_concluded and overlords:
                 scouting_overlord = overlords.find_by_tag(self.proxy_scouting_overlord_tag)
                 if scouting_overlord:
-                    # Report enemy proxies
-                    enemy_structures = self.bot.known_enemy_structures
-                    if enemy_structures.closer_than(65, self.bot.start_location).exists:
-                        self.enemy_proxy_found = True
-                        self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY)
-
-                    # Report enemy ground rushes
-                    enemy_units = self.bot.known_enemy_units.not_structure.\
-                        not_flying.exclude_type(const2.ENEMY_NON_ARMY)
-                    if enemy_units.exists:
-                        nearby_enemy_units = enemy_units.closer_than(
-                            self.bot.start_location_to_enemy_start_location_distance * 0.85, self.bot.start_location)
-                        enemy_workers = nearby_enemy_units.of_type(const2.WORKERS)
-                        nearby_enemy_units = nearby_enemy_units - enemy_workers
-                        if enemy_workers.exists and len(enemy_workers) > 2:
-                            if enemy_workers.center.distance_to(self.bot.enemy_start_location) > 70:
-                                # Found enemy worker rush
-                                self.enemy_proxy_found = True
-                                self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH)
-                        elif len(nearby_enemy_units) > 1:
-                            if nearby_enemy_units.center.distance_to(self.bot.enemy_start_location) > 65:
-                                # Found enemy non-worker rush
-                                self.enemy_proxy_found = True
-                                self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH)
-
                     # End early scouting process if we've reached the enemy expansion and
                     # haven't seen proxies
                     expansion_locations = self.bot.get_expansion_positions()
@@ -206,7 +181,6 @@ class OverlordManager(StatefulManager):
                         enemy_fifth_expansion = expansion_locations[-5]
                         if scouting_overlord.distance_to(enemy_fifth_expansion) < 8:
                             self.proxy_search_concluded = True
-                            self.publish(Messages.OVERLORD_SCOUT_FOUND_NO_RUSH)
 
                     except IndexError:
                         # The indexed expansion doesn't exist
