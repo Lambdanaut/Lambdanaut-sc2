@@ -659,6 +659,11 @@ class BuildManager(Manager):
                     if unit is const.BANELING and not self.bot.units(const.ZERGLING).idle:
                         continue
 
+                    # Skip ravager if we don't have any idle zerglings
+                    if unit is const.RAVAGER and not \
+                            self.bot.units(const.ROACH).filter(lambda r: not self.bot.unit_is_busy(r)):
+                        continue
+
                     if (tech_requirement is None or existing_unit_counts[tech_requirement]) > 0 and \
                             (idle_building_structure is None or idle_building_structure.exists):
 
@@ -967,16 +972,12 @@ class BuildManager(Manager):
                 return True
 
         elif build_target == const.RAVAGER:
-            # Get a Roach
-            roaches = self.bot.units(const.ROACH)
+            # Get roaches
+            roaches = self.bot.units(const.ROACH).filter(
+                lambda r: not self.bot.unit_is_busy(r))
 
             # Train the unit
-            if self.can_afford(build_target) and roaches.exists:
-                # Prefer idle roaches if they exist
-                idle_roaches = roaches.idle
-                if idle_roaches:
-                    roaches = idle_roaches
-
+            if self.can_afford(build_target) and roaches:
                 roach = roaches.closest_to(self.bot.start_location)
                 self.bot.actions.append(roach.stop())
                 self.bot.actions.append(roach.train(build_target, queue=True))

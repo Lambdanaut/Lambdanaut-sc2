@@ -124,11 +124,10 @@ class DefenseManager(StatefulManager):
                      self.bot.start_location_to_enemy_start_location_distance * distance_ratio_to_pull_back]
 
                 if army_clusters:
-                    nearest_enemy_cluster = self.bot.start_location.closest(self.bot.enemy_clusters)
-
-                    if nearest_enemy_cluster:
-                        for army_cluster in army_clusters:
-                            if army_cluster:
+                    for army_cluster in army_clusters:
+                        if army_cluster:
+                            nearest_enemy_cluster = army_cluster.position.closest(self.bot.enemy_clusters)
+                            if nearest_enemy_cluster:
 
                                 army_strength = self.bot.relative_army_strength(
                                     army_cluster, nearest_enemy_cluster)

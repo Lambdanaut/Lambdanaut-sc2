@@ -182,7 +182,7 @@ class IntelManager(Manager):
 
             enemy = self.bot.enemy_cache.values()
 
-            units_to_count = {const.ZERGLING, const.ROACH, const.RAVAGER,
+            units_to_count = {const.ZERGLING, const.RAVAGER,
                         const.MARINE, const.REAPER, const.MARAUDER,
                         const.ZEALOT, const.ADEPT, const.STALKER}
 
@@ -199,19 +199,19 @@ class IntelManager(Manager):
 
             # Count any and all enemy units
             if (enemy_counter[const.ZERGLING] >= 10
-                    or enemy_counter[const.ROACH] >= 2
-                    or enemy_counter[const.MARINE] >= 6
-                    or enemy_counter[const.REAPER] >= 2
-                    or enemy_counter[const.MARAUDER] >= 3
-                    or enemy_counter[const.ZEALOT] >= 4
-                    or enemy_counter[const.ADEPT] >= 3
-                    or enemy_counter[const.STALKER] >= 3):
+                    or enemy_counter[const.RAVAGER] >= 2
+                    or enemy_counter[const.MARINE] >= 7
+                    or enemy_counter[const.REAPER] >= 3
+                    or enemy_counter[const.MARAUDER] >= 4
+                    or enemy_counter[const.ZEALOT] >= 7
+                    or enemy_counter[const.ADEPT] >= 4
+                    or enemy_counter[const.STALKER] >= 6):
                 self.has_scouted_enemy_rush = True
                 return True
 
             # Count nearby enemy units
             elif (nearby_enemy_counter[const.ZERGLING] >= 4
-                    or nearby_enemy_counter[const.ROACH] >= 1
+                    or enemy_counter[const.RAVAGER] >= 1
                     or nearby_enemy_counter[const.MARINE] >= 1
                     or nearby_enemy_counter[const.REAPER] >= 2
                     or nearby_enemy_counter[const.MARAUDER] >= 1
