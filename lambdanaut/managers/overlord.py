@@ -249,7 +249,7 @@ class OverlordManager(StatefulManager):
 
             if nearby_enemy_units:
                 nearby_enemy_unit = nearby_enemy_units.closest_to(overlord)
-                away_from_enemy = overlord.position.towards(nearby_enemy_unit, -9)
+                away_from_enemy = overlord.position.towards(nearby_enemy_unit, -3)
                 self.bot.actions.append(overlord.move(away_from_enemy))
 
     async def baneling_drops(self):

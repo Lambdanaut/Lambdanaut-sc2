@@ -677,6 +677,7 @@ class MicroManager(Manager):
                                  if self.bot.can_attack(unit, u)
                                  and u.type_id not in const2.WORKERS
                                  and (not u.is_structure or u.type_id in const2.DEFENSIVE_STRUCTURES)]
+                            enemy_townhalls = self.bot.known_enemy_units(const2.TOWNHALLS).ready
 
                             nearest_enemy_unit = unit.position.closest(nearest_enemy_cluster)
                             unit_is_combatant = unit.type_id not in const2.NON_COMBATANTS
@@ -686,9 +687,23 @@ class MicroManager(Manager):
                                 pass
 
                             # Attack the closest worker if there are no attackable nearby units
-                            elif not attackable_non_workers and nearby_workers and not unit.is_moving:
-                                closest_worker = unit.position.closest(nearby_workers)
-                                self.bot.actions.append(unit.snapshot.attack(closest_worker))
+                            elif not attackable_non_workers \
+                                    and (nearby_workers or enemy_townhalls) \
+                                    and not unit.is_moving:
+                                if nearby_workers:
+                                    # If nearby workers, move towards them
+                                    closest_worker = unit.position.closest(nearby_workers)
+                                    self.bot.actions.append(unit.snapshot.attack(closest_worker))
+                                elif enemy_townhalls:
+                                    # Else if enemy townhalls, move towards it
+                                    closest_townhall = self.bot.enemy_start_location.closest(enemy_townhalls)
+                                    nearby_minerals = self.bot.state.mineral_field.closer_than(9, closest_townhall)
+                                    if nearby_minerals:
+                                        target = nearby_minerals.center
+                                    else:
+                                        target = closest_townhall.position
+
+                                    self.bot.actions.append(unit.snapshot.move(target))
 
                             # Back off from enemy if our cluster is much weaker
                             elif army_strength < -5 and unit_is_combatant:

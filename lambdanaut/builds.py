@@ -548,12 +548,12 @@ MID_GAME_ROACH_HYDRA_LURKER = [
     AtLeast(1, ROACHWARREN),
     DRONE, DRONE, DRONE, DRONE,
     AtLeast(3, EXTRACTOR),
-    EVOLUTIONCHAMBER,
-    EVOLUTIONCHAMBER,
     IfHasThenDontBuild(GREATERSPIRE, ROACH, 5),  # Build 5 roaches until we get late-game tech
     EXTRACTOR,
+    EVOLUTIONCHAMBER,
     RAVAGER, ROACH, ROACH, ROACH, RAVAGER, RAVAGER, RAVAGER,
     CanAfford(ZERGMISSILEWEAPONSLEVEL1),
+    EVOLUTIONCHAMBER,
     IfHasThenDontBuild(HYDRALISKDEN, ROACH, 5),  # Build extra roaches until hydralisk den arrives
     CanAfford(ZERGGROUNDARMORSLEVEL1),
     CanAfford(LAIR),

@@ -46,23 +46,12 @@
 
 
 ## HIGH PRIORITY
-
-  * Create a new manager class called DefenseManager that takes over the defending work done by ForceManager. 
-    This will allow us to be defending and attacking simultaneously. 
    
-  * Fix Moving To Attack state so that the units move straight to the current Moving to Attack position
-  
-  * Fix zergling micro so that zerglings don't run from enemies if they're 
-
   * Fix Overlord scouting to work with ravager rushing
-
-  * Write mutalisk micro and re-add mutalisk to ling-bane-muta build
   
   * Keep non-busy queens on creep during housekeeping. Right now they walk right out into the nether to die. 
   
   * Only spawn creep tumors with non-townhall queens
-  
-  * Prioritize minerals that don't have a worker targetting them when sending a worker to mine minerals.
   
 
 ## MEDIUM PRIORITY
@@ -74,6 +63,8 @@
   * Do zergling rushes against zerg on maps with short rush distance
   
   * Do air builds on maps where the rush distance is much shorter than the direct distance (Stasis LE)
+
+  * Write mutalisk micro and re-add mutalisk to ling-bane-muta build
 
   * Add COUNTERING forces state
     * If the opponent is attacking our base and has more than we have, then attack their main 
@@ -287,3 +278,13 @@
   * Better defending micro. Need to beat cheezerg's cheezy cheese 
     
   * Add infestors and infestor micro
+
+  * Create a new manager class called DefenseManager that takes over the defending work done by ForceManager. 
+    This will allow us to be defending and attacking simultaneously. 
+
+  * Fix Moving To Attack state so that the units move straight to the current Moving to Attack position
+  
+  * Fix zergling micro so that zerglings don't run from enemies if they're ranged
+
+  * Prioritize minerals that don't have a worker targetting them when sending a worker to mine minerals.
+  
