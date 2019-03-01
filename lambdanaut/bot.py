@@ -581,6 +581,12 @@ class LambdaBot(sc2.BotAI):
         else:
             return townhall.position
 
+    def unit_is_engaged(self, unit: Unit) -> bool:
+        """
+        Determines if a unit is currently attacking a specific unit
+        """
+        return unit.is_attacking and isinstance(unit.order_target, int)
+
     def unit_is_busy(self, unit: Unit) -> bool:
         """
         Determines if a unit is busy or if we can use him for another high-level

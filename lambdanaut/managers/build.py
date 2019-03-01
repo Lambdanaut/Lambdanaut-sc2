@@ -659,9 +659,9 @@ class BuildManager(Manager):
                     if unit is const.BANELING and not self.bot.units(const.ZERGLING).idle:
                         continue
 
-                    # Skip ravager if we don't have any idle zerglings
-                    if unit is const.RAVAGER and not \
-                            self.bot.units(const.ROACH).filter(lambda r: not self.bot.unit_is_busy(r)):
+                    # Skip ravager if we don't have any roaches that aren't actively engage in combat
+                    if unit is const.RAVAGER \
+                            and not self.bot.units(const.ROACH).filter(lambda r: not self.bot.unit_is_engaged(r)):
                         continue
 
                     if (tech_requirement is None or existing_unit_counts[tech_requirement]) > 0 and \
@@ -974,7 +974,7 @@ class BuildManager(Manager):
         elif build_target == const.RAVAGER:
             # Get roaches
             roaches = self.bot.units(const.ROACH).filter(
-                lambda r: not self.bot.unit_is_busy(r))
+                lambda r: not self.bot.unit_is_engaged(r))
 
             # Train the unit
             if self.can_afford(build_target) and roaches:
@@ -982,6 +982,17 @@ class BuildManager(Manager):
                 self.bot.actions.append(roach.stop())
                 self.bot.actions.append(roach.train(build_target, queue=True))
                 return True
+
+            # # Get roaches
+            # roaches = self.bot.units(const.ROACH).filter(
+            #     lambda r: not self.bot.unit_is_busy(r))
+            #
+            # # Train the unit
+            # if self.can_afford(build_target) and roaches:
+            #     roach = roaches.closest_to(self.bot.start_location)
+            #     self.bot.actions.append(roach.stop())
+            #     self.bot.actions.append(roach.train(build_target, queue=True))
+            #     return True
 
         elif build_target == const.LURKERMP:
             # Get a hydralisk
@@ -1004,7 +1015,7 @@ class BuildManager(Manager):
             corruptors = self.bot.units(const.CORRUPTOR)
 
             # Train the unit
-            if self.can_afford(build_target) and corruptors.exists:
+            if self.can_afford(build_target) and corruptors:
                 # Prefer idle corruptors if they exist
                 idle_corruptors = corruptors.idle
                 if idle_corruptors.exists:
