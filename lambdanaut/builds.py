@@ -224,6 +224,25 @@ EARLY_GAME_DEFAULT_OPENER = [
 ]
 
 
+# 12 Pool opener for defense or early aggression
+OPENER_12_POOL = [
+    HATCHERY,  # 1
+    OVERLORD,  # 1
+    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,  # 12
+    SPAWNINGPOOL,  # 1
+    DRONE,  # 13
+    OVERLORD,  # 2
+    ZERGLING, ZERGLING,
+    ZERGLING, ZERGLING,
+    ZERGLING, ZERGLING,
+    DRONE,  # 14
+    DRONE,  # 15
+    DRONE,  # 16
+    DRONE,  # 17
+    OVERLORD,  # 3
+]
+
+
 # A ZvZ spine rush
 # This build works like shit and it should never be used
 def early_game_pool_spine_all_in_send_workers_to_enemy(bot: sc2.BotAI) -> bool:
@@ -358,7 +377,7 @@ EARLY_GAME_POOL_FIRST_CAUTIOUS = [
 EARLY_GAME_POOL_FIRST_DEFENSIVE = [
     AtLeast(1, SPAWNINGPOOL),
     EXTRACTOR,
-    OVERLORD,  # 3
+    AtLeast(3, OVERLORD),  # 3
     ZERGLING, ZERGLING,
     QUEEN,
     CanAfford(SPINECRAWLER),
@@ -387,7 +406,7 @@ EARLY_GAME_POOL_FIRST_DEFENSIVE = [
 EARLY_GAME_POOL_FIRST_OFFENSIVE = [
     EXTRACTOR,
     AtLeast(1, SPAWNINGPOOL),
-    OVERLORD,  # 3
+    AtLeast(3, OVERLORD),  # 3
     ZERGLING, ZERGLING,
     ZERGLING, ZERGLING,
     SPINECRAWLER,
@@ -410,7 +429,7 @@ EARLY_GAME_SPORE_CRAWLERS = [
     EXTRACTOR,  # 1
     AtLeast(1, SPAWNINGPOOL),
     DRONE, DRONE, DRONE,  # 21
-    OVERLORD,  # 3
+    AtLeast(3, OVERLORD),  # 3
     QUEEN,  # 1
     ZERGLINGMOVEMENTSPEED,
     ZERGLING, ZERGLING,
@@ -430,7 +449,7 @@ EARLY_GAME_POOL_FIRST = [
     DRONE,  # 18
     QUEEN,  # 1
     ZERGLING, ZERGLING,
-    OVERLORD,  # 3
+    AtLeast(3, OVERLORD),  # 3
     ZERGLING, ZERGLING,  # 4
     QUEEN,  # 2
     CanAfford(ZERGLINGMOVEMENTSPEED),
@@ -445,7 +464,7 @@ EARLY_GAME_HATCHERY_FIRST = [
     AtLeast(1, SPAWNINGPOOL),
     DRONE,  # 18
     DRONE, DRONE,  # 20
-    OVERLORD,  # 3
+    AtLeast(3, OVERLORD),  # 3
     QUEEN,  # 1
     CanAfford(ZERGLINGMOVEMENTSPEED),
     ZERGLING, ZERGLING,
@@ -462,7 +481,7 @@ EARLY_GAME_HATCHERY_FIRST_GREEDY = [
     AtLeast(1, SPAWNINGPOOL),
     DRONE,  # 18
     DRONE, DRONE,  # 20
-    OVERLORD,  # 3
+    AtLeast(3, OVERLORD),  # 3
     CanAfford(ZERGLINGMOVEMENTSPEED),
     ZERGLING, ZERGLING,
     HATCHERY,  # 3  (Greedy third hatchery)
@@ -627,19 +646,22 @@ MID_GAME_CORRUPTOR_BROOD_LORD_RUSH += [ZERGFLYERARMORSLEVEL1]
 MID_GAME_TWO_BASE_ROACH_QUEEN_NYDUS_TIMING = [
     # Publish a message saying we shouldn't switch to MOVING_TO_ATTACK or ATTACK
     # We want to attack through the nydus worm
-    PublishMessage(Messages.DONT_ATTACK),
+
+    # PublishMessage(Messages.ALLOW_ATTACKING_THROUGH_NYDUS),
+    # PublishMessage(Messages.DONT_ATTACK),
+
     DRONE, DRONE, DRONE, DRONE, DRONE,
-    AtLeast(4, QUEEN),
+    AtLeast(3, QUEEN),
     DRONE, DRONE, DRONE, DRONE,
     AtLeast(2, EXTRACTOR),
     LAIR,
     AtLeast(4, EXTRACTOR),
+    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
     AtLeast(1, SPINECRAWLER),
+    QUEEN,
     ROACHWARREN,
-    DRONE, DRONE, DRONE,
     NYDUSNETWORK,
     QUEEN,
-    DRONE, DRONE, DRONE, DRONE, DRONE,
 
     ROACH, ROACH, ROACH, ROACH, ROACH, ROACH,
     OVERSEER, OVERSEER,
@@ -700,25 +722,26 @@ class Builds(enum.Enum):
     """Build Types"""
 
     EARLY_GAME_DEFAULT_OPENER = 0
-    EARLY_GAME_POOL_SPINE_ALL_IN = 1
-    RAVAGER_ALL_IN = 2
-    OPENER_RAVAGER_HARASS = 3
+    OPENER_12_POOL = 1
+    EARLY_GAME_POOL_SPINE_ALL_IN = 2
+    RAVAGER_ALL_IN = 3
+    OPENER_RAVAGER_HARASS = 4
 
-    EARLY_GAME_POOL_FIRST_CAUTIOUS = 4
-    EARLY_GAME_POOL_FIRST_DEFENSIVE = 5
-    EARLY_GAME_POOL_FIRST_OFFENSIVE = 6
-    EARLY_GAME_POOL_FIRST = 7
-    EARLY_GAME_HATCHERY_FIRST = 8
-    EARLY_GAME_HATCHERY_FIRST_GREEDY = 9
-    EARLY_GAME_SPORE_CRAWLERS = 10
+    EARLY_GAME_POOL_FIRST_CAUTIOUS = 5
+    EARLY_GAME_POOL_FIRST_DEFENSIVE = 6
+    EARLY_GAME_POOL_FIRST_OFFENSIVE = 7
+    EARLY_GAME_POOL_FIRST = 8
+    EARLY_GAME_HATCHERY_FIRST = 9
+    EARLY_GAME_HATCHERY_FIRST_GREEDY = 10
+    EARLY_GAME_SPORE_CRAWLERS = 11
 
-    MID_GAME_LING_BANE = 11
-    MID_GAME_ROACH_HYDRA_LURKER = 12
-    MID_GAME_TWO_BASE_ROACH_QUEEN_NYDUS_TIMING = 13
-    MID_GAME_CORRUPTOR_BROOD_LORD_RUSH = 14
+    MID_GAME_LING_BANE = 12
+    MID_GAME_ROACH_HYDRA_LURKER = 13
+    MID_GAME_TWO_BASE_ROACH_QUEEN_NYDUS_TIMING = 14
+    MID_GAME_CORRUPTOR_BROOD_LORD_RUSH = 15
 
-    LATE_GAME_CORRUPTOR_BROOD_LORD = 15
-    LATE_GAME_ULTRALISK = 16
+    LATE_GAME_CORRUPTOR_BROOD_LORD = 16
+    LATE_GAME_ULTRALISK = 17
 
 
 class BuildStages(enum.Enum):
@@ -731,6 +754,7 @@ class BuildStages(enum.Enum):
 
 OPENER_BUILDS = {
     Builds.EARLY_GAME_DEFAULT_OPENER,
+    Builds.OPENER_12_POOL,
     Builds.EARLY_GAME_POOL_SPINE_ALL_IN,
     Builds.RAVAGER_ALL_IN,
     Builds.OPENER_RAVAGER_HARASS,
@@ -780,6 +804,7 @@ def get_build_stage(build: Builds):
 # Mapping from Build Type to Build Targets list
 BUILD_MAPPING = {
     Builds.EARLY_GAME_DEFAULT_OPENER: EARLY_GAME_DEFAULT_OPENER,
+    Builds.OPENER_12_POOL: OPENER_12_POOL,
     Builds.EARLY_GAME_POOL_SPINE_ALL_IN: EARLY_GAME_POOL_SPINE_ALL_IN,
     Builds.RAVAGER_ALL_IN: RAVAGER_ALL_IN,
     Builds.OPENER_RAVAGER_HARASS: OPENER_RAVAGER_HARASS,
@@ -805,6 +830,7 @@ BUILD_MAPPING = {
 # The default build is switched to if the build is at its end
 DEFAULT_NEXT_BUILDS = {
     Builds.EARLY_GAME_DEFAULT_OPENER: Builds.EARLY_GAME_POOL_FIRST,
+    Builds.OPENER_12_POOL: Builds.EARLY_GAME_DEFAULT_OPENER,
     Builds.EARLY_GAME_POOL_SPINE_ALL_IN: None,
     Builds.RAVAGER_ALL_IN: None,
     Builds.OPENER_RAVAGER_HARASS: Builds.EARLY_GAME_DEFAULT_OPENER,
@@ -864,5 +890,6 @@ def update_default_builds(enemy_race):
 # Set of builds that must set their default next build after they are completed
 # This is for builds that we don't want to keep around in the build order when we're through with them.
 FORCE_DEFAULT_NEXT_BUILDS = {
-    Builds.OPENER_RAVAGER_HARASS
+    Builds.OPENER_RAVAGER_HARASS,
+    Builds.OPENER_12_POOL,
 }

@@ -134,7 +134,7 @@ class BuildManager(Manager):
                     self.add_build(Builds.EARLY_GAME_HATCHERY_FIRST_GREEDY)
 
             elif self.bot.enemy_race is sc2.Race.Zerg:
-                if rush_distance < 135:
+                if rush_distance < 145:
                     # Play cautiously against zerg on maps with low rush distance
                     self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
 

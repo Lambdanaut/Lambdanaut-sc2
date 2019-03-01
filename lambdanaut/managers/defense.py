@@ -135,7 +135,7 @@ class DefenseManager(StatefulManager):
                                 army_strength = self.bot.relative_army_strength(
                                     army_cluster, nearest_enemy_cluster)
 
-                                if army_strength >= -2 \
+                                if army_strength >= -1 \
                                         or (army_strength > -6 and
                                             nearest_enemy_cluster.position.distance_to(army_cluster.position) < 10) \
                                         or self.bot.supply_used > 185:
@@ -150,7 +150,7 @@ class DefenseManager(StatefulManager):
                                             if target and not self.bot.unit_is_busy(unit):
                                                 self.bot.actions.append(unit.attack(target))
 
-                                elif army_strength < -3:
+                                elif army_strength < -2:
                                     # If enemy is greater regroup to center of largest cluster towards friendly townhall
                                     largest_army_cluster = functools.reduce(
                                         lambda c1, c2: c1 if len(c1) >= len(c2) else c2,

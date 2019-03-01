@@ -525,6 +525,12 @@ class MicroManager(Manager):
         townhalls = self.bot.townhalls.ready
 
         if spine_crawlers and townhalls and self.should_unroot_spines:
+            townhalls_not_ready_with_creep = townhalls.not_ready.filter(
+                lambda th: self.bot.state.creep.is_set(
+                    th.position.towards(self.bot.enemy_start_location, 8).rounded))
+
+            townhalls |= townhalls_not_ready_with_creep
+
             townhall = townhalls.furthest_to(self.bot.start_location)
 
             # Get nearby spinecrawlers that are at our elevation
