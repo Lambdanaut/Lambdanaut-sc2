@@ -679,7 +679,6 @@ class MicroManager(Manager):
                                 if self.bot.can_attack(unit, u)
                                 and u.is_ready
                                 and u.type_id not in const2.WORKERS
-                                and u.type_id != const.REAPER  # Added because of annoying reapers. Quick hack. 
                                 and (not u.is_structure or u.type_id in const2.DEFENSIVE_STRUCTURES))
                             enemy_townhalls = self.bot.known_enemy_units(const2.TOWNHALLS).ready
 
