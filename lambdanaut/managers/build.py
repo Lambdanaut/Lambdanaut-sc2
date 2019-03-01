@@ -114,7 +114,7 @@ class BuildManager(Manager):
             if self.bot.enemy_race is sc2.Race.Terran:
                 # Use rush distance to determine build
                 # Average rush distance is around 155. Longer rush distances are over 160.
-                if rush_distance < 130:
+                if rush_distance < 140:
                     # Do ravager all ins on short rush distance maps
                     self.starting_build = Builds.RAVAGER_ALL_IN
                 elif rush_distance < 160:
@@ -124,7 +124,7 @@ class BuildManager(Manager):
             elif self.bot.enemy_race is sc2.Race.Protoss:
                 # Use rush distance to determine build
                 if rush_distance < 130:
-                    # Do ravager all ins on short rush distance maps
+                    # Do ravager all ins on super-short rush distance maps
                     self.starting_build = Builds.RAVAGER_ALL_IN
                 elif rush_distance < 150:
                     # Do ravager harass into macro on small rush distance maps

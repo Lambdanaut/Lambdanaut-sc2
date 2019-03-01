@@ -148,7 +148,7 @@ class DefenseManager(StatefulManager):
                                             if target and unit.weapon_cooldown <= 0 and not unit.is_attacking:
                                                 self.bot.actions.append(unit.attack(target))
 
-                                elif army_strength < -5:
+                                elif army_strength < -2:
                                     # If enemy is greater regroup to center of largest cluster towards friendly townhall
                                     largest_army_cluster = functools.reduce(
                                         lambda c1, c2: c1 if len(c1) >= len(c2) else c2,
