@@ -675,7 +675,7 @@ class MicroManager(Manager):
                             # If there are no enemies that we want to attack nearby, but there are workers,
                             # then attack the workers
                             any_attackable_non_workers: bool = any(
-                                True for u in enemy_cached
+                                True for u in nearest_enemy_cluster
                                 if self.bot.can_attack(unit, u)
                                 and u.is_ready
                                 and u.type_id not in const2.WORKERS
