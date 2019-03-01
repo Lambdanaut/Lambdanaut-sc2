@@ -279,7 +279,7 @@ RAVAGER_ALL_IN = [
     SPAWNINGPOOL,
     EXTRACTOR,  # 1
     OVERLORD,  # 2
-    EXTRACTOR, # 2
+    EXTRACTOR,  # 2
     OVERLORD,  # 3
     OVERLORD,  # 4  (Extra in case we lose one)
     ROACHWARREN,

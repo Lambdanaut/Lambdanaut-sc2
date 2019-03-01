@@ -81,9 +81,12 @@ class DefenseManager(StatefulManager):
                             # Use one more worker than there are enemies
                             # OR
                             # If the enemy is a single worker, just send one worker
-                            if len(self.bot.workers_defending) <= len(ground_enemies) \
-                                    or (len(self.bot.workers_defending) < 1 and len(ground_enemies) == 1 and
-                                        ground_enemies[0].type_id in const2.WORKERS):
+                            if len(ground_enemies) == 1 and ground_enemies[0].type_id in const2.WORKERS:
+                                defend_with_more_workers = len(self.bot.workers_defending) < 1
+                            else:
+                                defend_with_more_workers = len(self.bot.workers_defending) <= len(ground_enemies)
+
+                            if defend_with_more_workers:
                                 target = self.bot.closest_and_most_damaged(ground_enemies, worker)
                                 if target.type_id not in worker_non_targets:
                                     self.bot.workers_defending.add(worker.tag)
@@ -180,13 +183,15 @@ class DefenseManager(StatefulManager):
 
     async def stop_defending(self):
         # Cleanup workers that were defending and send them back to their townhalls
-        for worker in self.bot.workers:
-            nearest_townhall = self.bot.townhalls.ready.closest_to(worker.position)
+        townhalls = self.bot.townhalls.ready
+        if townhalls:
+            for worker in self.bot.workers:
+                nearest_townhall = townhalls.closest_to(worker.position)
 
-            if worker.tag in self.bot.workers_defending:
-                self.bot.actions.append(worker.move(nearest_townhall.position))
-            elif worker.distance_to(nearest_townhall) > 14:
-                self.bot.actions.append(worker.move(nearest_townhall.position))
+                if worker.tag in self.bot.workers_defending:
+                    self.bot.actions.append(worker.move(nearest_townhall.position))
+                elif worker.distance_to(nearest_townhall) > 14:
+                    self.bot.actions.append(worker.move(nearest_townhall.position))
 
         self.bot.workers_defending.clear()  # Remove worker ids from set
 
