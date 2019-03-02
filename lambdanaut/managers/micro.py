@@ -685,7 +685,7 @@ class MicroManager(Manager):
                         if u.type_id in const2.WORKERS and u.distance_to(army_center) < 35]
 
                     for unit in nearby_army:
-                        # Only micro moveable units and workers that are currently defending
+                        # Only micro movable units and workers that are currently defending
                         if unit.movement_speed > 0 \
                                 and (unit.type_id not in const2.WORKERS or unit.tag in self.bot.workers_defending):
 
@@ -734,7 +734,7 @@ class MicroManager(Manager):
                                     and (nearby_enemy_workers or enemy_townhalls) \
                                     and not unit.is_moving \
                                     and unit.weapon_cooldown\
-                                    and unit.unit_is_combatant:
+                                    and unit_is_combatant:
                                 if nearby_enemy_workers:
                                     # If nearby workers, move towards them
                                     closest_worker = unit.position.closest(nearby_enemy_workers)

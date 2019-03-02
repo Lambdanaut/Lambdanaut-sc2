@@ -128,43 +128,41 @@ class DefenseManager(StatefulManager):
                      if th.distance_to(cluster.position) <
                      self.bot.start_location_to_enemy_start_location_distance * distance_ratio_to_pull_back]
 
-                if army_clusters:
+                if army_clusters and self.bot.enemy_clusters:
+                    nearest_enemy_cluster = th.position.closest(self.bot.enemy_clusters)
                     for army_cluster in army_clusters:
                         if army_cluster:
-                            nearest_enemy_cluster = army_cluster.position.closest(self.bot.enemy_clusters)
-                            if nearest_enemy_cluster:
+                            army_strength = self.bot.relative_army_strength(
+                                army_cluster, nearest_enemy_cluster)
 
-                                army_strength = self.bot.relative_army_strength(
-                                    army_cluster, nearest_enemy_cluster)
+                            if army_strength >= -1 \
+                                    or (army_strength > -6 and
+                                        nearest_enemy_cluster.position.distance_to(army_cluster.position) < 15) \
+                                    or self.bot.supply_used > 185:
+                                # Attack enemy if we stand a chance or
+                                # if we hardly stand a chance and they're in our face or
+                                # if we're near supply max
+                                for unit in army_cluster:
+                                    if unit.type_id not in const2.NON_COMBATANTS \
+                                            and unit.tag not in self.bot.townhall_queens.values():
+                                        target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
 
-                                if army_strength >= -1 \
-                                        or (army_strength > -6 and
-                                            nearest_enemy_cluster.position.distance_to(army_cluster.position) < 10) \
-                                        or self.bot.supply_used > 185:
-                                    # Attack enemy if we stand a chance or
-                                    # if we hardly stand a chance and they're in our face or
-                                    # if we're near supply max
-                                    for unit in army_cluster:
-                                        if unit.type_id not in const2.NON_COMBATANTS \
-                                                and unit.tag not in self.bot.townhall_queens.values():
-                                            target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
+                                        if target and not self.bot.unit_is_busy(unit):
+                                            self.bot.actions.append(unit.attack(target))
 
-                                            if target and not self.bot.unit_is_busy(unit):
-                                                self.bot.actions.append(unit.attack(target))
+                            elif army_strength < -2:
+                                # If enemy is greater regroup to center of largest cluster towards friendly townhall
+                                largest_army_cluster = functools.reduce(
+                                    lambda c1, c2: c1 if len(c1) >= len(c2) else c2,
+                                    army_clusters[1:],
+                                    army_clusters[0])
 
-                                elif army_strength < -2:
-                                    # If enemy is greater regroup to center of largest cluster towards friendly townhall
-                                    largest_army_cluster = functools.reduce(
-                                        lambda c1, c2: c1 if len(c1) >= len(c2) else c2,
-                                        army_clusters[1:],
-                                        army_clusters[0])
-
-                                    for unit in army_cluster:
-                                        if unit.type_id not in const2.NON_COMBATANTS:
-                                            nearest_townhall = self.bot.townhalls.closest_to(unit.position)
-                                            towards_townhall = largest_army_cluster.position.towards(
-                                                nearest_townhall, +2)
-                                            self.bot.actions.append(unit.move(towards_townhall))
+                                for unit in army_cluster:
+                                    if unit.type_id not in const2.NON_COMBATANTS:
+                                        nearest_townhall = self.bot.townhalls.closest_to(unit.position)
+                                        towards_townhall = largest_army_cluster.position.towards(
+                                            nearest_townhall, +2)
+                                        self.bot.actions.append(unit.move(towards_townhall))
 
             # Bring back defending workers that have drifted too far from town halls
             workers_defending_to_remove = set()

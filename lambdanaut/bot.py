@@ -250,9 +250,9 @@ class LambdaBot(sc2.BotAI):
 
             self.force_manager.dont_stop_attacking = True; self.force_manager.state = const2.ForcesStates.ATTACKING
 
-            await self._client.debug_create_unit([[const.ZERGLING, 1, self.start_location - Point2((5, 0)), 1]])
-            await self._client.debug_create_unit([[const.ZERGLING, 2, self.start_location + Point2((1, 0)), 2]])
-            await self._client.debug_create_unit([[const.SUPPLYDEPOT, 1, self.start_location + Point2((1, 0)), 2]])
+            await self._client.debug_create_unit([[const.ZERGLING, 10, self.start_location - Point2((5, 0)), 1]])
+            await self._client.debug_create_unit([[const.ZERGLING, 1, self.start_location + Point2((1, 0)), 2]])
+            await self._client.debug_create_unit([[const.SPINECRAWLER, 1, self.start_location + Point2((1, 0)), 2]])
             # await self._client.debug_create_unit([[const.PHOTONCANNON, 6, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.PYLON, 2, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.SUPPLYDEPOT, 3, self.start_location + Point2((6, 0)), 2]])
