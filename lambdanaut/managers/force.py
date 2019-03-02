@@ -141,10 +141,16 @@ class ForceManager(StatefulManager):
     def get_nearby_to_target(self, target):
         """
         Gets a point nearby the target.
-        The point is 2/3rds the distance between our starting location and the target.
         """
 
-        return target.towards(self.bot._game_info.map_center, +32)
+        if target.distance_to(self.bot.start_location) < self.bot.start_location_to_enemy_start_location_distance / 2:
+            # If the target is on our side of the map, group up towards our start location
+            nearby_target = target.towards(self.bot.start_location, +32)
+        else:
+            # If the target is on their side of the map, group up towards the center of the map
+            nearby_target = target.towards(self.bot._game_info.map_center, +32)
+
+        return nearby_target
 
     async def update_enemy_army_position(self):
         enemy_units = self.bot.known_enemy_units.not_structure.exclude_type(

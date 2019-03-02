@@ -46,6 +46,14 @@
 
 
 ## HIGH PRIORITY
+
+  * Fix moving_to_attack location. Right now it performs very poorly vs cheezerg because it sends us halfway across
+    the map before we attack them. While we're moving out, we get attacked. 
+    * We could make the moving-to-attack location towards our base if the enemy structure closer than halfway 
+      across the map
+   
+  * Send first overlord on a queued path so it intersects the opponent's rush path on its way to their base
+    * This way we have a higher chance of scouting zergling cheese.
    
   * Fix Overlord scouting to work with ravager rushing
   

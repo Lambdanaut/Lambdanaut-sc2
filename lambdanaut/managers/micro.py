@@ -92,7 +92,7 @@ class MicroManager(Manager):
                 # Return to start location if damaged and near home
                 if zergling.health_percentage < 0.3:
                     nearest_townhall = zergling.position.closest(self.bot.townhalls)
-                    if nearest_townhall.distance_to(zergling) < 18:
+                    if nearest_townhall.distance_to(zergling) < 22:
                         self.bot.actions.append(zergling.move(self.bot.start_location))
                         continue
 

@@ -269,7 +269,7 @@ class BuildManager(Manager):
                         # Switch to a defensive build
                         self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
                 else:
-                    # If we're not in early game, stop building drones/townhalls for a it
+                    # If we're not in early game, stop building drones/townhalls for a bit
                     self._stop_nonarmy_production.add(
                         True, self.bot.state.game_loop, expiry=25)
 
