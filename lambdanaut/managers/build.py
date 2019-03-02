@@ -257,6 +257,30 @@ class BuildManager(Manager):
             #     if self.build_stage != BuildStages.LATE_GAME:
             #         self.add_build(Builds.MID_GAME_CORRUPTOR_BROOD_LORD_RUSH)
 
+            # Switch to Defensive build if early game
+            # Stop townhall and worker production for a short duration
+            stop_non_army_production = {
+                Messages.ENEMY_MOVING_OUT_SCOUTED}
+            if message in stop_non_army_production:
+                self.ack(message)
+
+                if self.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
+                    if Builds.EARLY_GAME_SPORE_CRAWLERS not in self.builds:
+                        # Switch to a defensive build
+                        self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
+                else:
+                    # If we're not in early game, stop building drones/townhalls for a it
+                    self._stop_nonarmy_production.add(
+                        True, self.bot.state.game_loop, expiry=25)
+
+            # Restart townhall and worker production when defending stops
+            exit_state = {Messages.STATE_EXITED, }
+            if message in exit_state:
+                self.ack(message)
+                if val == DefenseStates.DEFENDING:
+                    self.stop_townhall_production = False
+                    self.stop_worker_production = False
+
             # Stop townhall and worker production during defending
             large_defense = {
                 Messages.DEFENDING_AGAINST_MULTIPLE_ENEMIES, }
@@ -267,28 +291,6 @@ class BuildManager(Manager):
                     self.stop_townhall_production = True
                     self.stop_worker_production = True
 
-            # Switch to Defensive build if early game
-            # Stop townhall and worker production for a short duration
-            stop_non_army_production = {
-                Messages.ENEMY_MOVING_OUT_SCOUTED}
-            if message in stop_non_army_production:
-                self.ack(message)
-
-                self._stop_nonarmy_production.add(
-                    True, self.bot.state.game_loop, expiry=25)
-
-                if self.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
-                    if Builds.EARLY_GAME_SPORE_CRAWLERS not in self.builds:
-                        # Switch to a defensive build
-                        self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
-
-            # Restart townhall and worker production when defending stops
-            exit_state = {Messages.STATE_EXITED, }
-            if message in exit_state:
-                self.ack(message)
-                if val == DefenseStates.DEFENDING:
-                    self.stop_townhall_production = False
-                    self.stop_worker_production = False
 
             # We should build spine crawlers in opponent's base rather than at home
             build_offensive_spines = {Messages.BUILD_OFFENSIVE_SPINES, }

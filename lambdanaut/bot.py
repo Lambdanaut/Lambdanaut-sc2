@@ -335,7 +335,7 @@ class LambdaBot(sc2.BotAI):
         # Update cached values and create new cached units
         for units, cache in zip((self.units, self.known_enemy_units),
                                 (self.unit_cache, self.enemy_cache)):
-            for unit in units.ready:
+            for unit in units:
                 # If we already remember this unit
                 cached_unit = cache.get(unit.tag)
                 if cached_unit:

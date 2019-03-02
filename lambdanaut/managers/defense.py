@@ -177,8 +177,11 @@ class DefenseManager(StatefulManager):
 
                         # Return hurt workers to working
                         if worker.health_percentage < defending_worker_min_health:
-                            workers_defending_to_remove.add(worker_id)
-                            self.bot.actions.append(worker.move(nearest_townhall.position))
+                            minerals = self.bot.state.mineral_field.closer_than(8, nearest_townhall)
+                            if minerals:
+                                workers_defending_to_remove.add(worker_id)
+                                mineral = minerals.first
+                                self.bot.actions.append(worker.gather(mineral))
 
                         # Return distant workers to working
                         elif worker.distance_to(nearest_townhall.position) > 18:
