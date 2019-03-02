@@ -32,8 +32,8 @@ MAP_NAME = "KairosJunctionLE"
 MICRO_MAP_NAME = "kairo_training"
 REALTIME = False
 
-# BUILD = sc2.AIBuild.RandomBuild
-BUILD = sc2.AIBuild.Rush
+BUILD = sc2.AIBuild.RandomBuild
+# BUILD = sc2.AIBuild.Rush
 # BUILD = sc2.AIBuild.Timing
 # BUILD = sc2.AIBuild.Power
 # BUILD = sc2.AIBuild.Macro

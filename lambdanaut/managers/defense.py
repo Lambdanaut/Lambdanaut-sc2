@@ -54,6 +54,7 @@ class DefenseManager(StatefulManager):
 
     async def do_defending(self):
         worker_non_targets = {const.BANELING, const.REAPER}
+        defending_worker_min_health = 0.25
 
         for th in self.bot.townhalls:
             enemies_nearby = [u.snapshot for u in self.bot.enemy_cache.values()
@@ -86,7 +87,8 @@ class DefenseManager(StatefulManager):
                             else:
                                 defend_with_more_workers = len(self.bot.workers_defending) <= len(ground_enemies)
 
-                            if defend_with_more_workers:
+                            if defend_with_more_workers \
+                                    and worker.health_percentage > defending_worker_min_health + 0.05:
                                 target = self.bot.closest_and_most_damaged(ground_enemies, worker)
                                 if target.type_id not in worker_non_targets:
                                     self.bot.workers_defending.add(worker.tag)
@@ -172,7 +174,14 @@ class DefenseManager(StatefulManager):
                     townhalls = self.bot.townhalls.ready
                     if townhalls:
                         nearest_townhall = townhalls.closest_to(worker.position)
-                        if worker.distance_to(nearest_townhall.position) > 18:
+
+                        # Return hurt workers to working
+                        if worker.health_percentage < defending_worker_min_health:
+                            workers_defending_to_remove.add(worker_id)
+                            self.bot.actions.append(worker.move(nearest_townhall.position))
+
+                        # Return distant workers to working
+                        elif worker.distance_to(nearest_townhall.position) > 18:
                             workers_defending_to_remove.add(worker_id)
                             self.bot.actions.append(worker.move(nearest_townhall.position))
                 else:

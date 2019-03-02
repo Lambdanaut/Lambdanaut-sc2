@@ -10,7 +10,7 @@ if [[ "$debug_mode" == "DEBUG MODE: False" ]]; then
 
     # Zip up all python, markdown, and library files
     # Ignore any other files
-    zip -R $filename '*.py' '*.md' 'lib/*'
+    zip -R $filename '*.py' '*.md' 'lib/*' 'ladderbots.json'
 else
     echo "Debug mode is turned on. Not compiling."
 fi

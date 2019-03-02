@@ -2,7 +2,8 @@ import math
 import random
 from typing import Optional
 
-import lib.sc2.units as Units
+from lib.sc2.position import Point2
+from lib.sc2.units import Units
 import lib.sc2.constants as const
 
 from lambdanaut.builds import Builds
@@ -234,6 +235,39 @@ class ResourceManager(Manager):
                 if nearby_unit.health_percentage < 0.6 and nearby_unit.type_id != const.ZERGLING:
                     self.bot.actions.append(queen(const.TRANSFUSION_TRANSFUSION, nearby_unit))
 
+    async def keep_main_queens_on_ramp(self):
+        ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
+        ramp_pos = self.bot.start_location.closest(ramps)
+        ramps = [r for r in self.bot._game_info.map_ramps if r.top_center.distance_to(ramp_pos) < 6]
+
+        if ramps:
+            # Get main base ramp
+            ramp = ramps[0]
+        else:
+            return
+
+        townhalls = []
+        for townhall_tag, queen_tag in self.bot.townhall_queens.items():
+            townhall = self.bot.units.find_by_tag(townhall_tag)
+            if townhall:
+                townhalls.append(townhall)
+
+        if len(townhalls) >= 2:
+            townhalls = sorted(townhalls, key=lambda th: th.distance_to(ramp.top_center))
+            th1 = townhalls[0]
+            th2 = townhalls[1]
+
+            queen1_tag = self.bot.townhall_queens[th1.tag]
+            queen2_tag = self.bot.townhall_queens[th2.tag]
+
+            queen1 = self.bot.units.find_by_tag(queen1_tag)
+            queen2 = self.bot.units.find_by_tag(queen2_tag)
+            if queen1 and queen2:
+                ramp_center = (ramp.bottom_center + ramp.top_center) / 2
+                for queen, point_offset in zip((queen1, queen2), (Point2((+1, 0)), (Point2((-1, 0))))):
+                    if queen.energy < 23 and queen.distance_to(ramp_center) > 3:
+                        self.bot.actions.append(queen.attack(ramp_center + point_offset))
+
     async def manage_queens(self):
         queens = self.bot.units(const.QUEEN)
 
@@ -241,6 +275,9 @@ class ResourceManager(Manager):
         townhalls = self.bot.townhalls.sorted(lambda th: not th.is_ready)
 
         await self.do_transfuse()
+
+        # Take this out for now, Not providing much utility
+        # await self.keep_main_queens_on_ramp()
 
         if queens.exists:
             for townhall in townhalls:
@@ -264,7 +301,7 @@ class ResourceManager(Manager):
                     else:
                         if queen.is_idle:
                             # Move queen to its townhall
-                            if queen.distance_to(townhall) > 15:
+                            if queen.distance_to(townhall) > 20:
                                 self.bot.actions.append(
                                     queen.attack(townhall.position))
 
