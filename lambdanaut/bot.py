@@ -250,8 +250,9 @@ class LambdaBot(sc2.BotAI):
 
             self.force_manager.dont_stop_attacking = True; self.force_manager.state = const2.ForcesStates.ATTACKING
 
-            await self._client.debug_create_unit([[const.DRONE, 50, self.start_location - Point2((5, 0)), 1]])
-            await self._client.debug_create_unit([[const.REAPER, 10, self.start_location + Point2((1, 0)), 2]])
+            await self._client.debug_create_unit([[const.ZERGLING, 1, self.start_location - Point2((5, 0)), 1]])
+            await self._client.debug_create_unit([[const.ZERGLING, 2, self.start_location + Point2((1, 0)), 2]])
+            await self._client.debug_create_unit([[const.SUPPLYDEPOT, 1, self.start_location + Point2((1, 0)), 2]])
             # await self._client.debug_create_unit([[const.PHOTONCANNON, 6, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.PYLON, 2, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.SUPPLYDEPOT, 3, self.start_location + Point2((6, 0)), 2]])
@@ -793,7 +794,8 @@ class LambdaBot(sc2.BotAI):
             units_1: Union[clustering.Cluster, sc2.units.Units],
             units_2: Union[clustering.Cluster, sc2.units.Units],
             ignore_workers=False,
-            ignore_defensive_structures=False) -> float:
+            ignore_defensive_structures=False,
+            ignore_height_difference=True,) -> float:
         """
         Returns a positive value if u1 is stronger, and negative if u2 is stronger.
         A value of +12 would be very good and a value of -12 would be very bad.
@@ -839,14 +841,15 @@ class LambdaBot(sc2.BotAI):
         u1_avg_health = u1_health / len(u1)
         u2_avg_health = u2_health / len(u2)
 
-        u1_avg_height = sum(u.position3d.z for u in u1) / len(u1)
-        u2_avg_height = sum(u.position3d.z for u in u2) / len(u2)
+        if not ignore_height_difference:
+            u1_avg_height = sum(u.position3d.z for u in u1) / len(u1)
+            u2_avg_height = sum(u.position3d.z for u in u2) / len(u2)
 
-        # Simulate high ground advantage with 1.5x DPS
-        if u1_avg_height * 0.85 > u2_avg_height:
-            u1_avg_dps *= 1.5
-        elif u2_avg_height * 0.85 > u1_avg_height:
-            u2_avg_dps *= 1.5
+            # Simulate high ground advantage with 1.5x DPS
+            if u1_avg_height * 0.85 > u2_avg_height:
+                u1_avg_dps *= 1.5
+            elif u2_avg_height * 0.85 > u1_avg_height:
+                u2_avg_dps *= 1.5
 
         # How many enemy units are destroyed per second
         u1_loss_rate = u1_avg_dps / u2_avg_health

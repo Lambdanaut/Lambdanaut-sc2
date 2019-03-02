@@ -91,10 +91,12 @@ class MicroManager(Manager):
 
                 # Return to start location if damaged and near home
                 if zergling.health_percentage < 0.3:
-                    nearest_townhall = zergling.position.closest(self.bot.townhalls)
-                    if nearest_townhall.distance_to(zergling) < 22:
-                        self.bot.actions.append(zergling.move(self.bot.start_location))
-                        continue
+                    townhalls = self.bot.townhalls
+                    if townhalls:
+                        nearest_townhall = zergling.position.closest(self.bot.townhalls)
+                        if nearest_townhall.distance_to(zergling) < 22:
+                            self.bot.actions.append(zergling.move(self.bot.start_location))
+                            continue
 
                 # Focus down priorities
                 nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priority_types)
@@ -671,7 +673,8 @@ class MicroManager(Manager):
             if army_center.distance_to(enemy_army_center) < 17:
                 # Micro against enemy clusters
                 if nearby_army and nearest_enemy_cluster:
-                    army_strength = self.bot.relative_army_strength(army_cluster, nearest_enemy_cluster)
+                    army_strength = self.bot.relative_army_strength(
+                        army_cluster, nearest_enemy_cluster, ignore_height_difference=False)
 
                     ranged_units_in_attack_range_count = self.bot.count_units_in_attack_range(
                         nearby_army, nearest_enemy_cluster, ranged_only=True)
@@ -698,13 +701,12 @@ class MicroManager(Manager):
 
                             nearest_enemy_unit = unit.position.closest(nearest_enemy_cluster)
                             unit_is_combatant = unit.type_id not in const2.NON_COMBATANTS
-
                             # Don't micro a unit if he's avoiding an effect
                             if unit.avoiding_effect is not None:
                                 pass
 
                             # Back off from enemy if our cluster is much weaker
-                            elif army_strength < -5 and unit_is_combatant:
+                            elif army_strength < -2 and unit_is_combatant:
                                 if self.bot.is_melee(unit) and self.bot.is_melee(nearest_enemy_unit):
                                     away_from_enemy = unit.position.towards(
                                         nearest_enemy_unit, -2)
@@ -712,7 +714,7 @@ class MicroManager(Manager):
                                 elif unit.weapon_cooldown:
                                     # Ranged units only move back while we're on cooldown
                                     away_from_enemy = unit.position.towards(
-                                        nearest_enemy_unit, -2)
+                                        nearest_enemy_unit, -1.5)
                                     self.bot.actions.append(unit.snapshot.move(away_from_enemy))
 
                             # Close the distance if our cluster isn't in range
@@ -731,7 +733,8 @@ class MicroManager(Manager):
                             elif not any_attackable_non_workers \
                                     and (nearby_enemy_workers or enemy_townhalls) \
                                     and not unit.is_moving \
-                                    and unit.weapon_cooldown:
+                                    and unit.weapon_cooldown\
+                                    and unit.unit_is_combatant:
                                 if nearby_enemy_workers:
                                     # If nearby workers, move towards them
                                     closest_worker = unit.position.closest(nearby_enemy_workers)
