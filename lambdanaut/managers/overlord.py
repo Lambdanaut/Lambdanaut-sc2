@@ -362,7 +362,15 @@ class OverlordManager(StatefulManager):
         overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
         if overlord and overlord.is_idle:
             # Move towards natural expansion
-            self.bot.actions.append(overlord.move(enemy_natural_expansion))
+
+            path = self.bot.shortest_path_to_enemy_start_location
+            if path and len(path) > 10:
+                # Move the overlord along the rush path a bit so we're more likely to see rushing zerglings
+                index = round(len(path) * 0.7)
+                point_along_path = path[index]
+                self.bot.actions.append(overlord.move(point_along_path))
+
+            self.bot.actions.append(overlord.move(enemy_natural_expansion, queue=True))
 
     async def start_initial_backout(self):
         """
