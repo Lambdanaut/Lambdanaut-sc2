@@ -88,6 +88,14 @@ class MicroManager(Manager):
 
             nearby_enemy_units = self.bot.known_enemy_units.closer_than(6, zergling)
             if nearby_enemy_units:
+
+                # Return to start location if damaged and near home
+                if zergling.health_percentage < 0.3:
+                    nearest_townhall = zergling.position.closest(self.bot.townhalls)
+                    if nearest_townhall.distance_to(zergling) < 18:
+                        self.bot.actions.append(zergling.move(self.bot.start_location))
+                        continue
+
                 # Focus down priorities
                 nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priority_types)
                 if nearby_enemy_priorities:

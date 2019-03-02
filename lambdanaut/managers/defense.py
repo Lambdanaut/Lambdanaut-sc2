@@ -54,7 +54,7 @@ class DefenseManager(StatefulManager):
 
     async def do_defending(self):
         worker_non_targets = {const.BANELING, const.REAPER}
-        defending_worker_min_health = 0.25
+        defending_worker_min_health = 0.3
 
         for th in self.bot.townhalls:
             enemies_nearby = [u.snapshot for u in self.bot.enemy_cache.values()
