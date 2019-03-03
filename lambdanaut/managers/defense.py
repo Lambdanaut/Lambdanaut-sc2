@@ -198,10 +198,11 @@ class DefenseManager(StatefulManager):
             for worker in self.bot.workers:
                 nearest_townhall = townhalls.closest_to(worker.position)
 
-                if worker.tag in self.bot.workers_defending:
-                    self.bot.actions.append(worker.move(nearest_townhall.position))
-                elif worker.distance_to(nearest_townhall) > 14:
-                    self.bot.actions.append(worker.move(nearest_townhall.position))
+                if worker.tag in self.bot.workers_defending or worker.distance_to(nearest_townhall) > 14:
+                    if worker.is_carrying_minerals or worker.is_carrying_vespene:
+                        self.bot.actions.append(worker.return_resource(nearest_townhall))
+                    else:
+                        self.bot.actions.append(worker.move(nearest_townhall.position))
 
         self.bot.workers_defending.clear()  # Remove worker ids from set
 

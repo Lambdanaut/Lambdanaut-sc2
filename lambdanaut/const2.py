@@ -164,33 +164,35 @@ class Messages(enum.Enum):
     ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN = 18
     NEW_BUILD = 19  # New build added
     NEW_BUILD_STAGE = 20  # New build stage entered
+    NEED_MORE_ENEMY_TECH_INTEL = 21  # Message indicating that we need to scout for more enemy tech
+    SCOUTED_ENOUGH_ENEMY_TECH_INTEL = 22  # Message indicating that we have scouted "enough" enemy tech intel
 
     # # UNITS TRAINED MESSAGES
-    UNIT_CREATED = 21
-    STRUCTURE_COMPLETE = 22
-    UPGRADE_STARTED = 23
+    UNIT_CREATED = 23
+    STRUCTURE_COMPLETE = 24
+    UPGRADE_STARTED = 25
 
     # # UNIT ORDER MESSAGES
-    DRONE_LEAVING_TO_CREATE_HATCHERY = 24  # Value is Drone's tag
-    OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 25  # Move the second overlord scout to the enemy's main ramp
-    PULL_WORKERS_OFF_VESPENE = 26  # Value is int of workers to mine vespene. None if return to default.
-    PULL_WORKERS_OFF_VESPENE_FOR_X_SECONDS = 27  # Value is float of seconds to pull off vespene
-    UNROOT_ALL_SPINECRAWLERS = 28  # Message indicating we should uproot and reposition spinecrawlers
+    DRONE_LEAVING_TO_CREATE_HATCHERY = 26  # Value is Drone's tag
+    OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 27  # Move the second overlord scout to the enemy's main ramp
+    PULL_WORKERS_OFF_VESPENE = 28  # Value is int of workers to mine vespene. None if return to default.
+    PULL_WORKERS_OFF_VESPENE_FOR_X_SECONDS = 29  # Value is float of seconds to pull off vespene
+    UNROOT_ALL_SPINECRAWLERS = 30  # Message indicating we should uproot and reposition spinecrawlers
 
     # # STATE MACHINE
-    STATE_ENTERED = 29  # Value is State being left
-    STATE_EXITED = 30  # Value is State entered
-    DONT_ATTACK = 31  # Indicates that we shouldn't ever enter ATTACKING or MOVING_TO_ATTACK forces state
-    DONT_DEFEND = 32  # Indicates that we shouldn't ever enter DEFENDING forces state
-    ALLOW_DEFENDING = 33  # Indicates that we can enter the DEFENDING forces state
-    ALLOW_ATTACKING_THROUGH_NYDUS = 34  # Indicates that we can enter the ATTACKING_THROUGH_NYDUS state
+    STATE_ENTERED = 31  # Value is State being left
+    STATE_EXITED = 32  # Value is State entered
+    DONT_ATTACK = 33  # Indicates that we shouldn't ever enter ATTACKING or MOVING_TO_ATTACK forces state
+    DONT_DEFEND = 34  # Indicates that we shouldn't ever enter DEFENDING forces state
+    ALLOW_DEFENDING = 35  # Indicates that we can enter the DEFENDING forces state
+    ALLOW_ATTACKING_THROUGH_NYDUS = 36  # Indicates that we can enter the ATTACKING_THROUGH_NYDUS state
     # Starts an attack and doesn't stop until condition returns True.
     # Val is a function of type [[manager], bool]. It takes the manager that receives the message as input.
-    DONT_STOP_ATTACKING_UNTIL_CONDITION = 35
+    DONT_STOP_ATTACKING_UNTIL_CONDITION = 37
 
     # # STRATEGY CHANGE
-    BUILD_OFFENSIVE_SPINES = 36  # Builds spines in enemy base rather than at home. Turns off uprooting.
-    DONT_RETURN_DISTANT_WORKERS_TO_TOWNHALLS = 37  # Turn off returning distant workers to townhalls
+    BUILD_OFFENSIVE_SPINES = 38  # Builds spines in enemy base rather than at home. Turns off uprooting.
+    DONT_RETURN_DISTANT_WORKERS_TO_TOWNHALLS = 39  # Turn off returning distant workers to townhalls
 
 
 # Build Manager Commands

@@ -754,10 +754,13 @@ class MicroManager(Manager):
                             # Handle combat priority targeting
                             else:
                                 priorities = const2.WORKERS | {
-                                    const.STARPORTTECHLAB, const.FACTORYTECHLAB,
+                                    const.STARPORTTECHLAB, const.FACTORYTECHLAB, const.FUSIONCORE,
                                     const.SIEGETANK, const.SIEGETANKSIEGED, const.MEDIVAC, const.CYCLONE,
+                                    const.DARKSHRINE, const.ROBOTICSFACILITY,
                                     const.COLOSSUS, const.WARPPRISM, const.ARCHON, const.HIGHTEMPLAR,
-                                    const.DARKTEMPLAR, const.DISRUPTOR,
+                                    const.PYLON, const.DARKTEMPLAR, const.DISRUPTOR,
+                                    const.UnitTypeId.ROACHWARREN, const.SPIRE, const.GREATERSPIRE,
+                                    const.UnitTypeId.LURKERDENMP,
                                     const.INFESTOR, const.QUEEN, const.LURKERMP, const.LURKERMPBURROWED,
                                     const.ULTRALISK, const.BROODLORD,
                                 }

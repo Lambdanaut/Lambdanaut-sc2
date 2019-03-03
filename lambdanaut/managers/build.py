@@ -481,7 +481,7 @@ class BuildManager(Manager):
             overlords = self.bot.units(
                 {const.OVERLORD, const.UnitTypeId.OVERLORDTRANSPORT, const.UnitTypeId.OVERSEER})
             damaged_overlord_supply = 0
-            if overlords.exists:
+            if overlords:
                 damaged_overlords = overlords.filter(lambda o: o.health_percentage < 0.85)
                 if damaged_overlords.exists:
                     damaged_overlord_supply = len(damaged_overlords) * 8  # Overlords provide 8 supply
@@ -492,10 +492,16 @@ class BuildManager(Manager):
 
             supply_left = self.bot.supply_left + overlord_egg_supply - damaged_overlord_supply
 
-            if supply_left < 2 + self.bot.supply_cap / 10:
+            # Controls how soon we build overlords when we near supply cap.
+            # The lower this is, the earlier we'll build overlords. = Conservative
+            # The higher this is, the later we'll build overlords. = More prone to supply block
+            supply_cap_factor = 10
+
+            if supply_left < 2 + self.bot.supply_cap / supply_cap_factor:
                 # With a formula like this, At 20 supply cap it'll build an overlord
-                # when you have 5 supply left. At 40 supply cap it'll build an overlord
-                # when you have 7 supply left. This seems reasonable.
+                # when you have 7 supply left. At 40 supply cap it'll build an overlord
+                # when you have 11 supply left. This seems reasonable and conservative.
+                # It seems
 
                 # Ensure we have over 3 overlords.
                 if len(overlords) >= 3:

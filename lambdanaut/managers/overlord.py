@@ -28,7 +28,6 @@ class OverlordManager(StatefulManager):
         }
 
         self.state_start_map = {
-            OverlordStates.INITIAL_BACKOUT: self.start_initial_backout,
             OverlordStates.INITIAL_DIVE: self.start_initial_dive,
         }
 
@@ -42,7 +41,6 @@ class OverlordManager(StatefulManager):
 
         # Flag for if we find an enemy proxy or rush
         self.enemy_proxy_found = False
-        self.proxy_search_concluded = False
 
         # Move second overlord to enemy ramp if this is true
         self.move_overlord_scout_2_to_enemy_ramp = False
@@ -52,6 +50,8 @@ class OverlordManager(StatefulManager):
 
         # Message subscriptions
         self.subscribe(Messages.OVERLORD_SCOUT_2_TO_ENEMY_RAMP)
+        self.subscribe(Messages.NEED_MORE_ENEMY_TECH_INTEL)
+        self.subscribe(Messages.SCOUTED_ENOUGH_ENEMY_TECH_INTEL)
 
         # Expiring list of recent expansions we've sent an overlord to
         self._recent_expansions_visited = ExpiringList()
@@ -79,6 +79,20 @@ class OverlordManager(StatefulManager):
                         overlord = overlords.find_by_tag(self.proxy_scouting_overlord_tag)
                         if overlord:
                             self.move_overlord_to_enemy_ramp(overlord)
+
+            # Change state to suicide dive
+            change_state_to_suicide_dive = {
+                Messages.NEED_MORE_ENEMY_TECH_INTEL}
+            if message in change_state_to_suicide_dive:
+                self.ack(message)
+                await self.change_state(OverlordStates.SUICIDE_DIVE)
+
+            # Change state to initial backout
+            change_state_to_initial_backout = {
+                Messages.SCOUTED_ENOUGH_ENEMY_TECH_INTEL}
+            if message in change_state_to_initial_backout:
+                self.ack(message)
+                await self.change_state(OverlordStates.INITIAL_BACKOUT)
 
     def move_overlord_to_enemy_ramp(self, overlord):
         # Move them to the enemy ramp
@@ -170,26 +184,11 @@ class OverlordManager(StatefulManager):
                     # The indexed expansion doesn't exist
                     pass
         else:
-            if not self.enemy_proxy_found and not self.proxy_search_concluded and overlords:
+            if not self.enemy_proxy_found and overlords:
                 scouting_overlord = overlords.find_by_tag(self.proxy_scouting_overlord_tag)
-                if scouting_overlord:
-                    # End early scouting process if we've reached the enemy expansion and
-                    # haven't seen proxies
-                    expansion_locations = self.bot.get_expansion_positions()
-                    try:
-                        # This is the expected enemy 5th expand location where the overlord is headed
-                        enemy_fifth_expansion = expansion_locations[-5]
-                        if scouting_overlord.distance_to(enemy_fifth_expansion) < 8:
-                            self.proxy_search_concluded = True
-
-                    except IndexError:
-                        # The indexed expansion doesn't exist
-                        pass
-
-                else:
+                if not scouting_overlord:
                     # Overlord has died :(
                     self.proxy_scouting_overlord_tag = None
-                    self.proxy_search_concluded = True
 
     async def scout_enemy_third_expansion_with_third_overlord(self):
         overlords = self.bot.units(const.OVERLORD)
@@ -215,14 +214,14 @@ class OverlordManager(StatefulManager):
 
         overlords = self.bot.units(const.OVERLORD).tags_not_in(dont_flee_tags)
 
+        enemy_units = self.bot.enemy_cache.values()
         for overlord in overlords:
-            nearby_enemy_units = self.bot.known_enemy_units. \
-                closer_than(11, overlord).filter(
-                    lambda unit: unit.can_attack_air
-                    and overlord.distance_to(unit) < unit.air_range * 1.5)
+            nearby_enemy_units = [u.snapshot for u in enemy_units
+                                  if u.distance_to(overlord) < 14
+                                  and u.can_attack_air]
 
             if nearby_enemy_units:
-                nearby_enemy_unit = nearby_enemy_units.closest_to(overlord)
+                nearby_enemy_unit = overlord.position.closest(nearby_enemy_units)
                 away_from_enemy = overlord.position.towards(nearby_enemy_unit, -3)
                 self.bot.actions.append(overlord.move(away_from_enemy))
 
@@ -372,23 +371,18 @@ class OverlordManager(StatefulManager):
 
             self.bot.actions.append(overlord.move(enemy_natural_expansion, queue=True))
 
-    async def start_initial_backout(self):
+    async def do_initial_backout(self):
         """
         We've seen enemy structures
         Retreat from their natural expansion
         """
-
         enemy_natural_expansion = self.bot.get_enemy_natural_expansion()
 
         overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
-        if overlord:
-            # Move in closer towards main
+        if overlord and overlord.is_idle:
             away_from_enemy_natural_expansion = \
                 enemy_natural_expansion.position.towards(self.bot.start_location, +28)
             self.bot.actions.append(overlord.move(away_from_enemy_natural_expansion))
-
-    async def do_initial_backout(self):
-        pass
 
     async def do_suicide_dive(self):
         overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
@@ -446,12 +440,7 @@ class OverlordManager(StatefulManager):
                         await self.change_state(OverlordStates.INITIAL_DIVE)
 
         elif self.state == OverlordStates.INITIAL_BACKOUT:
-            # If we didn't find an enemy proxy/rush, and the search is off
-            # Then suicide dive in to get more information
-            if not self.enemy_proxy_found and self.proxy_search_concluded \
-                    and self.proxy_scouting_overlord_tag is not None:
-                if len(self.bot.known_enemy_structures) < 4:
-                    await self.change_state(OverlordStates.SUICIDE_DIVE)
+            pass
 
         elif self.state == OverlordStates.INITIAL_DIVE:
             enemy_structures = self.bot.known_enemy_structures

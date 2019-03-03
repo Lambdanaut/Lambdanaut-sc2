@@ -27,6 +27,8 @@ class IntelManager(Manager):
         self.has_scouted_enemy_counter_with_roaches = False
         self.has_scouted_enemy_counter_midgame_broodlord_rush = False
         self.has_scouted_enemy_rush = False
+        self.has_published_need_more_enemy_tech_intel = False
+        self.has_published_scouted_enemy_tech_intel = False
         self.has_scouted_enemy_greater_force = ExpiringList()  # Will contain True or nothing
 
         self.subscribe(Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION)
@@ -223,6 +225,38 @@ class IntelManager(Manager):
 
             return False
 
+    def need_more_enemy_tech_intel(self):
+        """
+        If we're in mid to late game and we've seen few enemy structures,
+        publish a message to search for further enemy tech structures.
+        """
+        if not self.has_published_need_more_enemy_tech_intel \
+                and self.bot.build_manager.build_stage in {BuildStages.MID_GAME, BuildStages.LATE_GAME}:
+
+            non_tech_structures = {const.SUPPLYDEPOT, const.PYLON}
+            enemy_tech_structures = self.bot.known_enemy_structures.exclude_type(non_tech_structures)
+
+            if len(enemy_tech_structures) < 2:
+                self.has_published_need_more_enemy_tech_intel = True
+                return True
+
+        return False
+
+    def scouted_enemy_tech_intel(self):
+        if not self.has_published_scouted_enemy_tech_intel \
+                and self.bot.build_manager.build_stage in {BuildStages.MID_GAME, BuildStages.LATE_GAME} \
+                and len(self.bot.known_enemy_structures) > 4:
+
+            non_tech_structures = {const.SUPPLYDEPOT, const.PYLON}
+            enemy_tech_structures = self.bot.known_enemy_structures.exclude_type(non_tech_structures)
+
+            if len(enemy_tech_structures) > 3:
+                self.has_published_scouted_enemy_tech_intel = True
+                return True
+
+        return False
+
+
     async def assess_game(self):
         """
         Assess the game's state and send out applicable messages
@@ -242,6 +276,10 @@ class IntelManager(Manager):
             self.publish(Messages.ENEMY_MOVING_OUT_SCOUTED)
         if self.enemy_rush_scouted():
             self.publish(Messages.FOUND_ENEMY_RUSH)
+        if self.need_more_enemy_tech_intel():
+            self.publish(Messages.NEED_MORE_ENEMY_TECH_INTEL)
+        if self.scouted_enemy_tech_intel():
+            self.publish(Messages.SCOUTED_ENOUGH_ENEMY_TECH_INTEL)
 
     async def run(self):
         await self.read_messages()
