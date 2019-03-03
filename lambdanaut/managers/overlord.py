@@ -103,9 +103,9 @@ class OverlordManager(StatefulManager):
 
     def turn_on_generate_creep(self):
         # Spread creep on last scouted expansion location like a fucking dick head
-        if self.bot.units({const.LAIR, const.HIVE}).exists:
+        if self.bot.units({const.LAIR, const.HIVE}):
             overlords = self.bot.units(const.OVERLORD)
-            if overlords.exists:
+            if overlords:
                 for overlord in overlords.filter(
                         lambda o: o.tag not in self.overlord_tags_with_creep_turned_on):
                     self.overlord_tags_with_creep_turned_on.add(overlord.tag)
@@ -245,7 +245,7 @@ class OverlordManager(StatefulManager):
 
         # Ensure we have Ventrical Sacks upgraded
         if const.OVERLORDSPEED in self.bot.state.upgrades \
-                and self.bot.units(const.BANELINGNEST).exists:
+                and self.bot.units(const.BANELINGNEST):
             # Get overlords
             overlords = self.bot.units(const.UnitTypeId.OVERLORD).ready. \
                 tags_not_in(self.scouting_overlord_tags)
@@ -253,12 +253,12 @@ class OverlordManager(StatefulManager):
                 tags_not_in(self.scouting_overlord_tags - {self.baneling_drop_overlord_tag})
 
             if self.baneling_drop_overlord_tag is None:
-                if overlord_transports.exists:
+                if overlord_transports:
                     # Tag an overlord transport to drop with
                     self.print("Tagging overlord transport for a baneling drop")
                     overlord = overlord_transports.closest_to(self.bot.start_location)
                     self.baneling_drop_overlord_tag = overlord.tag
-                elif overlords.exists:
+                elif overlords:
                     # Morph to transport overlord
                     self.print("Morphing Overlord for baneling drop")
                     overlord = overlords.closest_to(self.bot.start_location)
@@ -418,7 +418,7 @@ class OverlordManager(StatefulManager):
                     enemy_defensive_structures_types = {const.PHOTONCANNON, const.SPINECRAWLER, const.MISSILETURRET}
                     nearby_enemy_defensive_structures = enemy_structures.of_type(
                         enemy_defensive_structures_types).closer_than(15, overlord)
-                    if nearby_enemy_defensive_structures.exists:
+                    if nearby_enemy_defensive_structures:
                         closest_enemy_defensive_structure = \
                             nearby_enemy_defensive_structures.closest_to(overlord)
                         self.publish(
@@ -428,11 +428,11 @@ class OverlordManager(StatefulManager):
                         await self.change_state(OverlordStates.INITIAL_BACKOUT)
 
                 if distance_to_expansion < 11:
-                    if enemy_structures.closer_than(12, overlord).exists and \
+                    if enemy_structures.closer_than(12, overlord) and \
                             self.bot.is_visible(enemy_natural_expansion):
                         # Check if they took their natural expansion
                         enemy_townhalls = enemy_structures.of_type(const2.TOWNHALLS)
-                        if enemy_townhalls.exists:
+                        if enemy_townhalls:
                             if enemy_townhalls.closer_than(4, enemy_natural_expansion):
                                 self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN)
                             else:
@@ -457,7 +457,7 @@ class OverlordManager(StatefulManager):
                     enemy_defensive_structures_types = {const.PHOTONCANNON, const.SPINECRAWLER}
                     nearby_enemy_defensive_structures = enemy_structures.of_type(
                         enemy_defensive_structures_types).closer_than(15, overlord)
-                    if nearby_enemy_defensive_structures.exists:
+                    if nearby_enemy_defensive_structures:
                         closest_enemy_defensive_structure = \
                             nearby_enemy_defensive_structures.closest_to(overlord)
                         self.publish(
@@ -473,14 +473,14 @@ class OverlordManager(StatefulManager):
                     if barracks_count or gateway_count or zergling_count:
                         self.publish(Messages.FOUND_ENEMY_EARLY_AGGRESSION)
 
-                if enemy_structures.closer_than(11, overlord).exists:
+                if enemy_structures.closer_than(11, overlord):
                     self.publish(Messages.OVERLORD_SCOUT_FOUND_ENEMY_BASE, value=overlord.position)
                     await self.change_state(OverlordStates.INITIAL_BACKOUT)
 
                     enemy_townhalls = enemy_structures.of_type(const2.TOWNHALLS)
-                    if enemy_townhalls.exists:
+                    if enemy_townhalls:
                         enemy_natural_expansion = self.bot.get_enemy_natural_expansion()
-                        if enemy_townhalls.closer_than(4, enemy_natural_expansion).exists:
+                        if enemy_townhalls.closer_than(4, enemy_natural_expansion):
                             self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN)
                     else:
                         self.publish(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
