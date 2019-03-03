@@ -220,6 +220,7 @@ class MicroManager(Manager):
 
         bile_priorities = {
             const.SCV, const.OVERLORD, const.MEDIVAC, const.SIEGETANKSIEGED, const.BANSHEE,
+            const.WIDOWMINE, const.WIDOWMINEBURROWED,
             const.PHOTONCANNON, const.SPINECRAWLER, const.PYLON, const.SUPPLYDEPOT,
             const.FACTORYTECHLAB, const.STARPORTTECHLAB,
         }
@@ -756,6 +757,7 @@ class MicroManager(Manager):
                                 priorities = const2.WORKERS | {
                                     const.STARPORTTECHLAB, const.FACTORYTECHLAB, const.FUSIONCORE,
                                     const.SIEGETANK, const.SIEGETANKSIEGED, const.MEDIVAC, const.CYCLONE,
+                                    const.WIDOWMINE, const.WIDOWMINEBURROWED,
                                     const.DARKSHRINE, const.ROBOTICSFACILITY,
                                     const.COLOSSUS, const.WARPPRISM, const.ARCHON, const.HIGHTEMPLAR,
                                     const.PYLON, const.DARKTEMPLAR, const.DISRUPTOR,

@@ -601,8 +601,8 @@ class LambdaBot(sc2.BotAI):
           * If the unit has a weapon cooldown, we assume he's in combat
         """
         return \
-            (unit.is_moving and not unit.is_attacking and isinstance(unit.order_target, Point2)) \
-            or (unit.is_attacking and not isinstance(unit.order_target, int)) \
+            unit.is_moving \
+            or (unit.is_attacking and isinstance(unit.order_target, int)) \
             or unit.weapon_cooldown > 0
 
     def is_melee(self, unit: Unit) -> bool:
