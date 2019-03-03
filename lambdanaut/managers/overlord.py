@@ -219,7 +219,7 @@ class OverlordManager(StatefulManager):
                                   if u.can_attack_air
                                   and u.distance_to(overlord) < u.air_range * 1.75
                                   # For bunkers
-                                  or u.distance_to(overlord) < 9]
+                                  or (u.type_id is const.BUNKER and u.distance_to(overlord) < 9)]
 
             if nearby_enemy_units:
                 nearby_enemy_unit = overlord.position.closest(nearby_enemy_units)
