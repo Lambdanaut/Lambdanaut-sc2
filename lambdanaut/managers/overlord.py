@@ -239,6 +239,10 @@ class OverlordManager(StatefulManager):
          * Unload banelings
         """
 
+        # TODO: Test this to make sure it still works
+        # Disable baneling drops for the time being
+        return
+
         # Ensure we have Ventrical Sacks upgraded
         if const.OVERLORDSPEED in self.bot.state.upgrades \
                 and self.bot.units(const.BANELINGNEST).exists:
