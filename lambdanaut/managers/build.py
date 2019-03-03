@@ -667,11 +667,6 @@ class BuildManager(Manager):
                     if unit is const.BANELING and not self.bot.units(const.ZERGLING).idle:
                         continue
 
-                    # Skip ravager if we don't have any roaches that aren't actively engage in combat
-                    if unit is const.RAVAGER \
-                            and not self.bot.units(const.ROACH).filter(lambda r: not self.bot.unit_is_engaged(r)):
-                        continue
-
                     if (tech_requirement is None or existing_unit_counts[tech_requirement]) > 0 and \
                             (idle_building_structure is None or idle_building_structure.exists):
 
@@ -990,6 +985,10 @@ class BuildManager(Manager):
                 self.bot.actions.append(roach.stop())
                 self.bot.actions.append(roach.train(build_target, queue=True))
                 return True
+
+            # Return True regardless.
+            # We can skip the ravager if all the roaches are engaged
+            return True
 
             # # Get roaches
             # roaches = self.bot.units(const.ROACH).filter(
