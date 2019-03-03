@@ -39,9 +39,6 @@ class OverlordManager(StatefulManager):
         self.third_expansion_scouting_overlord_tag = None
         self.baneling_drop_overlord_tag = None
 
-        # Flag for if we find an enemy proxy or rush
-        self.enemy_proxy_found = False
-
         # Move second overlord to enemy ramp if this is true
         self.move_overlord_scout_2_to_enemy_ramp = False
 
@@ -104,7 +101,7 @@ class OverlordManager(StatefulManager):
             target = nearby_ramp.towards(self.bot.start_location, 10.5)
             self.bot.actions.append(overlord.move(target))
 
-    async def turn_on_generate_creep(self):
+    def turn_on_generate_creep(self):
         # Spread creep on last scouted expansion location like a fucking dick head
         if self.bot.units({const.LAIR, const.HIVE}).exists:
             overlords = self.bot.units(const.OVERLORD)
@@ -115,7 +112,7 @@ class OverlordManager(StatefulManager):
                     self.bot.actions.append(
                         overlord(const.AbilityId.BEHAVIOR_GENERATECREEPON))
 
-    async def overlord_dispersal(self):
+    def overlord_dispersal(self):
         """
         Disperse Overlords to different expansions
         """
@@ -158,18 +155,15 @@ class OverlordManager(StatefulManager):
                     self.bot.enemy_start_location, distance, max_difference=(math.pi / 1.0))
                 self.bot.actions.append(overlord.move(target))
 
-    async def proxy_scout_with_second_overlord(self):
+    def proxy_scout_with_second_overlord(self):
         overlords = self.bot.units(const.OVERLORD)
 
         if self.proxy_scouting_overlord_tag is None and len(overlords) == 2:
             overlord = overlords.filter(lambda ov: ov.tag not in self.scouting_overlord_tags).first
 
-            if self.move_overlord_scout_2_to_enemy_ramp:
-                # Move the scouting overlord directly to the enemy ramp for vision
-                self.move_overlord_to_enemy_ramp(overlord)
-            else:
-                self.proxy_scouting_overlord_tag = overlord.tag
+            self.proxy_scouting_overlord_tag = overlord.tag
 
+            if not self.move_overlord_scout_2_to_enemy_ramp:
                 # Move Overlord around different expansion locations
                 expansion_locations = self.bot.get_expansion_positions()
                 for expansion_location in expansion_locations[1:5]:
@@ -183,14 +177,19 @@ class OverlordManager(StatefulManager):
                 except IndexError:
                     # The indexed expansion doesn't exist
                     pass
-        else:
-            if not self.enemy_proxy_found and overlords:
-                scouting_overlord = overlords.find_by_tag(self.proxy_scouting_overlord_tag)
-                if not scouting_overlord:
-                    # Overlord has died :(
-                    self.proxy_scouting_overlord_tag = None
 
-    async def scout_enemy_third_expansion_with_third_overlord(self):
+        if overlords and self.proxy_scouting_overlord_tag is not None:
+            scouting_overlord = overlords.find_by_tag(self.proxy_scouting_overlord_tag)
+            if not scouting_overlord:
+                # Overlord has died :(
+                self.proxy_scouting_overlord_tag = None
+                return
+
+            if self.move_overlord_scout_2_to_enemy_ramp and scouting_overlord.is_idle:
+                # Move the scouting overlord directly to the enemy ramp for vision
+                self.move_overlord_to_enemy_ramp(scouting_overlord)
+
+    def scout_enemy_third_expansion_with_third_overlord(self):
         overlords = self.bot.units(const.OVERLORD)
 
         if self.third_expansion_scouting_overlord_tag is None:
@@ -205,7 +204,7 @@ class OverlordManager(StatefulManager):
                 for expansion_location in third_and_fourth_expansions:
                     self.bot.actions.append(overlord.move(expansion_location, queue=True))
 
-    async def overlord_flee(self):
+    def overlord_flee(self):
         """
         Flee overlords when they're near an enemy that can attack air
         """
@@ -217,15 +216,15 @@ class OverlordManager(StatefulManager):
         enemy_units = self.bot.enemy_cache.values()
         for overlord in overlords:
             nearby_enemy_units = [u.snapshot for u in enemy_units
-                                  if u.distance_to(overlord) < 14
-                                  and u.can_attack_air]
+                                  if u.can_attack_air
+                                  and u.distance_to(overlord) < u.air_range * 1.75]
 
             if nearby_enemy_units:
                 nearby_enemy_unit = overlord.position.closest(nearby_enemy_units)
                 away_from_enemy = overlord.position.towards(nearby_enemy_unit, -3)
                 self.bot.actions.append(overlord.move(away_from_enemy))
 
-    async def baneling_drops(self):
+    def baneling_drops(self):
         """
         Initializes a baneling drop
 
@@ -492,9 +491,9 @@ class OverlordManager(StatefulManager):
 
         await self.read_messages()
 
-        await self.overlord_flee()
-        await self.overlord_dispersal()
-        await self.turn_on_generate_creep()
-        await self.proxy_scout_with_second_overlord()
-        await self.scout_enemy_third_expansion_with_third_overlord()
-        await self.baneling_drops()
+        self.turn_on_generate_creep()
+        self.proxy_scout_with_second_overlord()
+        self.scout_enemy_third_expansion_with_third_overlord()
+        self.baneling_drops()
+        self.overlord_flee()
+        self.overlord_dispersal()
