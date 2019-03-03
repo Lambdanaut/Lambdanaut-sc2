@@ -48,6 +48,8 @@
 ## HIGH PRIORITY
 
   * Use A* when we switch to ATTACKING to hit the enemy where they're most vulnerable
+  
+  * Don't switch to moving_to_attacking if we have an upgrade that is 0.5-0.85% done
    
   * Keep non-busy queens on creep during housekeeping. Right now they walk right out into the nether to die. 
   
