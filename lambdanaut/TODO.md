@@ -49,8 +49,6 @@
 
   * Use A* when we switch to ATTACKING to hit the enemy where they're most vulnerable
    
-  * Fix Overlord scouting to work with ravager rushing
-  
   * Keep non-busy queens on creep during housekeeping. Right now they walk right out into the nether to die. 
   
   * Only spawn creep tumors with non-townhall queens
@@ -59,7 +57,7 @@
 ## MEDIUM PRIORITY
 
   * Add attention function that keeps army moving towards a target destination during attacks. 
-    We want to walk by low priority targets. Would be useful against additional pylons during ravager rushes when the
+    We want to walk by low priority targets. Would be useful against AdditionalPylons during ravager rushes when the
     ravagers get distracted by a forward Nexus rather than going for probes.
 
   * Do zergling rushes against zerg on maps with short rush distance
@@ -298,3 +296,5 @@
     * We could make the moving-to-attack location towards our base if the enemy structure closer than halfway 
       across the map
       
+  * Fix Overlord scouting to work with ravager rushing
+  
