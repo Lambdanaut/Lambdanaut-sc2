@@ -531,6 +531,9 @@ class MicroManager(Manager):
             nearby_spine_crawlers = spine_crawlers.closer_than(22, townhall).filter(
                 lambda sc: math.floor(sc.position3d.z) <= math.floor(townhall.position3d.z))
 
+            # Get enemies near townhall. We don't want to uproot if enemies are there.
+            enemies_near_townhall = self.bot.known_enemy_units.closer_than(12, townhall)
+
             # Get nearby ramp
             nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
             nearby_ramp: Point2 = townhall.position.towards(
@@ -555,9 +558,10 @@ class MicroManager(Manager):
 
             # Unroot spine crawlers that are far away from the front expansions
             # Also unroot spine crawlers if a nearby ramp gets creep on it.
-            if len(nearby_spine_crawlers) < len(spine_crawlers) \
-                    or (ramp_close_to_townhall and ramp_lower_than_townhall and ramp_creep
-                        and ramp_distance_to_sc > 2):
+            if not enemies_near_townhall \
+                    and (len(nearby_spine_crawlers) < len(spine_crawlers)
+                         or (ramp_close_to_townhall and ramp_lower_than_townhall and ramp_creep
+                             and ramp_distance_to_sc > 2)):
 
                 far_rooted_spine_crawlers = (sc for sc in rooted_spine_crawlers.idle
                                              if sc not in nearby_spine_crawlers)

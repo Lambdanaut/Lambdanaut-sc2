@@ -266,11 +266,17 @@ class IntelManager(Manager):
                 and self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
 
             # Enemy hatcheries on our side of the map
-            nearby_enemy_hatcheries = self.bot.known_enemy_structures(const.HATCHERY).\
+            nearby_enemy_hatcheries = self.bot.known_enemy_structures(const.UnitTypeId.HATCHERY).\
                 closer_than(self.bot.start_location_to_enemy_start_location_distance / 2,
                             self.bot.start_location)
 
-            if nearby_enemy_hatcheries:
+            # Enemy spine crawlers on our side of the map
+            # Assume shenanigans.
+            nearby_enemy_spines = self.bot.known_enemy_structures(const.UnitTypeId.SPINECRAWLER). \
+                closer_than(self.bot.start_location_to_enemy_start_location_distance / 2,
+                            self.bot.start_location)
+
+            if nearby_enemy_hatcheries or nearby_enemy_spines:
                 self.has_published_scouted_enemy_proxy_hatchery = True
                 return True
 
