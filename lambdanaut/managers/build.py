@@ -257,8 +257,21 @@ class BuildManager(Manager):
             if message in proxy_hatchery_detected:
                 self.ack(message)
 
-                # Switch to a defensive roach ravager build
-                self.add_build(Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE)
+                # Switch to a defensive roach ravager build if we haven't
+                # finished a baneling nest yet
+                baneling_nests = self.bot.units(const.UnitTypeId.BANELINGNEST)
+                if not baneling_nests.ready:
+
+                    # Cancel spawning hatcheries
+                    in_prod_hatcheries = self.bot.units(const.UnitTypeId.HATCHERY).not_ready
+                    for hatchery in in_prod_hatcheries:
+                        self.bot.actions.append(hatchery(const.AbilityId.CANCEL))
+
+                    # Cancel spawning baneling nests
+                    for baneling_nest in baneling_nests.not_ready:
+                        self.bot.actions.append(baneling_nest(const.AbilityId.CANCEL))
+
+                    self.add_build(Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE)
 
             # Switch to Defensive build if early game
             # Stop townhall and worker production for a short duration
