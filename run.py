@@ -30,7 +30,8 @@ MAPS = [
 
 MAP_NAME = "KairosJunctionLE"
 MICRO_MAP_NAME = "kairo_training"
-REALTIME = False
+VS_HUMAN = True
+REALTIME = True
 
 BUILD = None
 # BUILD = sc2.AIBuild.RandomBuild
@@ -49,7 +50,7 @@ DIFFICULTY = sc2.Difficulty.CheatInsane
 # DIFFICULTY = sc2.Difficulty.Easy
 
 RACE = sc2.Race.Zerg
-ENEMY_RACE = sc2.Race.Protoss
+ENEMY_RACE = sc2.Race.Zerg
 REPLAY_NAME = os.path.join("replays", "last_lambdanaut_replay{}.*.sc2replay".format(datetime_str))
 
 if not MAP_NAME:
@@ -75,10 +76,20 @@ if __name__ == '__main__':
         # Local game
         print("Starting local game...")
 
-        player_config = [
-            sc2.player.Bot(RACE, bot.LambdaBot()),
-            sc2.player.Computer(ENEMY_RACE, DIFFICULTY, BUILD)
-        ]
+        bot_config = sc2.player.Bot(RACE, bot.LambdaBot())
+
+        if VS_HUMAN:
+            opponent_config = sc2.player.Human(ENEMY_RACE)
+            player_config = [
+                opponent_config,
+                bot_config,
+            ]
+        else:
+            opponent_config = sc2.player.Computer(ENEMY_RACE, DIFFICULTY, BUILD)
+            player_config = [
+                bot_config,
+                opponent_config,
+            ]
 
         sc2.run_game(
             sc2.maps.get(MAP_NAME),
