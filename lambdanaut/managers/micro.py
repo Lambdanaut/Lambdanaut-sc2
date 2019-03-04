@@ -8,7 +8,7 @@ from lib.sc2.unit import Unit
 import lib.sc2.constants as const
 
 import lambdanaut.const2 as const2
-from lambdanaut.const2 import Messages
+from lambdanaut.const2 import DefenseStates, Messages
 from lambdanaut.expiringlist import ExpiringList
 from lambdanaut.managers import Manager
 from lambdanaut.pathfinding import Pathfinder
@@ -43,23 +43,6 @@ class MicroManager(Manager):
 
         # Flag indicating whether we should unroot spines or not
         self.should_unroot_spines = True
-
-    async def micro_back_melee(self, unit) -> bool:
-        """
-        Micros back damaged melee units
-        Returns a boolean indicating whether they were micro'd back
-
-        CURRENTLY NOT IN USE BECAUSE IT DOESN'T SEEM TO PROVIDE ANY BENEFITS
-        WOULD THEORETICALLY BE USED BY WORKERS AND ZERGLINGS
-        """
-        if unit.health_percentage < 0.25:
-            if self.bot.known_enemy_units:
-                nearest_enemy = self.bot.known_enemy_units.closest_to(unit)
-                if nearest_enemy.distance_to(unit) < 12 and self.bot.is_melee(nearest_enemy):
-                    away_from_enemy = unit.position.towards(nearest_enemy, -1)
-                    self.bot.actions.append(unit.move(away_from_enemy))
-                    return True
-        return False
 
     async def manage_drones(self):
         # Burrow damaged workers if enemies are nearby
@@ -572,9 +555,11 @@ class MicroManager(Manager):
 
             # Unroot spine crawlers that are far away from the front expansions
             # Also unroot spine crawlers if a nearby ramp gets creep on it.
-            if len(nearby_spine_crawlers) < len(spine_crawlers) \
+            # If the defense manager is defending. Don't uproot.
+            if self.bot.defense_manager.state is not DefenseStates.DEFENDING \
+                    and (len(nearby_spine_crawlers) < len(spine_crawlers)
                     or (ramp_close_to_townhall and ramp_lower_than_townhall and ramp_creep
-                        and ramp_distance_to_sc > 2):
+                        and ramp_distance_to_sc > 2)):
 
                 far_rooted_spine_crawlers = (sc for sc in rooted_spine_crawlers.idle
                                              if sc not in nearby_spine_crawlers)

@@ -54,9 +54,7 @@
   * Keep non-busy queens on creep during housekeeping. Right now they walk right out into the nether to die. 
   
   * Only spawn creep tumors with non-townhall queens
-  
-  * Dont unroot spine crawlers if enemy is nearby where we want to root them
-  
+
 
 ## MEDIUM PRIORITY
 
@@ -303,4 +301,6 @@
   * Fix Overlord scouting to work with ravager rushing
   
   * Don't go spore crawlers unless we see two phoenix
+  
+  * Dont unroot spine crawlers if enemy is nearby where we want to root them
   

@@ -108,7 +108,7 @@ class DefenseManager(StatefulManager):
                         # Only send the closest queen if the enemy is only a couple units
                         target = self.bot.closest_and_most_damaged(enemies_nearby, queen)
 
-                        if target and 8 < queen.distance_to(target) < 15 and not queen.weapon_cooldown:
+                        if target and 8 < queen.distance_to(target) < 20 and not queen.weapon_cooldown:
                             if target.distance_to(queen) < queen.ground_range:
                                 self.bot.actions.append(queen.attack(target))
                             else:
@@ -135,6 +135,9 @@ class DefenseManager(StatefulManager):
                             army_strength = self.bot.relative_army_strength(
                                 army_cluster, nearest_enemy_cluster)
 
+                            nearby_spine_crawlers = self.bot.units(const.SPINECRAWLER).ready.\
+                                closer_than(20, nearest_enemy_cluster.position)
+
                             if army_strength >= -2 \
                                     or nearest_enemy_cluster.position.distance_to(army_cluster.position) < 14 \
                                     or self.bot.supply_used > 185:
@@ -144,10 +147,19 @@ class DefenseManager(StatefulManager):
                                 for unit in army_cluster:
                                     if unit.type_id not in const2.NON_COMBATANTS \
                                             and unit.tag not in self.bot.townhall_queens.values():
-                                        target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
 
-                                        if target and not self.bot.unit_is_busy(unit):
-                                            self.bot.actions.append(unit.attack(target))
+                                        # Prefer defending with spine crawlers
+                                        if nearby_spine_crawlers and len(nearest_enemy_cluster) > 5:
+                                            target = nearby_spine_crawlers.center
+
+                                            if target and not self.bot.unit_is_busy(unit):
+                                                self.bot.actions.append(unit.attack(target))
+
+                                        else:
+                                            target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
+
+                                            if target and not self.bot.unit_is_busy(unit):
+                                                self.bot.actions.append(unit.attack(target))
 
                             elif army_strength < -3:
                                 # If enemy is greater regroup to center of largest cluster towards friendly townhall
