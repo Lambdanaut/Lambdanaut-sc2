@@ -555,11 +555,9 @@ class MicroManager(Manager):
 
             # Unroot spine crawlers that are far away from the front expansions
             # Also unroot spine crawlers if a nearby ramp gets creep on it.
-            # If the defense manager is defending. Don't uproot.
-            if self.bot.defense_manager.state is not DefenseStates.DEFENDING \
-                    and (len(nearby_spine_crawlers) < len(spine_crawlers)
+            if len(nearby_spine_crawlers) < len(spine_crawlers) \
                     or (ramp_close_to_townhall and ramp_lower_than_townhall and ramp_creep
-                        and ramp_distance_to_sc > 2)):
+                        and ramp_distance_to_sc > 2):
 
                 far_rooted_spine_crawlers = (sc for sc in rooted_spine_crawlers.idle
                                              if sc not in nearby_spine_crawlers)

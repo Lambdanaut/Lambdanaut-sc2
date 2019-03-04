@@ -108,10 +108,6 @@ class BuildManager(Manager):
         * Map features
         """
 
-
-        self.add_build(Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE)
-        return
-
         if len(self.bot.enemy_start_locations) < 3:
 
             rush_distance = len(self.bot.shortest_path_to_enemy_start_location)
