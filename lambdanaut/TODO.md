@@ -55,6 +55,8 @@
   
   * Only spawn creep tumors with non-townhall queens
   
+  * Dont unroot spine crawlers if enemy is nearby where we want to root them
+  
 
 ## MEDIUM PRIORITY
 
@@ -299,4 +301,6 @@
       across the map
       
   * Fix Overlord scouting to work with ravager rushing
+  
+  * Don't go spore crawlers unless we see two phoenix
   

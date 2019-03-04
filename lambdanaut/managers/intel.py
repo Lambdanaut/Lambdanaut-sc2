@@ -97,7 +97,9 @@ class IntelManager(Manager):
         """Checks the map to see if there are any visible units we should counter with roach/hydra"""
         if not self.has_scouted_enemy_counter_with_roaches:
             enemy_counter_with_roach_types = {
-                const.ROACH, const.ROACHWARREN, const.HELLIONTANK, const.PLANETARYFORTRESS}
+                const.ROACH, const.ROACHWARREN, const.HYDRALISK, const.LAIR, const.HYDRALISKDEN,
+                const.HELLIONTANK, const.PLANETARYFORTRESS,
+            }
 
             enemy_counter_with_roach_units = self.bot.known_enemy_units.of_type(enemy_counter_with_roach_types)
 
@@ -120,13 +122,15 @@ class IntelManager(Manager):
             enemy_air_tech_types = {
                 const.STARGATE, const.SPIRE, const.LIBERATOR, const.BATTLECRUISER, const.ORACLE,
                 const.BANSHEE, const.SMBANSHEE, const.SMARMORYBANSHEE,
-                const.PHOENIX, const.BROODLORD, const.DARKSHRINE, const.GHOSTACADEMY,
+                const.BROODLORD, const.DARKSHRINE, const.GHOSTACADEMY,
                 const.GHOST, const.MUTALISK, const.LURKERDENMP, const.LURKERMP, const.ROACHBURROWED,
                 const.STARPORTTECHLAB, const.DARKTEMPLAR, const.LURKER, const.LURKERDEN}
 
             enemy_air_tech_units = self.bot.known_enemy_units.of_type(enemy_air_tech_types)
 
-            if enemy_air_tech_units.exists:
+            phoenix_count = len(self.bot.known_enemy_units.of_type(const.PHOENIX))
+
+            if enemy_air_tech_units or phoenix_count > 1:
                 self.has_scouted_enemy_air_tech = True
                 return True
 
@@ -217,9 +221,9 @@ class IntelManager(Manager):
                     or nearby_enemy_counter[const.MARINE] >= 1
                     or nearby_enemy_counter[const.REAPER] >= 2
                     or nearby_enemy_counter[const.MARAUDER] >= 1
-                    or nearby_enemy_counter[const.ZEALOT] >= 1
+                    or nearby_enemy_counter[const.ZEALOT] >= 2
                     or nearby_enemy_counter[const.ADEPT] >= 3
-                    or nearby_enemy_counter[const.STALKER] >= 1):
+                    or nearby_enemy_counter[const.STALKER] >= 2):
                 self.has_scouted_enemy_rush = True
                 return True
 
