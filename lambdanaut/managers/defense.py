@@ -136,7 +136,7 @@ class DefenseManager(StatefulManager):
                                 army_cluster, nearest_enemy_cluster)
 
                             nearby_spine_crawlers = self.bot.units(const.SPINECRAWLER).ready.\
-                                closer_than(20, nearest_enemy_cluster.position)
+                                closer_than(14, nearest_enemy_cluster.position)
 
                             if army_strength >= -2 \
                                     or nearest_enemy_cluster.position.distance_to(army_cluster.position) < 14 \
@@ -148,8 +148,10 @@ class DefenseManager(StatefulManager):
                                     if unit.type_id not in const2.NON_COMBATANTS \
                                             and unit.tag not in self.bot.townhall_queens.values():
 
-                                        # Prefer defending with spine crawlers
-                                        if nearby_spine_crawlers and len(nearest_enemy_cluster) > 5:
+                                        # Prefer defending with spine crawlers if they're nearby
+                                        if nearby_spine_crawlers and len(nearest_enemy_cluster) > 5\
+                                                and unit.distance_to(nearby_spine_crawlers.center) > 8:
+
                                             target = nearby_spine_crawlers.center
 
                                             if target and not self.bot.unit_is_busy(unit):
