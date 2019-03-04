@@ -29,6 +29,7 @@ class IntelManager(Manager):
         self.has_scouted_enemy_rush = False
         self.has_published_need_more_enemy_tech_intel = False
         self.has_published_scouted_enemy_tech_intel = False
+        self.has_published_scouted_enemy_proxy_hatchery = False
         self.has_scouted_enemy_greater_force = ExpiringList()  # Will contain True or nothing
 
         self.subscribe(Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION)
@@ -260,6 +261,20 @@ class IntelManager(Manager):
 
         return False
 
+    def scouted_enemy_proxy_hatchery(self):
+        if not self.has_published_scouted_enemy_proxy_hatchery \
+                and self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
+
+            # Enemy hatcheries on our side of the map
+            nearby_enemy_hatcheries = self.bot.known_enemy_structures(const.HATCHERY).\
+                closer_than(self.bot.start_location_to_enemy_start_location_distance / 2,
+                            self.bot.start_location)
+
+            if nearby_enemy_hatcheries:
+                self.has_published_scouted_enemy_proxy_hatchery = True
+                return True
+
+        return False
 
     async def assess_game(self):
         """
@@ -284,6 +299,8 @@ class IntelManager(Manager):
             self.publish(Messages.NEED_MORE_ENEMY_TECH_INTEL)
         if self.scouted_enemy_tech_intel():
             self.publish(Messages.SCOUTED_ENOUGH_ENEMY_TECH_INTEL)
+        if self.scouted_enemy_proxy_hatchery():
+            self.publish(Messages.FOUND_ENEMY_PROXY_HATCHERY)
 
     async def run(self):
         await self.read_messages()

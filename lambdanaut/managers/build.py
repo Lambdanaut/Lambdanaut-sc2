@@ -60,6 +60,7 @@ class BuildManager(Manager):
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY)
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH)
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH)
+        self.subscribe(Messages.FOUND_ENEMY_PROXY_HATCHERY)
         self.subscribe(Messages.FOUND_ENEMY_RUSH)
         self.subscribe(Messages.ENEMY_MOVING_OUT_SCOUTED)
         self.subscribe(Messages.FOUND_ENEMY_EARLY_AGGRESSION)
@@ -106,6 +107,11 @@ class BuildManager(Manager):
         * By-air distance to enemy location
         * Map features
         """
+
+
+        self.add_build(Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE)
+        return
+
         if len(self.bot.enemy_start_locations) < 3:
 
             rush_distance = len(self.bot.shortest_path_to_enemy_start_location)
@@ -139,12 +145,39 @@ class BuildManager(Manager):
                     # self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
                     pass
 
-    def add_build(self, build: Builds):
-        self.print("Adding build order: {}".format(build.name))
+    def check_build_requirements(self, build: Builds) -> bool:
+        if build in {Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE, Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS}:
+            # Don't switch out of early game spore crawlers
+            if Builds.EARLY_GAME_SPORE_CRAWLERS in self.builds:
+                return False
 
+        if build in {Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS, Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE}:
+            # If we're we have a focused early game build, don't start defending cautiously
+            if any(build in self.builds for build in {
+                    Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE,
+                    Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE,
+                    Builds.EARLY_GAME_POOL_SPINE_ALL_IN}):
+                return False
+
+        return True
+
+    def add_build(self, build: Builds, force=False):
+        """
+        Adds a build to the build queue
+        :param build: The build to be added
+        :param force: Skip and build requirements and force the build to be added
+        :return:
+        """
         assert isinstance(build, Builds)
 
         build_stage = builds.get_build_stage(build)
+
+        # Check that the build's requirements are met
+        if not force and not self.check_build_requirements(build):
+            self.print("Skipping build order. It didn't meet requirements: {}".format(build.name))
+            return
+
+        self.print("Adding build order: {}".format(build.name))
 
         # If we're switching the midgame that has already been set, set a flag
         if build_stage == BuildStages.MID_GAME and \
@@ -169,7 +202,7 @@ class BuildManager(Manager):
 
         next_default_build = DEFAULT_NEXT_BUILDS[build]
         if next_default_build is not None:
-            self.add_build(next_default_build)
+            self.add_build(next_default_build, force=True)
 
     def get_latest_build(self) -> builds.Builds:
         """Returns the latest build order added"""
@@ -204,10 +237,7 @@ class BuildManager(Manager):
             cautious_early_game = {Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN}
             if message in cautious_early_game:
                 self.ack(message)
-                # If we're already defending hard, don't start defending soft
-                if Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE not in self.builds and \
-                        Builds.EARLY_GAME_SPORE_CRAWLERS not in self.builds:
-                    self.add_build(Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS)
+                self.add_build(Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS)
 
             # Messages indicating we need to defend a rush
             rush_detected = {
@@ -217,19 +247,38 @@ class BuildManager(Manager):
                 Messages.FOUND_ENEMY_RUSH}
             if message in rush_detected:
                 self.ack(message)
-
-                if Builds.EARLY_GAME_SPORE_CRAWLERS not in self.builds:
-                    # Switch to a defensive build
-                    self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
+                self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
 
             # Messages indicating we need to defend an early aggression
             early_aggression = {Messages.FOUND_ENEMY_EARLY_AGGRESSION}
             if message in early_aggression:
                 self.ack(message)
+                self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
 
-                if Builds.EARLY_GAME_SPORE_CRAWLERS not in self.builds:
-                    # Switch to a defensive build
-                    self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
+            # Messages indicating we need to defend a proxy hatchery
+            proxy_hatchery_detected = {
+                Messages.FOUND_ENEMY_PROXY_HATCHERY}
+            if message in proxy_hatchery_detected:
+                self.ack(message)
+
+                # Switch to a defensive roach ravager build
+                self.add_build(Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE)
+
+            # Switch to Defensive build if early game
+            # Stop townhall and worker production for a short duration
+            stop_non_army_production = {
+                Messages.ENEMY_MOVING_OUT_SCOUTED}
+            if message in stop_non_army_production:
+                self.ack(message)
+
+                if self.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
+                    if Builds.EARLY_GAME_SPORE_CRAWLERS not in self.builds:
+                        # Switch to a defensive build
+                        self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
+                else:
+                    # If we're not in early game, stop building drones/townhalls for a bit
+                    self._stop_nonarmy_production.add(
+                        True, self.bot.state.game_loop, expiry=25)
 
             # Messages indicating we need to build spore crawlers
             spore_crawlers_early_game = {Messages.ENEMY_AIR_TECH_SCOUTED}
@@ -257,22 +306,6 @@ class BuildManager(Manager):
             # # # TAKEN OUT FOR NOW BECAUSE THE RUSH SUCKS
             #     if self.build_stage != BuildStages.LATE_GAME:
             #         self.add_build(Builds.MID_GAME_CORRUPTOR_BROOD_LORD_RUSH)
-
-            # Switch to Defensive build if early game
-            # Stop townhall and worker production for a short duration
-            stop_non_army_production = {
-                Messages.ENEMY_MOVING_OUT_SCOUTED}
-            if message in stop_non_army_production:
-                self.ack(message)
-
-                if self.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
-                    if Builds.EARLY_GAME_SPORE_CRAWLERS not in self.builds:
-                        # Switch to a defensive build
-                        self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
-                else:
-                    # If we're not in early game, stop building drones/townhalls for a bit
-                    self._stop_nonarmy_production.add(
-                        True, self.bot.state.game_loop, expiry=25)
 
             # Restart townhall and worker production when defending stops
             exit_state = {Messages.STATE_EXITED, }
