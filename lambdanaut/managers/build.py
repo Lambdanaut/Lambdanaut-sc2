@@ -122,6 +122,9 @@ class BuildManager(Manager):
                 elif rush_distance < 160:
                     # Do ravager harass into macro on small to medium rush distance maps
                     self.starting_build = Builds.OPENER_RAVAGER_HARASS
+                elif rush_distance > 165:
+                    # Rush distance is long. Play more greedily.
+                    self.add_build(Builds.EARLY_GAME_HATCHERY_FIRST_GREEDY)
 
             elif self.bot.enemy_race is sc2.Race.Protoss:
                 # Use rush distance to determine build
@@ -131,7 +134,7 @@ class BuildManager(Manager):
                 elif rush_distance < 150:
                     # Do ravager harass into macro on small rush distance maps
                     self.starting_build = Builds.OPENER_RAVAGER_HARASS
-                elif rush_distance > 160:
+                elif rush_distance > 155:
                     # Rush distance is long. Play more greedily.
                     self.add_build(Builds.EARLY_GAME_HATCHERY_FIRST_GREEDY)
 
