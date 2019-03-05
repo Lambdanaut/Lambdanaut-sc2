@@ -1,5 +1,7 @@
 from collections import defaultdict
 import copy
+import functools
+import itertools
 import math
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
@@ -35,6 +37,7 @@ BUILD = Builds.OPENER_DEFAULT
 
 class LambdaBot(sc2.BotAI):
     def __init__(self):
+        import pdb; pdb.set_trace()
         # super(LambdaBot, self).__init__()
 
         self.debug = DEBUG
@@ -449,6 +452,49 @@ class LambdaBot(sc2.BotAI):
             self.shortest_path_to_enemy_start_location = None
         else:
             self.shortest_path_to_enemy_start_location = [p for p in shortest_path]
+
+    def shortest_path_between_points(self, points: List[Point2],
+                                     starting_from_first_point=True)-> List[Point2]:
+        """
+        Brute force travelling salesman problem.
+        Not efficient but works for small numbers of points (less than 7)
+        """
+
+        if not len(points):
+            return []
+
+        paths = itertools.permutations(points)
+
+        if starting_from_first_point:
+            paths = filter(lambda p: p[0] == points[0], paths)
+
+        paths = list(paths)
+
+        lengths = []
+        for path in paths:
+            length = 0
+            for point_i in range(len(path)):
+                if point_i == len(path) - 1:
+                    break
+
+                point_1 = path[point_i]
+                point_2 = path[point_i + 1]
+
+                length += point_1.distance_to(point_2)
+
+            lengths.append(length)
+
+        shortest_i = 0
+        shortest_length = math.inf
+        i = 0
+        for path, length in zip(paths, lengths):
+            if length < shortest_length:
+                shortest_i = i
+                shortest_length = length
+            i += 1
+
+        shortest_path = paths[shortest_i]
+        return shortest_path
 
     def get_path_around_ranges(self, units, point1: Point2, point2: Point2, path_step=2) -> List[Tuple[int, int]]:
         """
