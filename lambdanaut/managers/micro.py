@@ -201,6 +201,9 @@ class MicroManager(Manager):
     async def manage_ravagers(self):
         ravagers = self.bot.units(const.RAVAGER)
 
+        # Bile priorities
+        # Note that pylons are not included because sometimes they'll be too far back,
+        # hidden up a ramp, and cause stupid ravager movement
         bile_priorities = {
             const.SCV, const.OVERLORD, const.MEDIVAC, const.SIEGETANKSIEGED, const.BANSHEE,
             const.WIDOWMINE, const.WIDOWMINEBURROWED,
