@@ -5,7 +5,7 @@ Build Orders
 * Opener build orders should always end with 17 drones if they intend to transition into another build
 """
 
-from typing import Callable, List
+from typing import Callable
 import uuid
 
 import lib.sc2 as sc2
@@ -380,25 +380,27 @@ EARLY_GAME_POOL_FIRST_DEFENSIVE = [
     AtLeast(1, SPAWNINGPOOL),
     EXTRACTOR,
     AtLeast(3, OVERLORD),  # 3
-    ZERGLING, ZERGLING,
+    IfHasThenDontBuild(BANELINGNEST, ZERGLING, 2),  # Focus on getting banelings out at this point
     QUEEN,
     CanAfford(SPINECRAWLER),
-    ZERGLING, ZERGLING,
+    IfHasThenDontBuild(BANELINGNEST, ZERGLING, 2),
     IfHasThenDontBuild(ROACHWARREN, BANELINGNEST),
     ZERGLING, ZERGLING,
-    IfHasThenDontBuild(ROACHWARREN, BANELING, 4),  # Build 4 banelings until we get a roach warren
     CanAfford(SPINECRAWLER),
+    IfHasThenDontBuild(ROACHWARREN, BANELING, 4),  # Build 4 banelings until we get a roach warren
+    ZERGLING, ZERGLING,
     HATCHERY,
     QUEEN,
+    DRONE, DRONE,
     CanAfford(SPINECRAWLER),
-    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 4),  # Build 4 zerglings until we get a roach warren
+    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 6),  # Build 4 zerglings until we get a roach warren
     IfHasThenDontBuild(ROACHWARREN, BANELING, 4),  # Build 4 banelings until we get a roach warren
-    DRONE, DRONE, DRONE, DRONE,
+    DRONE, DRONE,
     QUEEN,
     CanAfford(ZERGLINGMOVEMENTSPEED),
     IfHasThenDontBuild(ROACHWARREN, BANELING, 4),
     EXTRACTOR,
-    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 20),
+    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 18),
 ]
 
 
@@ -614,18 +616,18 @@ MID_GAME_ROACH_HYDRA_LURKER = [
     CanAfford(LAIR),
     IfHasThenDontBuild(GREATERSPIRE, ROACH, 5),  # Build extra roaches until late game
     QUEEN,
-    DRONE, DRONE, DRONE,
     EXTRACTOR,
     IfHasThenBuild(BANELINGNEST, BANELING, 6),
     QUEEN,
     HATCHERY,
     DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
-    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
     EXTRACTOR,
     CanAfford(GLIALRECONSTITUTION),
+    DRONE, DRONE, DRONE,
     QUEEN,
     CanAfford(ZERGMISSILEWEAPONSLEVEL2),
     CanAfford(ZERGGROUNDARMORSLEVEL2),
+    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
     QUEEN,
     RAVAGER, RAVAGER,
     EXTRACTOR,

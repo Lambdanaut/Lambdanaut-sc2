@@ -47,16 +47,20 @@
 
 ## HIGH PRIORITY
 
-  * Use A* when we switch to ATTACKING to hit the enemy where they're most vulnerable
-  
   * Don't switch to moving_to_attacking if we have an upgrade that is 0.5-0.85% done
    
-  * Keep non-busy queens on creep during housekeeping. Right now they walk right out into the nether to die. 
-  
   * Only spawn creep tumors with non-townhall queens
+  
+  * If we have a baneling nest and we're being attacked with an army greater than ours made of lings, 
+    send lings to a corner of main to mutate into banelings. Would defend against hammerbot. 
 
 
 ## MEDIUM PRIORITY
+
+  * Use A* when we switch to ATTACKING to hit the enemy where they're most vulnerable
+  
+  * Better baneling vs marine micro. 
+    * Have banelings explode on marines before they reach the marine
 
   * Add attention function that keeps army moving towards a target destination during attacks. 
     We want to walk by low priority targets. Would be useful against AdditionalPylons during ravager rushes when the
