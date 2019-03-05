@@ -44,8 +44,8 @@ BUILD = sc2.AIBuild.Macro
 
 # DIFFICULTY = sc2.Difficulty.CheatInsane
 # DIFFICULTY = sc2.Difficulty.CheatMoney
-# DIFFICULTY = sc2.Difficulty.CheatVision
-DIFFICULTY = sc2.Difficulty.VeryHard
+DIFFICULTY = sc2.Difficulty.CheatVision
+# DIFFICULTY = sc2.Difficulty.VeryHard
 # DIFFICULTY = sc2.Difficulty.Hard
 # DIFFICULTY = sc2.Difficulty.Medium
 # DIFFICULTY = sc2.Difficulty.Easy

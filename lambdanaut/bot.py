@@ -253,9 +253,9 @@ class LambdaBot(sc2.BotAI):
             self.force_manager.dont_stop_attacking = True; self.force_manager.state = const2.ForcesStates.ATTACKING
 
             # await self._client.debug_create_unit([[const.ZERGLING, 22, self.start_location - Point2((10, 0)), 1]])
-            await self._client.debug_create_unit([[const.ADEPT, 1, self.start_location - Point2((10, 0)), 1]])
-            await self._client.debug_create_unit([[const.PYLON, 1, self.start_location + Point2((6, 0)), 2]])
-            await self._client.debug_create_unit([[const.ADEPT, 5, self.start_location + Point2((6, 0)), 2]])
+            await self._client.debug_create_unit([[const.LURKERMP, 5, self.start_location - Point2((10, 0)), 1]])
+            await self._client.debug_create_unit([[const.PYLON, 5, self.start_location + Point2((6, 0)), 2]])
+            await self._client.debug_create_unit([[const.ADEPT, 10, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.PHOTONCANNON, 6, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.PYLON, 2, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.SUPPLYDEPOT, 3, self.start_location + Point2((6, 0)), 2]])
@@ -814,12 +814,14 @@ class LambdaBot(sc2.BotAI):
         """
 
         default_dps_map = {
-            const.BANELING: 30,
             const.BUNKER: 30,
             const.HIGHTEMPLAR: 30,
-            const.INFESTOR: 30,
             const.DISRUPTOR: 30,
+            const.BANELING: 30,
+            const.INFESTOR: 30,
             const.VIPER: 30,
+            const.LURKERMP: 30,
+            const.LURKERMPBURROWED: 30,
         }
 
         default_dps = default_dps_map.get(unit.type_id)

@@ -400,6 +400,46 @@ class MicroManager(Manager):
             else:
                 to_remove_from_healing.add(infestor_tag)
 
+    async def manage_lurkers(self):
+        lurkers = self.bot.units(const.LURKERMP)
+        burrowed_lurkers = self.bot.units(const.UnitTypeId.LURKERMPBURROWED)
+
+        if lurkers or burrowed_lurkers:
+
+            attack_priorities = const2.WORKERS | {
+                const.ZERGLING, const.BANELING, const.HYDRALISK, const.ROACH,
+                const.MARINE, const.GHOST, const.HELLION, const.HELLIONTANK,
+                const.ZEALOT, const.STALKER, const.ADEPT, const.DARKTEMPLAR,
+                const.SENTRY, const.HIGHTEMPLAR}
+
+            def splash_action(lurker, enemy):
+                """Splash action to perform on enemies"""
+                self.bot.actions.append(lurker.attack(enemy))
+
+            # Attack greatest splash opportunities
+            self.bot.splash_on_enemies(
+                units=burrowed_lurkers,
+                action=splash_action,
+                search_range=10,  # Range is 9
+                priorities=attack_priorities,)
+
+            enemy_targets = [u.snapshot for u in self.bot.enemy_cache.values()
+                             if not u.is_flying]
+
+            for lurker in lurkers:
+                enemies_in_range = any(True for u in enemy_targets if lurker.distance_to(u) < 8)  # Range is 9
+
+                # Burrow lurkers with enemies nearby
+                if enemies_in_range:
+                    self.bot.actions.append(lurker(const.AbilityId.BURROWDOWN_LURKER))
+
+            for lurker in burrowed_lurkers:
+                enemies_nearby = any(True for u in enemy_targets if lurker.distance_to(u) < 10)
+
+                # Unburrow Lurkers
+                if not enemies_nearby:
+                    self.bot.actions.append(lurker(const.AbilityId.BURROWUP_LURKER))
+
     async def manage_mutalisks(self):
         """
         Mutalisk pathfinding
@@ -795,6 +835,7 @@ class MicroManager(Manager):
         await self.manage_roaches()
         await self.manage_ravagers()
         await self.manage_infestors()
+        await self.manage_lurkers()
         await self.manage_mutalisks()
         await self.manage_corruptors()
         await self.manage_overseers()
