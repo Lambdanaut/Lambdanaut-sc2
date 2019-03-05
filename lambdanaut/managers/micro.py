@@ -204,7 +204,7 @@ class MicroManager(Manager):
         bile_priorities = {
             const.SCV, const.OVERLORD, const.MEDIVAC, const.SIEGETANKSIEGED, const.BANSHEE,
             const.WIDOWMINE, const.WIDOWMINEBURROWED,
-            const.PHOTONCANNON, const.SPINECRAWLER, const.PYLON, const.SUPPLYDEPOT,
+            const.PHOTONCANNON, const.SPINECRAWLER, const.SUPPLYDEPOT,
             const.FACTORYTECHLAB, const.STARPORTTECHLAB,
         }
         bile_priorities_neutral = {
