@@ -108,12 +108,13 @@ class DefenseManager(StatefulManager):
                         # Only send the closest queen if the enemy is only a couple units
                         target = self.bot.closest_and_most_damaged(enemies_nearby, queen)
 
-                        if target and 8 < queen.distance_to(target) < 20 and not queen.weapon_cooldown:
+                        if target and queen.distance_to(target) < 18 and queen.distance_to(th) < 18 \
+                                and not queen.weapon_cooldown:
                             if target.distance_to(queen) < queen.ground_range:
                                 self.bot.actions.append(queen.attack(target))
                             else:
                                 self.bot.actions.append(queen.attack(target.position))
-                        elif queen.distance_to(th) > 10:
+                        else:
                             self.bot.actions.append(queen.attack(th.position))
 
                 # Have army clusters defend
@@ -129,53 +130,31 @@ class DefenseManager(StatefulManager):
                      self.bot.start_location_to_enemy_start_location_distance * distance_ratio_to_pull_back]
 
                 if army_clusters and self.bot.enemy_clusters:
+
                     nearest_enemy_cluster = th.position.closest(self.bot.enemy_clusters)
                     for army_cluster in army_clusters:
                         if army_cluster:
-                            army_strength = self.bot.relative_army_strength(
-                                army_cluster, nearest_enemy_cluster)
-
                             nearby_spine_crawlers = self.bot.units(const.SPINECRAWLER).ready.\
                                 closer_than(14, nearest_enemy_cluster.position)
 
-                            if army_strength >= -2 \
-                                    or nearest_enemy_cluster.position.distance_to(army_cluster.position) < 22 \
-                                    or self.bot.supply_used > 185:
-                                # Attack enemy if we stand a chance or
-                                # if we hardly stand a chance and they're in our face or
-                                # if we're near supply max
-                                for unit in army_cluster:
-                                    if unit.type_id not in const2.NON_COMBATANTS \
-                                            and unit.tag not in self.bot.townhall_queens.values():
+                            for unit in army_cluster:
+                                if unit.type_id not in const2.NON_COMBATANTS \
+                                        and unit.tag not in self.bot.townhall_queens.values():
 
-                                        # Prefer defending with spine crawlers if they're nearby
-                                        if nearby_spine_crawlers and len(nearest_enemy_cluster) > 5\
-                                                and unit.distance_to(nearby_spine_crawlers.center) > 8:
+                                    # Prefer defending with spine crawlers if they're nearby
+                                    if nearby_spine_crawlers and len(nearest_enemy_cluster) > 5\
+                                            and unit.distance_to(nearby_spine_crawlers.center) > 8:
 
-                                            target = nearby_spine_crawlers.center
+                                        target = nearby_spine_crawlers.center
 
-                                            if target and not self.bot.unit_is_busy(unit):
-                                                self.bot.actions.append(unit.attack(target))
+                                        if target:
+                                            self.bot.actions.append(unit.attack(target))
 
-                                        else:
-                                            target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
+                                    else:
+                                        target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
 
-                                            if target and not self.bot.unit_is_busy(unit):
-                                                self.bot.actions.append(unit.attack(target))
-
-                            elif army_strength < -3:
-                                # If enemy is greater regroup to center of largest cluster towards friendly townhall
-                                largest_army_cluster = functools.reduce(
-                                    lambda c1, c2: c1 if len(c1) >= len(c2) else c2,
-                                    army_clusters[1:],
-                                    army_clusters[0])
-
-                                for unit in army_cluster:
-                                    if unit.type_id not in const2.NON_COMBATANTS:
-                                        nearest_townhall = self.bot.townhalls.closest_to(unit.position)
-                                        towards_townhall = largest_army_cluster.position.towards(
-                                            nearest_townhall, +2)
-                                        self.bot.actions.append(unit.move(towards_townhall))
+                                        if target and not self.bot.unit_is_busy(unit):
+                                            self.bot.actions.append(unit.attack(target))
 
             # Bring back defending workers that have drifted too far from town halls
             workers_defending_to_remove = set()
