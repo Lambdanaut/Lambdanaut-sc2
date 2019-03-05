@@ -30,7 +30,7 @@ from lambdanaut.const2 import Messages
 from lambdanaut.builds import Builds
 
 
-BUILD = Builds.EARLY_GAME_DEFAULT_OPENER
+BUILD = Builds.OPENER_DEFAULT
 
 
 class LambdaBot(sc2.BotAI):
