@@ -306,6 +306,12 @@ class BuildManager(Manager):
                 # Don't change the build if we're rushing to brood lords
                 if self.build_stage != BuildStages.LATE_GAME and \
                         Builds.MID_GAME_CORRUPTOR_BROOD_LORD_RUSH not in self.builds:
+
+                    # Cancel spawning baneling nests
+                    baneling_nests = self.bot.units(const.UnitTypeId.BANELINGNEST)
+                    for baneling_nest in baneling_nests.not_ready:
+                        self.bot.actions.append(baneling_nest(const.AbilityId.CANCEL))
+
                     self.add_build(Builds.MID_GAME_ROACH_HYDRA_LURKER)
 
             # Messages indicating we need to rush up to brood lords in midgame asap
