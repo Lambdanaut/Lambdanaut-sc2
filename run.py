@@ -28,7 +28,7 @@ MAPS = [
     'BlueshiftLE',
     'PortAleksanderLE', ]
 
-MAP_NAME = "KairosJunctionLE"
+MAP_NAME = "PortAleksanderLE"
 MICRO_MAP_NAME = "kairo_training"
 VS_HUMAN = False
 VS_BOT = False
@@ -43,8 +43,8 @@ BUILD = sc2.AIBuild.Macro
 # BUILD = sc2.AIBuild.Air
 
 # DIFFICULTY = sc2.Difficulty.CheatInsane
-# DIFFICULTY = sc2.Difficulty.CheatMoney
-DIFFICULTY = sc2.Difficulty.CheatVision
+DIFFICULTY = sc2.Difficulty.CheatMoney
+# DIFFICULTY = sc2.Difficulty.CheatVision
 # DIFFICULTY = sc2.Difficulty.VeryHard
 # DIFFICULTY = sc2.Difficulty.Hard
 # DIFFICULTY = sc2.Difficulty.Medium

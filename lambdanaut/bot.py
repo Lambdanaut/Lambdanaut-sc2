@@ -377,7 +377,8 @@ class LambdaBot(sc2.BotAI):
     def can_attack(self, unit, target):
         can = (unit.can_attack_ground and not target.is_flying) or \
               (unit.can_attack_air and target.is_flying) or \
-              (unit.type_id == const.BANELING and not target.is_flying)
+              (unit.type_id == const.BANELING and not target.is_flying) or \
+              (unit.type_id == const.LURKERMP and not target.is_flying)
         return can
 
     def get_expansion_positions(self) -> List[sc2.position.Point2]:
