@@ -166,17 +166,19 @@ class OverlordManager(StatefulManager):
             if not self.move_overlord_scout_2_to_enemy_ramp:
                 # Move Overlord around different expansion locations
                 expansion_locations = self.bot.get_expansion_positions()
-                for expansion_location in expansion_locations[1:5]:
-                    self.bot.actions.append(overlord.move(expansion_location, queue=True))
+                if expansion_locations:
+                    shortest_path = self.bot.shortest_path_between_points(expansion_locations[1:6])
+                    for expansion_location in shortest_path:
+                        self.bot.actions.append(overlord.move(expansion_location, queue=True))
 
-                try:
-                    # This is the expected enemy 5th expand location
-                    enemy_fifth_expansion = expansion_locations[-5]
-                    self.bot.actions.append(overlord.move(enemy_fifth_expansion, queue=True))
-                    self.bot.actions.append(overlord.stop(queue=True))
-                except IndexError:
-                    # The indexed expansion doesn't exist
-                    pass
+                    try:
+                        # This is the expected enemy 5th expand location
+                        enemy_fifth_expansion = expansion_locations[-5]
+                        self.bot.actions.append(overlord.move(enemy_fifth_expansion, queue=True))
+                        self.bot.actions.append(overlord.stop(queue=True))
+                    except IndexError:
+                        # The indexed expansion doesn't exist
+                        pass
 
         if overlords and self.proxy_scouting_overlord_tag is not None:
             scouting_overlord = overlords.find_by_tag(self.proxy_scouting_overlord_tag)

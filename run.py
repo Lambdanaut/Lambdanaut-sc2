@@ -28,10 +28,10 @@ MAPS = [
     'BlueshiftLE',
     'PortAleksanderLE', ]
 
-MAP_NAME = "KairosJunctionLE"
+MAP_NAME = "CeruleanFallLE"
 MICRO_MAP_NAME = "kairo_training"
-VS_HUMAN = True
-REALTIME = True
+VS_HUMAN = False
+REALTIME = False
 
 BUILD = None
 # BUILD = sc2.AIBuild.RandomBuild
@@ -50,7 +50,7 @@ DIFFICULTY = sc2.Difficulty.CheatVision
 # DIFFICULTY = sc2.Difficulty.Easy
 
 RACE = sc2.Race.Zerg
-ENEMY_RACE = sc2.Race.Terran
+ENEMY_RACE = sc2.Race.Zerg
 REPLAY_NAME = os.path.join("replays", "last_lambdanaut_replay{}.*.sc2replay".format(datetime_str))
 
 if not MAP_NAME:

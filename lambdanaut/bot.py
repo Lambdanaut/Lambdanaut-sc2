@@ -37,8 +37,7 @@ BUILD = Builds.OPENER_DEFAULT
 
 class LambdaBot(sc2.BotAI):
     def __init__(self):
-        import pdb; pdb.set_trace()
-        # super(LambdaBot, self).__init__()
+        super(LambdaBot, self).__init__()
 
         self.debug = DEBUG
 
@@ -458,6 +457,10 @@ class LambdaBot(sc2.BotAI):
         """
         Brute force travelling salesman problem.
         Not efficient but works for small numbers of points (less than 7)
+
+        Given a list of points, finds the path between them with the shortest distance.
+        If starting_from_first_point is True, then the path must start with the first
+        point in `points`
         """
 
         if not len(points):
