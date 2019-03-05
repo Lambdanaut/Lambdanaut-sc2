@@ -252,9 +252,10 @@ class LambdaBot(sc2.BotAI):
 
             self.force_manager.dont_stop_attacking = True; self.force_manager.state = const2.ForcesStates.ATTACKING
 
-            await self._client.debug_create_unit([[const.ZERGLING, 10, self.start_location - Point2((5, 0)), 1]])
-            await self._client.debug_create_unit([[const.ZERGLING, 1, self.start_location + Point2((1, 0)), 2]])
-            await self._client.debug_create_unit([[const.SPINECRAWLER, 1, self.start_location + Point2((1, 0)), 2]])
+            # await self._client.debug_create_unit([[const.ZERGLING, 22, self.start_location - Point2((10, 0)), 1]])
+            await self._client.debug_create_unit([[const.ADEPT, 1, self.start_location - Point2((10, 0)), 1]])
+            await self._client.debug_create_unit([[const.PYLON, 1, self.start_location + Point2((6, 0)), 2]])
+            await self._client.debug_create_unit([[const.ADEPT, 5, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.PHOTONCANNON, 6, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.PYLON, 2, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.SUPPLYDEPOT, 3, self.start_location + Point2((6, 0)), 2]])
@@ -276,11 +277,6 @@ class LambdaBot(sc2.BotAI):
         """
         Draws debug images on screen during game
         """
-
-        # # Print cluster debug info
-        # print ("Army cluster count: {}".format(len([cluster for cluster in self.army_clusters if cluster])))
-        # print ("Army clusters: {}".format([cluster.position for cluster in self.army_clusters]))
-        # print ("Enemy cluster count: {}".format(len([cluster for cluster in self.enemy_clusters if cluster])))
 
         class Green:
             r = 0
@@ -335,10 +331,16 @@ class LambdaBot(sc2.BotAI):
         """
         Updates the friendly units and enemy units caches
         """
+
+        types_to_exclude = {const.ADEPTPHASESHIFT}
+
         # Update cached values and create new cached units
         for units, cache in zip((self.units, self.known_enemy_units),
                                 (self.unit_cache, self.enemy_cache)):
             for unit in units:
+                if unit.type_id in types_to_exclude:
+                    continue
+
                 # If we already remember this unit
                 cached_unit = cache.get(unit.tag)
                 if cached_unit:
