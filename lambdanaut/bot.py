@@ -860,11 +860,11 @@ class LambdaBot(sc2.BotAI):
         # Also filter out workers if ignore_workers is True
         u1 = [u for u in units_1
               if (not u.is_structure or u.can_attack_ground or u.can_attack_air)
-              and not ignore_defensive_structures or u not in const2.DEFENSIVE_STRUCTURES
+              and (not ignore_defensive_structures or u not in const2.DEFENSIVE_STRUCTURES)
               and (ignore_workers or u.type_id not in const2.WORKERS)]
         u2 = [u for u in units_2
               if (not u.is_structure or u.can_attack_ground or u.can_attack_air)
-              and not ignore_defensive_structures or u not in const2.DEFENSIVE_STRUCTURES
+              and (not ignore_defensive_structures or u not in const2.DEFENSIVE_STRUCTURES)
               and (ignore_workers or u.type_id not in const2.WORKERS)]
 
         u1_dps = sum(self.adjusted_dps(u) for u in u1)
