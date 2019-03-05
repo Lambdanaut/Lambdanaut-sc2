@@ -1062,7 +1062,7 @@ class BuildManager(Manager):
             if self.can_afford(build_target) and hydralisks.exists:
                 # Prefer idle hydralisks if they exist
                 idle_hydralisks = hydralisks.idle
-                if idle_hydralisks.exists:
+                if idle_hydralisks:
                     hydralisks = idle_hydralisks
 
                 hydralisk = hydralisks.closest_to(self.bot.start_location)
