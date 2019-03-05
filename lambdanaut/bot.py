@@ -816,6 +816,7 @@ class LambdaBot(sc2.BotAI):
 
         default_dps_map = {
             const.BUNKER: 30,
+            const.SIEGETANKSIEGED: 40,
             const.HIGHTEMPLAR: 30,
             const.DISRUPTOR: 30,
             const.BANELING: 30,

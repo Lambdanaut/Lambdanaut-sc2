@@ -205,7 +205,7 @@ class MicroManager(Manager):
         # Bunkers and pylons are intentionally not included in the priorities list.
         bile_priorities = {
             const.SCV, const.OVERLORD, const.MEDIVAC, const.SIEGETANKSIEGED, const.BANSHEE,
-            const.WIDOWMINE, const.WIDOWMINEBURROWED,
+            const.WIDOWMINE, const.WIDOWMINEBURROWED, const.LIBERATORAG,
             const.PHOTONCANNON, const.SPINECRAWLER, const.SUPPLYDEPOT,
             const.FACTORYTECHLAB, const.STARPORTTECHLAB,
         }
