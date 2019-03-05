@@ -210,6 +210,8 @@ class RunFunction(SpecialBuildTarget):
         self.result = None  # Hold the result of `self.function()`
 
 
+# #################################### OPENERS #####################################
+
 # A good basic macro opener. Always start here
 EARLY_GAME_DEFAULT_OPENER = [
     HATCHERY,  # 1
@@ -352,6 +354,9 @@ OPENER_RAVAGER_HARASS = [
 ]
 
 
+# #################################### EARLY GAME #####################################
+
+
 # Suspect enemy cheese but no proof. Get a spawning pool first with Zerglings
 EARLY_GAME_POOL_FIRST_CAUTIOUS = [
     AtLeast(1, SPAWNINGPOOL),
@@ -404,26 +409,25 @@ EARLY_GAME_ROACH_RAVAGER_DEFENSIVE = [
     ZERGLING, ZERGLING,
     QUEEN,
     CanAfford(SPINECRAWLER),
-    ZERGLING, ZERGLING,
+    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 2),
     CanAfford(SPINECRAWLER),
     IfHasThenDontBuild(ROACHWARREN, ZERGLING, 2),
     EXTRACTOR,
-    DRONE, DRONE, DRONE, DRONE, # 21  (More than most early game builds...)
+    DRONE, DRONE, DRONE,  # 21
     EXTRACTOR,
     ROACHWARREN,
-    ROACH, ROACH, ROACH, ROACH, ROACH, ROACH,
+    ROACH, ROACH, ROACH, ROACH, ROACH, ROACH, ROACH, ROACH,
+    RAVAGER,
+    RAVAGER,
     RAVAGER,
     ROACH,
-    RAVAGER,
     ROACH,
     RAVAGER,
-    ROACH,
-    RAVAGER,
-    ROACH,
     QUEEN,
     RAVAGER,
     HATCHERY,
     RAVAGER, RAVAGER,
+    DRONE,
     ZERGLINGMOVEMENTSPEED,
 ]
 
@@ -515,6 +519,9 @@ EARLY_GAME_HATCHERY_FIRST_GREEDY = [
     QUEEN,  # 2
     DRONE,  # 21
 ]
+
+
+# #################################### MID GAME #####################################
 
 
 # Get a ling-bane mid-game composition
@@ -703,6 +710,10 @@ MID_GAME_TWO_BASE_ROACH_QUEEN_NYDUS_TIMING = [
     QUEEN,
 ]
 
+
+# #################################### LATE GAME #####################################
+
+
 LATE_GAME_CORRUPTOR_BROOD_LORD = [
     AtLeast(75, DRONE),
     AtLeast(1, INFESTATIONPIT),
@@ -871,7 +882,7 @@ DEFAULT_NEXT_BUILDS = {
 
     Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS: Builds.MID_GAME_ROACH_HYDRA_LURKER,
     Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE: Builds.EARLY_GAME_POOL_FIRST,
-    Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE: Builds.MID_GAME_ROACH_HYDRA_LURKER,
+    Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE: Builds.EARLY_GAME_HATCHERY_FIRST,
     Builds.EARLY_GAME_POOL_FIRST_OFFENSIVE: Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS,
     Builds.EARLY_GAME_SPORE_CRAWLERS: Builds.MID_GAME_ROACH_HYDRA_LURKER,
     Builds.EARLY_GAME_POOL_FIRST: Builds.MID_GAME_ROACH_HYDRA_LURKER,
@@ -923,6 +934,7 @@ def update_default_builds(enemy_race):
 
 # Set of builds that must set their default next build after they are completed
 # This is for builds that we don't want to keep around in the build order when we're through with them.
+# The next default build MUST be in the same build stage as the build in this set.
 FORCE_DEFAULT_NEXT_BUILDS = {
     Builds.OPENER_RAVAGER_HARASS,
     Builds.OPENER_12_POOL,

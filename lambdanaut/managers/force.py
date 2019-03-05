@@ -116,9 +116,9 @@ class ForceManager(StatefulManager):
         """
         return {
             BuildStages.OPENING: 60,  # Allow greater distances for rush
-            BuildStages.EARLY_GAME: 5,
-            BuildStages.MID_GAME: 5,
-            BuildStages.LATE_GAME: 5,
+            BuildStages.EARLY_GAME: 10,
+            BuildStages.MID_GAME: 10,
+            BuildStages.LATE_GAME: 10,
         }[build_stage]
 
     def get_target(self):
