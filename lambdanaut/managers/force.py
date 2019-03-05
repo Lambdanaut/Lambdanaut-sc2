@@ -569,8 +569,7 @@ class ForceManager(StatefulManager):
 
                 if self.allow_attacking \
                         and ((relative_army_strength > 7 and len(army) > 4)
-                             or (relative_army_strength > -5
-                                 and army_value > self.army_value_to_attack)):
+                             or army_value > self.army_value_to_attack):
                     return await self.change_state(ForcesStates.MOVING_TO_ATTACK)
 
         # ESCORTING

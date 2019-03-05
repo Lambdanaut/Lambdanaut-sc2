@@ -302,8 +302,8 @@ RAVAGER_ALL_IN = [
     OVERLORD,  # 2
     EXTRACTOR,  # 2
     OVERLORD,  # 3
-    OVERLORD,  # 4  (Extra in case we lose one)
     ROACHWARREN,
+    OVERLORD,  # 4  (Extra in case we lose one)
     ROACH,
     ROACH,
     IfHasThenDontBuild(RAVAGER, ROACH, 2),
