@@ -139,7 +139,7 @@ class DefenseManager(StatefulManager):
                                 closer_than(14, nearest_enemy_cluster.position)
 
                             if army_strength >= -2 \
-                                    or nearest_enemy_cluster.position.distance_to(army_cluster.position) < 14 \
+                                    or nearest_enemy_cluster.position.distance_to(army_cluster.position) < 22 \
                                     or self.bot.supply_used > 185:
                                 # Attack enemy if we stand a chance or
                                 # if we hardly stand a chance and they're in our face or
