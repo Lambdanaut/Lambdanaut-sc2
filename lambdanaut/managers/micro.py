@@ -668,9 +668,9 @@ class MicroManager(Manager):
                         nearby_army, nearest_enemy_cluster, ranged_only=True)
                     ranged_units_in_attack_range_ratio = ranged_units_in_attack_range_count / len(nearby_army)
 
-                    nearby_enemy_workers = [
-                        u.snapshot for u in enemy_cached
-                        if u.type_id in const2.WORKERS and u.distance_to(army_center) < 35]
+                    # nearby_enemy_workers = [
+                    #     u.snapshot for u in enemy_cached
+                    #     if u.type_id in const2.WORKERS and u.distance_to(army_center) < 35]
 
                     for unit in nearby_army:
                         # Only micro movable units and workers that are currently defending
@@ -679,13 +679,13 @@ class MicroManager(Manager):
 
                             # If there are no enemies that we want to attack nearby, but there are workers,
                             # then attack the workers
-                            any_attackable_non_workers: bool = any(
-                                True for u in nearest_enemy_cluster
-                                if self.bot.can_attack(unit, u)
-                                and u.is_ready
-                                and u.type_id not in const2.WORKERS
-                                and (not u.is_structure or u.type_id in const2.DEFENSIVE_STRUCTURES))
-                            enemy_townhalls = self.bot.known_enemy_units(const2.TOWNHALLS).ready
+                            # any_attackable_non_workers: bool = any(
+                            #     True for u in nearest_enemy_cluster
+                            #     if self.bot.can_attack(unit, u)
+                            #     and u.is_ready
+                            #     and u.type_id not in const2.WORKERS
+                            #     and (not u.is_structure or u.type_id in const2.DEFENSIVE_STRUCTURES))
+                            # enemy_townhalls = self.bot.known_enemy_units(const2.TOWNHALLS).ready
 
                             nearest_enemy_unit = unit.position.closest(nearest_enemy_cluster)
                             unit_is_combatant = unit.type_id not in const2.NON_COMBATANTS
@@ -718,26 +718,26 @@ class MicroManager(Manager):
                                 self.bot.actions.append(unit.snapshot.move(towards_enemy))
 
                             # Attack the closest worker/townhall if there are no attackable nearby units
-                            elif not any_attackable_non_workers \
-                                    and (nearby_enemy_workers or enemy_townhalls) \
-                                    and not unit.is_moving \
-                                    and unit.weapon_cooldown\
-                                    and unit_is_combatant:
-                                if nearby_enemy_workers:
-                                    # If nearby workers, move towards them
-                                    closest_worker = unit.position.closest(nearby_enemy_workers)
-                                    self.bot.actions.append(unit.snapshot.attack(closest_worker))
-                                elif enemy_townhalls:
-                                    # Else if enemy townhalls, move towards it
-                                    closest_townhall = self.bot.enemy_start_location.closest(enemy_townhalls)
-                                    nearby_minerals = self.bot.state.mineral_field.closer_than(9, closest_townhall)
-                                    if nearby_minerals:
-                                        target = nearby_minerals.center
-                                    else:
-                                        target = closest_townhall.position
-
-                                    if unit.distance_to(target) > 8:
-                                        self.bot.actions.append(unit.snapshot.move(target))
+                            # elif not any_attackable_non_workers \
+                            #         and (nearby_enemy_workers or enemy_townhalls) \
+                            #         and not unit.is_moving \
+                            #         and unit.weapon_cooldown\
+                            #         and unit_is_combatant:
+                            #     if nearby_enemy_workers:
+                            #         # If nearby workers, move towards them
+                            #         closest_worker = unit.position.closest(nearby_enemy_workers)
+                            #         self.bot.actions.append(unit.snapshot.attack(closest_worker))
+                            #     elif enemy_townhalls:
+                            #         # Else if enemy townhalls, move towards it
+                            #         closest_townhall = self.bot.enemy_start_location.closest(enemy_townhalls)
+                            #         nearby_minerals = self.bot.state.mineral_field.closer_than(9, closest_townhall)
+                            #         if nearby_minerals:
+                            #             target = nearby_minerals.center
+                            #         else:
+                            #             target = closest_townhall.position
+                            #
+                            #         if unit.distance_to(target) > 8:
+                            #             self.bot.actions.append(unit.snapshot.move(target))
 
                             # Handle combat priority targeting
                             else:
