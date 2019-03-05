@@ -486,7 +486,7 @@ class ForceManager(StatefulManager):
                 if townhalls:
                     nearest_townhall = townhalls.closest_to(unit)
                     if nearest_townhall.distance_to(unit) > 20:
-                        self.bot.actions.append(unit.move(nearest_townhall))
+                        self.bot.actions.append(unit.move(nearest_townhall.position))
 
     async def do_searching(self):
         army = self.bot.units(const2.ZERG_ARMY_UNITS).\
@@ -501,7 +501,7 @@ class ForceManager(StatefulManager):
         for expansion in enemy_expansion_positions:
             for unit in army:
                 if not self.bot.unit_is_busy(unit):
-                    self.bot.actions.append(unit.move(expansion, queue=True))
+                    self.bot.actions.append(unit.attack(expansion, queue=True))
 
     async def determine_state_change(self):
         # Reacting to subscribed messages
