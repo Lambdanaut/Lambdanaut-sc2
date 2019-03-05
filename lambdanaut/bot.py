@@ -332,15 +332,10 @@ class LambdaBot(sc2.BotAI):
         Updates the friendly units and enemy units caches
         """
 
-        types_to_exclude = {const.ADEPTPHASESHIFT}
-
         # Update cached values and create new cached units
         for units, cache in zip((self.units, self.known_enemy_units),
                                 (self.unit_cache, self.enemy_cache)):
             for unit in units:
-                if unit.type_id in types_to_exclude:
-                    continue
-
                 # If we already remember this unit
                 cached_unit = cache.get(unit.tag)
                 if cached_unit:

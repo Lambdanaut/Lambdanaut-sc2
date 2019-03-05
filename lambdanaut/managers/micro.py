@@ -241,7 +241,7 @@ class MicroManager(Manager):
                             target = enemy_unit.position.towards(ravager.position, -enemy_unit.radius * 0.8)
 
                         our_closest_unit_to_enemy = self.bot.units.closest_to(target)
-                        if our_closest_unit_to_enemy.distance_to(enemy_unit.position) > 3:
+                        if our_closest_unit_to_enemy.distance_to(enemy_unit.position) > 0.5:
 
                             # Only bile a forcefield at most once
                             if enemy_unit.type_id == const.UnitTypeId.FORCEFIELD:
