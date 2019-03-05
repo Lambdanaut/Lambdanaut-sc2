@@ -31,6 +31,7 @@ MAPS = [
 MAP_NAME = "KairosJunctionLE"
 MICRO_MAP_NAME = "kairo_training"
 VS_HUMAN = False
+VS_BOT = False
 REALTIME = False
 
 BUILD = None
@@ -50,7 +51,7 @@ DIFFICULTY = sc2.Difficulty.VeryHard
 # DIFFICULTY = sc2.Difficulty.Easy
 
 RACE = sc2.Race.Zerg
-ENEMY_RACE = sc2.Race.Protoss
+ENEMY_RACE = sc2.Race.Zerg
 REPLAY_NAME = os.path.join("replays", "last_lambdanaut_replay{}.*.sc2replay".format(datetime_str))
 
 if not MAP_NAME:
@@ -61,6 +62,11 @@ if not BUILD:
 TESTING_MICRO = lambdanaut.CREATE_DEBUG_UNITS
 if TESTING_MICRO:
     MAP_NAME = MICRO_MAP_NAME
+
+if VS_BOT:
+    from lib.examples.zerg.zerg_rush import ZergRushBot
+
+    OPPONENT_BOT = ZergRushBot
 
 
 # Start game
@@ -84,6 +90,12 @@ if __name__ == '__main__':
             player_config = [
                 opponent_config,
                 bot_config,
+            ]
+        elif VS_BOT:
+            opponent_config = sc2.player.Bot(ENEMY_RACE, OPPONENT_BOT())
+            player_config = [
+                bot_config,
+                opponent_config,
             ]
         else:
             opponent_config = sc2.player.Computer(ENEMY_RACE, DIFFICULTY, BUILD)

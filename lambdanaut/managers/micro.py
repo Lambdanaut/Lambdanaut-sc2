@@ -202,17 +202,14 @@ class MicroManager(Manager):
         ravagers = self.bot.units(const.RAVAGER)
 
         # Bile priorities
-        # Note that pylons are not included because sometimes they'll be too far back,
-        # hidden up a ramp, and cause stupid ravager movement
+        # Bunkers and pylons are intentionally not included in the priorities list.
         bile_priorities = {
             const.SCV, const.OVERLORD, const.MEDIVAC, const.SIEGETANKSIEGED, const.BANSHEE,
             const.WIDOWMINE, const.WIDOWMINEBURROWED,
             const.PHOTONCANNON, const.SPINECRAWLER, const.SUPPLYDEPOT,
             const.FACTORYTECHLAB, const.STARPORTTECHLAB,
         }
-        bile_priorities_neutral = {
-            const.UnitTypeId.FORCEFIELD,
-        }
+        bile_priorities_neutral = {const.UnitTypeId.FORCEFIELD, }
 
         for ravager in ravagers:
             nearby_enemy_units = self.bot.enemy_cache.values()
@@ -653,7 +650,8 @@ class MicroManager(Manager):
 
         # Micro closer to nearest enemy army cluster if our dps is higher
         # Micro further from nearest enemy army cluster if our dps is lower
-        enemy_cached = self.bot.enemy_cache.values()
+
+        # enemy_cached = self.bot.enemy_cache.values()
         for army_cluster in self.bot.army_clusters:
             army_center = army_cluster.position
 
