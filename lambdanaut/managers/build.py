@@ -246,6 +246,7 @@ class BuildManager(Manager):
                 Messages.FOUND_ENEMY_RUSH}
             if message in rush_detected:
                 self.ack(message)
+
                 self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
 
             # Messages indicating we need to defend an early aggression
@@ -1042,17 +1043,6 @@ class BuildManager(Manager):
             # Return True regardless.
             # We can skip the ravager if all the roaches are engaged
             return True
-
-            # # Get roaches
-            # roaches = self.bot.units(const.ROACH).filter(
-            #     lambda r: not self.bot.unit_is_busy(r))
-            #
-            # # Train the unit
-            # if self.can_afford(build_target) and roaches:
-            #     roach = roaches.closest_to(self.bot.start_location)
-            #     self.bot.actions.append(roach.stop())
-            #     self.bot.actions.append(roach.train(build_target, queue=True))
-            #     return True
 
         elif build_target == const.LURKERMP:
             # Get a hydralisk

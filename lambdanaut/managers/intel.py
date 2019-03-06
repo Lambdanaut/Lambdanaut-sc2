@@ -189,7 +189,7 @@ class IntelManager(Manager):
 
             enemy = self.bot.enemy_cache.values()
 
-            units_to_count = {const.ZERGLING, const.RAVAGER,
+            units_to_count = const2.WORKERS | {const.ZERGLING, const.RAVAGER,
                         const.MARINE, const.REAPER, const.MARAUDER,
                         const.ZEALOT, const.ADEPT, const.STALKER}
 
@@ -205,7 +205,8 @@ class IntelManager(Manager):
                         nearby_enemy_counter[unit.type_id] += 1
 
             # Count any and all enemy units
-            if (enemy_counter[const.ZERGLING] >= 10
+            if (
+                    enemy_counter[const.ZERGLING] >= 10
                     or enemy_counter[const.RAVAGER] >= 2
                     or enemy_counter[const.MARINE] >= 7
                     or enemy_counter[const.REAPER] >= 3
@@ -217,11 +218,15 @@ class IntelManager(Manager):
                 return True
 
             # Count nearby enemy units
-            elif (nearby_enemy_counter[const.ZERGLING] >= 4
+            elif (
+                    nearby_enemy_counter[const.DRONE] >= 7
+                    or nearby_enemy_counter[const.ZERGLING] >= 4
                     or enemy_counter[const.RAVAGER] >= 1
+                    or nearby_enemy_counter[const.SCV] >= 7
                     or nearby_enemy_counter[const.MARINE] >= 1
                     or nearby_enemy_counter[const.REAPER] >= 2
                     or nearby_enemy_counter[const.MARAUDER] >= 1
+                    or nearby_enemy_counter[const.PROBE] >= 7
                     or nearby_enemy_counter[const.ZEALOT] >= 2
                     or nearby_enemy_counter[const.ADEPT] >= 3
                     or nearby_enemy_counter[const.STALKER] >= 2):

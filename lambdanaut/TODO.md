@@ -47,6 +47,8 @@
 
 ## HIGH PRIORITY
 
+  * When defending, defend close to the townhall. No need to leave it. 
+
   * Don't switch to moving_to_attacking if we have an upgrade that is 0.5-0.85% done
    
   * Only spawn creep tumors with non-townhall queens

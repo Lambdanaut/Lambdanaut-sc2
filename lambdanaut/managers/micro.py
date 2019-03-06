@@ -748,9 +748,10 @@ class MicroManager(Manager):
 
                             # Back off from enemy if we outrange them and are close
                             elif unit_is_combatant and unit.weapon_cooldown \
+                                    and not unit.is_moving \
                                     and not self.bot.is_melee(unit) \
                                     and unit.ground_range >= nearest_enemy_unit.ground_range \
-                                    and unit_distance_to_enemy < unit.ground_range - 1:
+                                    and unit_distance_to_enemy < unit.ground_range - 0.5:
                                 # Move a bit further if the enemy is a unit rather than a structure
                                 distance_to_move = 1 if nearest_enemy_unit.is_structure else 1.5
 
@@ -764,6 +765,7 @@ class MicroManager(Manager):
                             # Close the distance if our unit's range is lower than the nearest enemy's range
                             elif unit_is_combatant and unit.weapon_cooldown \
                                     and not self.bot.is_melee(unit) \
+                                    and not unit.is_moving \
                                     and nearest_enemy_unit.ground_range > 0 \
                                     and unit.ground_range < nearest_enemy_unit.ground_range \
                                     and unit_distance_to_enemy >= unit.ground_range * 0.75:
