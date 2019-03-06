@@ -98,7 +98,7 @@ class OverlordManager(StatefulManager):
             nearby_ramp = self.bot.enemy_start_location.towards(
                 self.bot.start_location, 2).closest(ramps)
 
-            target = nearby_ramp.towards(self.bot.start_location, 10.5)
+            target = nearby_ramp.towards(self.bot.start_location, 9.5)
             self.bot.actions.append(overlord.move(target))
 
     def turn_on_generate_creep(self):

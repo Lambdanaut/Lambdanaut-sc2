@@ -54,6 +54,7 @@
   * If we have a baneling nest and we're being attacked with an army greater than ours made of lings, 
     send lings to a corner of main to mutate into banelings. Would defend against hammerbot. 
 
+  * Prefer visible enemies to use bile on. This will prevent us from attempting to bile where we can't see.
 
 ## MEDIUM PRIORITY
 

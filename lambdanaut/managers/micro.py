@@ -740,22 +740,22 @@ class MicroManager(Manager):
                                     away_from_enemy = unit.position.towards(
                                         nearest_enemy_unit, -2)
                                     self.bot.actions.append(unit.snapshot.move(away_from_enemy))
-                                elif unit.weapon_cooldown:
+                                elif unit.weapon_cooldown \
+                                        and unit.ground_range >= nearest_enemy_unit.ground_range:
                                     # Ranged units only move back while we're on cooldown
                                     away_from_enemy = unit.position.towards(
                                         nearest_enemy_unit, -1.5)
                                     self.bot.actions.append(unit.snapshot.move(away_from_enemy))
 
                             # Close the distance if our cluster isn't in range
-                            elif unit_is_combatant and ranged_units_in_attack_range_ratio < 0.8 \
+                            elif unit_is_combatant and ranged_units_in_attack_range_ratio < 0.5 \
+                                    and not self.bot.is_melee(unit) \
                                     and len(army_cluster) > 6 \
                                     and unit.weapon_cooldown \
                                     and unit.distance_to(nearest_enemy_unit) - nearest_enemy_unit.radius > unit.ground_range * 0.35 \
-                                    and not self.bot.is_melee(unit) \
                                     and not unit.is_moving:
-                                how_far_to_move = 1
                                 towards_enemy = unit.position.towards(
-                                    nearest_enemy_unit, how_far_to_move)
+                                    nearest_enemy_unit, 1)
                                 self.bot.actions.append(unit.snapshot.move(towards_enemy))
 
                             # Attack the closest worker/townhall if there are no attackable nearby units
