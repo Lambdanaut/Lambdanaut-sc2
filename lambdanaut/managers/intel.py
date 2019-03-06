@@ -131,7 +131,7 @@ class IntelManager(Manager):
 
             phoenix_count = len(self.bot.known_enemy_units.of_type(const.PHOENIX))
 
-            if enemy_air_tech_units or phoenix_count > 1:
+            if enemy_air_tech_units or phoenix_count > 2:
                 self.has_scouted_enemy_air_tech = True
                 return True
 
