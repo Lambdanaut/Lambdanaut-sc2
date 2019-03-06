@@ -289,19 +289,6 @@ class MicroManager(Manager):
                                     self.bot.actions.append(ravager.move(away_from_enemy))
                                     self.bot.actions.append(ravager.hold_position(queue=True))
 
-                        elif ravager.weapon_cooldown \
-                                and closest_enemy.distance_to(ravager) <= ravager.ground_range:
-
-                            # Move a bit further if the enemy is a unit rather than a structure
-                            distance_to_move = 1 if closest_enemy.is_structure else 2
-
-                            away_from_enemy = ravager.position.towards(closest_enemy, -distance_to_move)
-
-                            pathable = not self.bot.game_info.pathing_grid.is_set(away_from_enemy.rounded)
-                            if pathable:
-                                self.bot.actions.append(ravager.move(away_from_enemy))
-                                self.bot.actions.append(ravager.attack(closest_enemy.position, queue=True))
-
     async def manage_infestors(self):
         infestors = self.bot.units(const.INFESTOR)
         burrowed_infestors = self.bot.units(const.UnitTypeId.INFESTORBURROWED)
@@ -729,6 +716,7 @@ class MicroManager(Manager):
                             # enemy_townhalls = self.bot.known_enemy_units(const2.TOWNHALLS).ready
 
                             nearest_enemy_unit = unit.position.closest(nearest_enemy_cluster)
+                            unit_distance_to_enemy = unit.distance_to(nearest_enemy_unit)
                             unit_is_combatant = unit.type_id not in const2.NON_COMBATANTS
                             # Don't micro a unit if he's avoiding an effect
                             if unit.avoiding_effect is not None:
@@ -752,11 +740,39 @@ class MicroManager(Manager):
                                     and not self.bot.is_melee(unit) \
                                     and len(army_cluster) > 6 \
                                     and unit.weapon_cooldown \
-                                    and unit.distance_to(nearest_enemy_unit) - nearest_enemy_unit.radius > unit.ground_range * 0.35 \
+                                    and unit_distance_to_enemy - nearest_enemy_unit.radius > unit.ground_range * 0.35 \
                                     and not unit.is_moving:
                                 towards_enemy = unit.position.towards(
                                     nearest_enemy_unit, 1)
                                 self.bot.actions.append(unit.snapshot.move(towards_enemy))
+
+                            # Back off from enemy if we outrange them and are close
+                            elif unit_is_combatant and unit.weapon_cooldown \
+                                    and not self.bot.is_melee(unit) \
+                                    and unit.ground_range >= nearest_enemy_unit.ground_range \
+                                    and unit_distance_to_enemy < unit.ground_range - 1:
+                                # Move a bit further if the enemy is a unit rather than a structure
+                                distance_to_move = 1 if nearest_enemy_unit.is_structure else 1.5
+
+                                away_from_enemy = unit.position.towards(nearest_enemy_unit, -distance_to_move)
+
+                                pathable = not self.bot.game_info.pathing_grid.is_set(away_from_enemy.rounded)
+                                if pathable:
+                                    self.bot.actions.append(unit.move(away_from_enemy))
+                                    self.bot.actions.append(unit.attack(nearest_enemy_unit.position, queue=True))
+
+                            # Close the distance if our unit's range is lower than the nearest enemy's range
+                            elif unit_is_combatant and unit.weapon_cooldown \
+                                    and not self.bot.is_melee(unit) \
+                                    and nearest_enemy_unit.ground_range > 0 \
+                                    and unit.ground_range < nearest_enemy_unit.ground_range \
+                                    and unit_distance_to_enemy >= unit.ground_range * 0.75:
+
+                                towards_enemy = unit.position.towards(nearest_enemy_unit, 2)
+
+                                pathable = not self.bot.game_info.pathing_grid.is_set(towards_enemy.rounded)
+                                if pathable:
+                                    self.bot.actions.append(unit.move(towards_enemy))
 
                             # Attack the closest worker/townhall if there are no attackable nearby units
                             # elif not any_attackable_non_workers \
