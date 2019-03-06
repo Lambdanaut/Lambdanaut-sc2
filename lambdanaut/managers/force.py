@@ -570,7 +570,8 @@ class ForceManager(StatefulManager):
                 if self.allow_attacking \
                         and ((relative_army_strength > 7 and len(army) > 4)
                              or (relative_army_strength > -6
-                                 and army_value > self.army_value_to_attack)):
+                                 and army_value > self.army_value_to_attack)) \
+                             or self.bot.supply_used > 195:
                     return await self.change_state(ForcesStates.MOVING_TO_ATTACK)
 
         # ESCORTING
@@ -633,7 +634,7 @@ class ForceManager(StatefulManager):
                     if enemy:
                         relative_army_strength = self.bot.relative_army_strength(
                             army, enemy, ignore_workers=True, ignore_height_difference=False)
-                        if relative_army_strength < -5 and self.bot.supply_used < 170:
+                        if relative_army_strength < -4 and self.bot.supply_used < 170:
                             return await self.change_state(ForcesStates.RETREATING)
 
                 enemy_start_location = self.bot.enemy_start_location.position

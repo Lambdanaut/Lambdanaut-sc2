@@ -28,7 +28,7 @@ MAPS = [
     'BlueshiftLE',
     'PortAleksanderLE', ]
 
-MAP_NAME = "PortAleksanderLE"
+MAP_NAME = "KairosJunctionLE"
 MICRO_MAP_NAME = "kairo_training"
 VS_HUMAN = False
 VS_BOT = False
