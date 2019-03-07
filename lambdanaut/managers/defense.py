@@ -60,51 +60,53 @@ class DefenseManager(StatefulManager):
         townhalls = self.bot.townhalls
 
         if townhalls:
-            # Get townhall with closest enemy unit by sorting them on their distance
-            townhalls_sorted = sorted([(self.bot.known_enemy_units.exclude_type(const2.NON_COMBATANTS).
-                                        closest_distance_to(th), th)
-                                       for th in townhalls])
-            closest_townhall = townhalls_sorted[0][1]
+            enemies = self.bot.known_enemy_units.exclude_type(const2.NON_COMBATANTS)
 
-            # Get nearby enemies
-            enemies_nearby = [u.snapshot for u in self.bot.enemy_cache.values()
-                              if u.distance_to(closest_townhall) < townhall_distance_to_search]
+            if enemies:
+                # Get townhall with closest enemy unit by sorting them on their distance
+                townhalls_sorted = sorted([(enemies.closest_distance_to(th), th)
+                                           for th in townhalls])
+                closest_townhall = townhalls_sorted[0][1]
 
-            # Have army clusters defend
-            army_clusters = self.bot.army_clusters
+                # Get nearby enemies
+                enemies_nearby = [u.snapshot for u in self.bot.enemy_cache.values()
+                                  if u.distance_to(closest_townhall) < townhall_distance_to_search]
 
-            # The harder we're attacked, the further-out army to pull back
-            # 1-3 Enemies: 0.3 of map. 4 enemy: 0.4 of map. 5 enemy: 0.5 of map. 6 enemy: 0.6 of map...
-            # 8 or more enemy: 0.8 of map
-            distance_ratio_to_pull_back = max(0.3, min(0.8, len(enemies_nearby) * 0.1))
-            army_clusters = \
-                [cluster for cluster in army_clusters
-                 if closest_townhall.distance_to(cluster.position) <
-                 self.bot.start_location_to_enemy_start_location_distance * distance_ratio_to_pull_back]
+                # Have army clusters defend
+                army_clusters = self.bot.army_clusters
 
-            if army_clusters and self.bot.enemy_clusters:
+                # The harder we're attacked, the further-out army to pull back
+                # 1-3 Enemies: 0.3 of map. 4 enemy: 0.4 of map. 5 enemy: 0.5 of map. 6 enemy: 0.6 of map...
+                # 8 or more enemy: 0.8 of map
+                distance_ratio_to_pull_back = max(0.3, min(0.8, len(enemies_nearby) * 0.1))
+                army_clusters = \
+                    [cluster for cluster in army_clusters
+                     if closest_townhall.distance_to(cluster.position) <
+                     self.bot.start_location_to_enemy_start_location_distance * distance_ratio_to_pull_back]
 
-                nearest_enemy_cluster = closest_townhall.position.closest(self.bot.enemy_clusters)
-                for army_cluster in army_clusters:
-                    if army_cluster:
+                if army_clusters and self.bot.enemy_clusters:
 
-                        for unit in army_cluster:
-                            if unit.type_id not in const2.NON_COMBATANTS \
-                                    and not self.bot.unit_is_busy(unit) \
-                                    and unit.tag not in self.bot.townhall_queens.values():
+                    nearest_enemy_cluster = closest_townhall.position.closest(self.bot.enemy_clusters)
+                    for army_cluster in army_clusters:
+                        if army_cluster:
 
-                                # If we're too far from our defending spot. Attack-move to defending spot.
-                                target = closest_townhall.position.towards_with_random_angle(
-                                    nearest_enemy_cluster.position, +7)
+                            for unit in army_cluster:
+                                if unit.type_id not in const2.NON_COMBATANTS \
+                                        and not self.bot.unit_is_busy(unit) \
+                                        and unit.tag not in self.bot.townhall_queens.values():
 
-                                if unit.distance_to(target) > 12:
-                                    self.bot.actions.append(unit.attack(target))
-                                else:
-                                    # If we're near our defending spot. Attack enemy unit
-                                    enemy_target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
+                                    # If we're too far from our defending spot. Attack-move to defending spot.
+                                    target = closest_townhall.position.towards_with_random_angle(
+                                        nearest_enemy_cluster.position, +7)
 
-                                    if enemy_target and enemy_target.distance_to(target) < 12:
-                                        self.bot.actions.append(unit.attack(enemy_target))
+                                    if unit.distance_to(target) > 12:
+                                        self.bot.actions.append(unit.attack(target))
+                                    else:
+                                        # If we're near our defending spot. Attack enemy unit
+                                        enemy_target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
+
+                                        if enemy_target and enemy_target.distance_to(target) < 12:
+                                            self.bot.actions.append(unit.attack(enemy_target))
 
             # Do defending for each townhall
             for th in townhalls:
