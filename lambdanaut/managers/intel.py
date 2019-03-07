@@ -98,7 +98,7 @@ class IntelManager(Manager):
         """Checks the map to see if there are any visible units we should counter with roach/hydra"""
         if not self.has_scouted_enemy_counter_with_roaches:
             enemy_counter_with_roach_types = {
-                const.ROACH, const.ROACHWARREN, const.HYDRALISK, const.LAIR, const.HYDRALISKDEN,
+                const.ROACH, const.ROACHWARREN, const.HYDRALISK, const.HYDRALISKDEN, const.LAIR,
                 const.HELLIONTANK, const.PLANETARYFORTRESS,
             }
 
