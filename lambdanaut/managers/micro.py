@@ -212,8 +212,8 @@ class MicroManager(Manager):
         bile_priorities_neutral = {const.UnitTypeId.FORCEFIELD, }
 
         for ravager in ravagers:
-            nearby_enemy_units = self.bot.enemy_cache.values()
-            nearby_enemy_units = [u.snapshot for u in nearby_enemy_units if u.distance_to(ravager) < 13 + u.radius]
+            nearby_enemy_units = self.bot.known_enemy_units
+            nearby_enemy_units = [u for u in nearby_enemy_units if u.distance_to(ravager) < 13 + u.radius]
             if nearby_enemy_units:
                 # Perform bile attacks
                 # Bile range is 9

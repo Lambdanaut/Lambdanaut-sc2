@@ -211,6 +211,12 @@ class OverlordManager(StatefulManager):
         Flee overlords when they're near an enemy that can attack air
         """
 
+        enemy_air_attacking_defensive_structures = {
+            const.PHOTONCANNON,
+            const.SPORECRAWLER,
+            const.MISSILETURRET,
+        }
+
         dont_flee_tags = {self.baneling_drop_overlord_tag}
 
         overlords = self.bot.units(const.OVERLORD).tags_not_in(dont_flee_tags)
@@ -219,9 +225,13 @@ class OverlordManager(StatefulManager):
         for overlord in overlords:
             nearby_enemy_units = [u.snapshot for u in enemy_units
                                   if u.can_attack_air
-                                  and u.distance_to(overlord) < u.air_range * 1.75
+                                  and u.distance_to(overlord) < u.air_range * 1.5
+                                  # For air-attacking static defense
+                                  or (u.type_id in enemy_air_attacking_defensive_structures
+                                      and u.distance_to(overlord) < u.air_range * 1.2)
                                   # For bunkers
-                                  or (u.type_id is const.BUNKER and u.distance_to(overlord) < 9)]
+                                  or (u.type_id is const.BUNKER and u.distance_to(overlord) < 9)
+                                  ]
 
             if nearby_enemy_units:
                 nearby_enemy_unit = overlord.position.closest(nearby_enemy_units)
