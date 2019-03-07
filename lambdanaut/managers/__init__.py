@@ -16,7 +16,7 @@ class Manager(object):
     # with self.subscribe(EVENT_NAME)
 
     def __init__(self, bot):
-        self.bot: lambdanaut.bot.LambdaBot = bot
+        self.bot: lambdanaut.bot.Lambdanaut = bot
 
         self._messages = {}
 

@@ -8,15 +8,15 @@ Bot made by Burny
 
 import random
 
-import sc2
-from sc2 import Race, Difficulty
-from sc2.constants import *
-from sc2.position import Point2, Point3
-from sc2.unit import Unit
-from sc2.player import Bot, Computer
-from sc2.player import Human
-from sc2.ids.unit_typeid import UnitTypeId
-from sc2.ids.ability_id import AbilityId
+import lib.sc2 as sc2
+from lib.sc2 import Race, Difficulty
+from lib.sc2.constants import *
+from lib.sc2.position import Point2, Point3
+from lib.sc2.unit import Unit
+from lib.sc2.player import Bot, Computer
+from lib.sc2.player import Human
+from lib.sc2.ids.unit_typeid import UnitTypeId
+from lib.sc2.ids.ability_id import AbilityId
 
 class MassReaperBot(sc2.BotAI):
     def __init__(self):

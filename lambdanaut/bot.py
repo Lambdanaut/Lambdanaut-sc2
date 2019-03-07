@@ -35,9 +35,9 @@ from lambdanaut.builds import Builds
 BUILD = Builds.OPENER_DEFAULT
 
 
-class LambdaBot(sc2.BotAI):
+class Lambdanaut(sc2.BotAI):
     def __init__(self):
-        super(LambdaBot, self).__init__()
+        super(Lambdanaut, self).__init__()
 
         self.debug = DEBUG
 
@@ -97,7 +97,7 @@ class LambdaBot(sc2.BotAI):
         # Sets enemy_race.
         # This is a hack to fix a bug on our test maps.
         try:
-            self.enemy_race = super(LambdaBot, self).enemy_race
+            self.enemy_race = super(Lambdanaut, self).enemy_race
         except AttributeError:
             self.enemy_race = sc2.data.Race.Zerg
 

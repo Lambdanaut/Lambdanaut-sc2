@@ -48,6 +48,7 @@
 ## HIGH PRIORITY
 
   * When defending, defend close to the townhall. No need to leave it. 
+    * Attack-move non-busy units to the townhall with the nearest enemy unit
 
   * Don't switch to moving_to_attacking if we have an upgrade that is 0.5-0.85% done
    

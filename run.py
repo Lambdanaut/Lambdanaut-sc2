@@ -42,16 +42,16 @@ BUILD = None
 BUILD = sc2.AIBuild.Macro
 # BUILD = sc2.AIBuild.Air
 
-DIFFICULTY = sc2.Difficulty.CheatInsane
+# DIFFICULTY = sc2.Difficulty.CheatInsane
 # DIFFICULTY = sc2.Difficulty.CheatMoney
-# DIFFICULTY = sc2.Difficulty.CheatVision
+DIFFICULTY = sc2.Difficulty.CheatVision
 # DIFFICULTY = sc2.Difficulty.VeryHard
 # DIFFICULTY = sc2.Difficulty.Hard
 # DIFFICULTY = sc2.Difficulty.Medium
 # DIFFICULTY = sc2.Difficulty.Easy
 
 RACE = sc2.Race.Zerg
-ENEMY_RACE = sc2.Race.Terran
+ENEMY_RACE = sc2.Race.Zerg
 REPLAY_NAME = os.path.join("replays", "last_lambdanaut_replay{}.*.sc2replay".format(datetime_str))
 
 if not MAP_NAME:
@@ -65,15 +65,18 @@ if TESTING_MICRO:
 
 if VS_BOT:
     from lib.examples.zerg.zerg_rush import ZergRushBot
+    from lib.examples.terran.mass_reaper import MassReaperBot
 
-    OPPONENT_BOT = ZergRushBot
+    OPPONENT_BOT = bot.Lambdanaut
+    # OPPONENT_BOT = ZergRushBot
+    # OPPONENT_BOT = MassReaperBot
 
 
 # Start game
 if __name__ == '__main__':
     if "--LadderServer" in sys.argv:
         # Ladder game started by LadderManager
-        ladder_bot = sc2.player.Bot(RACE, bot.LambdaBot())
+        ladder_bot = sc2.player.Bot(RACE, bot.Lambdanaut())
         print("Starting ladder game...")
         result, opponentid = run_ladder_game(ladder_bot)
         print(result," against opponent ", opponentid)
@@ -82,7 +85,7 @@ if __name__ == '__main__':
         # Local game
         print("Starting local game...")
 
-        bot_config = sc2.player.Bot(RACE, bot.LambdaBot())
+        bot_config = sc2.player.Bot(RACE, bot.Lambdanaut())
 
         if VS_HUMAN:
             opponent_config = sc2.player.Human(ENEMY_RACE)
