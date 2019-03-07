@@ -656,8 +656,8 @@ class MicroManager(Manager):
         enemy_units = self.bot.known_enemy_units
         if enemy_units:
             if self.bot.is_melee(unit):
-                # Search for further priorities if unit is melee
-                enemy_units = enemy_units.closer_than(2, unit)
+                # Search for closer priorities if unit is melee
+                enemy_units = enemy_units.closer_than(1, unit)
             else:
                 enemy_units = enemy_units.closer_than(unit.ground_range * 1.8, unit)
 
