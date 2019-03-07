@@ -301,7 +301,7 @@ class MicroManager(Manager):
                 const.MARINE, const.MARAUDER, const.REAPER, const.GHOST, const.VIKING, const.BANSHEE, const.MEDIVAC,
                 const.HELLION, const.HELLIONTANK,
                 const.ZEALOT, const.STALKER, const.ADEPT, const.DARKTEMPLAR, const.VOIDRAY, const.TEMPEST,
-                const.SENTRY, const.HIGHTEMPLAR, const.PHOENIX,}
+                const.IMMORTAL, const.SENTRY, const.COLOSSUS, const.HIGHTEMPLAR, const.PHOENIX,}
 
             infested_terran_priorities = const2.TOWNHALLS | {
                 const.SIEGETANKSIEGED, const.CARRIER, const.PHOENIX, const.BROODLORD, const.ULTRALISK,

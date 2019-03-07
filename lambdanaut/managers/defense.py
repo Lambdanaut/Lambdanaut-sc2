@@ -95,17 +95,18 @@ class DefenseManager(StatefulManager):
                                         and not self.bot.unit_is_busy(unit) \
                                         and unit.tag not in self.bot.townhall_queens.values():
 
-                                    # If we're too far from our defending spot. Attack-move to defending spot.
                                     target = closest_townhall.position.towards_with_random_angle(
                                         nearest_enemy_cluster.position, +7)
 
-                                    if unit.distance_to(target) > 12:
+                                    if unit.distance_to(target) > 12 or len(enemies_nearby) < 4:
+                                        # If we're too far from our defending spot or the enemy army is small,
+                                        # Attack-move to defending spot.
                                         self.bot.actions.append(unit.attack(target))
                                     else:
                                         # If we're near our defending spot. Attack enemy unit
                                         enemy_target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
 
-                                        if enemy_target and enemy_target.distance_to(target) < 12:
+                                        if enemy_target and enemy_target.distance_to(target) < 13:
                                             self.bot.actions.append(unit.attack(enemy_target))
 
             # Do defending for each townhall
