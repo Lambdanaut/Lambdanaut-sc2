@@ -98,9 +98,9 @@ class DefenseManager(StatefulManager):
                                     target = closest_townhall.position.towards_with_random_angle(
                                         nearest_enemy_cluster.position, +7)
 
-                                    if unit.distance_to(target) > 12 or len(enemies_nearby) < 4:
-                                        # If we're too far from our defending spot or the enemy army is small,
-                                        # Attack-move to defending spot.
+                                    if unit.distance_to(target) > 15 and len(enemies_nearby) > 3:
+                                        # If we're too far from our defending spot and the enemy army is large,
+                                        # Move to defending spot.
                                         self.bot.actions.append(unit.attack(target))
                                     else:
                                         # If we're near our defending spot. Attack enemy unit
