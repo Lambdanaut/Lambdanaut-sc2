@@ -432,10 +432,15 @@ class MicroManager(Manager):
 
             for lurker in lurkers:
                 enemies_in_range = any(True for u in enemy_targets if lurker.distance_to(u) < 8)  # Range is 9
+                enemies_nearby = [u for u in enemy_targets if lurker.distance_to(u) < 13]
 
-                # Burrow lurkers with enemies nearby
                 if enemies_in_range:
+                    # Burrow lurkers with enemies nearby
                     self.bot.actions.append(lurker(const.AbilityId.BURROWDOWN_LURKER))
+                elif enemies_nearby:
+                    # Move towards nearby enemies
+                    closest_enemy = lurker.position.closest(enemies_nearby)
+                    self.bot.actions.append(lurker.attack(closest_enemy.position))
 
             for lurker in burrowed_lurkers:
                 enemies_nearby = any(True for u in enemy_targets if lurker.distance_to(u) < 10)
@@ -674,7 +679,7 @@ class MicroManager(Manager):
         if enemy_units:
             if self.bot.is_melee(unit):
                 # Search for closer priorities if unit is melee
-                enemy_units = enemy_units.closer_than(1, unit)
+                enemy_units = enemy_units.closer_than(0.5, unit)
             else:
                 enemy_units = enemy_units.closer_than(unit.ground_range * 1.8, unit)
 
@@ -689,8 +694,8 @@ class MicroManager(Manager):
     async def manage_combat_micro(self):
         """Does default combat micro for units"""
 
-        types_not_to_micro = {const.LURKERMP, const.MUTALISK, const.INFESTEDTERRAN, const.ROACHBURROWED,
-                              const.INFESTORBURROWED, const.BROODLORD, const.BANELING}
+        types_not_to_micro = {const.LURKERMP, const.ULTRALISK, const.MUTALISK, const.INFESTEDTERRAN,
+                              const.ROACHBURROWED, const.INFESTORBURROWED, const.BROODLORD, const.BANELING}
 
         # Micro closer to nearest enemy army cluster if our dps is higher
         # Micro further from nearest enemy army cluster if our dps is lower
@@ -706,8 +711,8 @@ class MicroManager(Manager):
             if army_center.distance_to(enemy_army_center) < 17:
                 # Micro against enemy clusters
                 if nearby_army and nearest_enemy_cluster:
-                    army_strength = self.bot.relative_army_strength(
-                        army_cluster, nearest_enemy_cluster, ignore_height_difference=False)
+                    # army_strength = self.bot.relative_army_strength(
+                    #     army_cluster, nearest_enemy_cluster, ignore_height_difference=False)
 
                     ranged_units_in_attack_range_count = self.bot.count_units_in_attack_range(
                         nearby_army, nearest_enemy_cluster, ranged_only=True)
@@ -740,17 +745,17 @@ class MicroManager(Manager):
                                 pass
 
                             # Back off from enemy if our cluster is much weaker
-                            elif army_strength < -2 and unit_is_combatant:
-                                if self.bot.is_melee(unit) and self.bot.is_melee(nearest_enemy_unit):
-                                    away_from_enemy = unit.position.towards(
-                                        nearest_enemy_unit, -2)
-                                    self.bot.actions.append(unit.snapshot.move(away_from_enemy))
-                                elif unit.weapon_cooldown \
-                                        and unit.ground_range >= nearest_enemy_unit.ground_range:
-                                    # Ranged units only move back while we're on cooldown
-                                    away_from_enemy = unit.position.towards(
-                                        nearest_enemy_unit, -1.5)
-                                    self.bot.actions.append(unit.snapshot.move(away_from_enemy))
+                            # elif army_strength < -2 and unit_is_combatant:
+                            #     if self.bot.is_melee(unit) and self.bot.is_melee(nearest_enemy_unit):
+                            #         away_from_enemy = unit.position.towards(
+                            #             nearest_enemy_unit, -2)
+                            #         self.bot.actions.append(unit.snapshot.move(away_from_enemy))
+                            #     elif unit.weapon_cooldown \
+                            #             and unit.ground_range >= nearest_enemy_unit.ground_range:
+                            #         # Ranged units only move back while we're on cooldown
+                            #         away_from_enemy = unit.position.towards(
+                            #             nearest_enemy_unit, -1.5)
+                            #         self.bot.actions.append(unit.snapshot.move(away_from_enemy))
 
                             # Close the distance if our cluster isn't in range
                             elif unit_is_combatant and ranged_units_in_attack_range_ratio < 0.5 \
@@ -765,8 +770,8 @@ class MicroManager(Manager):
 
                             # Back off from enemy if we outrange them and are close
                             elif unit_is_combatant and unit.weapon_cooldown \
-                                    and not unit.is_moving \
                                     and not self.bot.is_melee(unit) \
+                                    and not unit.is_moving \
                                     and unit.ground_range >= nearest_enemy_unit.ground_range \
                                     and unit_distance_to_enemy < unit.ground_range - 0.5:
                                 # Move a bit further if the enemy is a unit rather than a structure

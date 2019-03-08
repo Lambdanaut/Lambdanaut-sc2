@@ -825,6 +825,7 @@ class BuildManager(Manager):
                 expansion_location = expansion_locations[self.next_expansion_index]
             except IndexError:
                 self.print("Couldn't build expansion. All spots are taken.")
+                self.next_expansion_index = 0
                 return False
 
             # Get drones that aren't carrying minerals or gas
@@ -1073,20 +1074,20 @@ class BuildManager(Manager):
             return True
 
         elif build_target == const.LURKERMP:
-            # Get a hydralisk
-            hydralisks = self.bot.units(const.HYDRALISK)
+            # Get hydras
+            hydralisks = self.bot.units(const.HYDRALISK).filter(
+                lambda r: not self.bot.unit_is_engaged(r))
 
             # Train the unit
-            if self.can_afford(build_target) and hydralisks.exists:
-                # Prefer idle hydralisks if they exist
-                idle_hydralisks = hydralisks.idle
-                if idle_hydralisks:
-                    hydralisks = idle_hydralisks
-
+            if self.can_afford(build_target) and hydralisks:
                 hydralisk = hydralisks.closest_to(self.bot.start_location)
                 self.bot.actions.append(hydralisk.stop())
                 self.bot.actions.append(hydralisk.train(build_target, queue=True))
                 return True
+
+            # Return True regardless.
+            # We can skip the lurker if all the hydralisks are engaged
+            return True
 
         elif build_target == const.BROODLORD:
             # Get a Corruptor

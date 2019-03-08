@@ -261,7 +261,7 @@ class IntelManager(Manager):
             non_tech_structures = {const.SUPPLYDEPOT, const.PYLON}
             enemy_tech_structures = self.bot.known_enemy_structures.exclude_type(non_tech_structures)
 
-            if len(enemy_tech_structures) > 3:
+            if len(enemy_tech_structures) > 2:
                 self.has_published_scouted_enemy_tech_intel = True
                 return True
 

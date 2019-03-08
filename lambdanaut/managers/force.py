@@ -481,7 +481,7 @@ class ForceManager(StatefulManager):
             tags_not_in(self.bot.occupied_units)
 
         for unit in army:
-            if unit.weapon_cooldown or unit.is_idle or unit.is_moving:
+            if not self.bot.unit_is_engaged(unit):
                 townhalls = self.bot.townhalls
                 if townhalls:
                     nearest_townhall = townhalls.closest_to(unit)

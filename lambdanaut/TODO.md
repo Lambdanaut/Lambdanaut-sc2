@@ -47,10 +47,9 @@
 
 ## HIGH PRIORITY
 
-  * When defending, defend close to the townhall. No need to leave it. 
-    * Attack-move non-busy units to the townhall with the nearest enemy unit
-    
-  * Add a low-baneling-count zergling build to start vs protoss
+  * Keep army together when attacking. Right now zerglings run ahead first. 
+  
+  * Attack multiple bases with zerglings
 
   * Switch into 2 base nydus build if we scout multiple banshees and have fewer than 4 townhalls
 
@@ -62,6 +61,9 @@
     send lings to a corner of main to mutate into banelings. Would defend against hammerbot. 
 
   * Prefer visible enemies to use bile on. This will prevent us from attempting to bile where we can't see.
+
+  * If we haven't scouted enemy natural expand by the time we take our third, then overlord-scout their natural expand.
+    * If we still haven't scouted an enemy natural expand, switch to a 2-base aggressive/defensive build like nydus.
 
 ## MEDIUM PRIORITY
 
@@ -316,3 +318,8 @@
   
   * Dont unroot spine crawlers if enemy is nearby where we want to root them
   
+  * Add a low-baneling-count zergling build to start vs protoss
+
+  * When defending, defend close to the townhall. No need to leave it. 
+    * Attack-move non-busy units to the townhall with the nearest enemy unit
+
