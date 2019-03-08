@@ -106,7 +106,7 @@ class DefenseManager(StatefulManager):
                                         # If we're near our defending spot. Attack enemy unit
                                         enemy_target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
 
-                                        if enemy_target and enemy_target.distance_to(target) < 13:
+                                        if enemy_target and enemy_target.distance_to(target) < 20:
                                             self.bot.actions.append(unit.attack(enemy_target))
 
             # Do defending for each townhall
