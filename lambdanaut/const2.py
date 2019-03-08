@@ -65,6 +65,7 @@ ZERG_UPGRADES_TO_STRUCTURE = {
     const.EVOLVEGROOVEDSPINES: const.HYDRALISKDEN,
     const.BURROW: const.HATCHERY,
     const.INFESTORENERGYUPGRADE: const.INFESTATIONPIT,
+    const.NEURALPARASITE: const.INFESTATIONPIT,
     const.UpgradeId.OVERLORDSPEED: const.HATCHERY,
     const.UpgradeId.DIGGINGCLAWS: const.LURKERDENMP,  # Lurker Adaptive Talons
     const.CHITINOUSPLATING: const.ULTRALISKCAVERN,
@@ -96,6 +97,7 @@ ZERG_UPGRADES_TO_TECH_REQUIREMENT = {
     const.EVOLVEGROOVEDSPINES: const.HYDRALISKDEN,
     const.BURROW: const.HATCHERY,
     const.INFESTORENERGYUPGRADE: const.INFESTATIONPIT,
+    const.NEURALPARASITE: const.INFESTATIONPIT,
     const.UpgradeId.OVERLORDSPEED: const.HATCHERY,
     const.UpgradeId.DIGGINGCLAWS: const.LURKERDENMP,  # Lurker Adaptive Talons
     const.CHITINOUSPLATING: const.ULTRALISKCAVERN,
@@ -196,12 +198,18 @@ class Messages(enum.Enum):
     # # STRATEGY CHANGE
     BUILD_OFFENSIVE_SPINES = 39  # Builds spines in enemy base rather than at home. Turns off uprooting.
     DONT_RETURN_DISTANT_WORKERS_TO_TOWNHALLS = 40  # Turn off returning distant workers to townhalls
+    ALLOW_NEURAL_PARASITE_UPGRADE = 41
 
 
 # Build Manager Commands
 class BuildManagerCommands(enum.Enum):
     EXPAND_MOVE = 0  # Command to move to expansion before building
     BUILD_OVERLORD = 1
+
+
+# Build Manager flag names that can be set
+class BuildManagerFlags(enum.Enum):
+    ALLOW_NEURAL_PARASITE_UPGRADE = 0  # Flag to allow researching infestor neural parasite ability
 
 
 # Force Manager Commands

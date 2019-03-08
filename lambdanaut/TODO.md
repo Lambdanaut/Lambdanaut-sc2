@@ -49,6 +49,10 @@
 
   * When defending, defend close to the townhall. No need to leave it. 
     * Attack-move non-busy units to the townhall with the nearest enemy unit
+    
+  * Add a low-baneling-count zergling build to start vs protoss
+
+  * Switch into 2 base nydus build if we scout multiple banshees and have fewer than 4 townhalls
 
   * Don't switch to moving_to_attacking if we have an upgrade that is 0.5-0.85% done
    

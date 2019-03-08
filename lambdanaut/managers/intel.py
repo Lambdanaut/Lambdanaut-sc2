@@ -30,6 +30,7 @@ class IntelManager(Manager):
         self.has_published_need_more_enemy_tech_intel = False
         self.has_published_scouted_enemy_tech_intel = False
         self.has_published_scouted_enemy_proxy_hatchery = False
+        self.has_published_research_neural_parasite = False
         self.has_scouted_enemy_greater_force = ExpiringList()  # Will contain True or nothing
 
         self.subscribe(Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION)
@@ -287,6 +288,21 @@ class IntelManager(Manager):
 
         return False
 
+    def scouted_research_neural_parasite(self):
+        if not self.has_published_research_neural_parasite:
+
+            neural_parasite_targets = {
+                const.COLOSSUS, const.CARRIER, const.MOTHERSHIP, const.ROBOTICSBAY,
+                const.BATTLECRUISER,
+            }
+            enemy_tech_structures = self.bot.known_enemy_units(neural_parasite_targets)
+
+            if len(enemy_tech_structures):
+                self.has_published_research_neural_parasite = True
+                return True
+
+        return False
+
     async def assess_game(self):
         """
         Assess the game's state and send out applicable messages
@@ -312,6 +328,8 @@ class IntelManager(Manager):
             self.publish(Messages.SCOUTED_ENOUGH_ENEMY_TECH_INTEL)
         if self.scouted_enemy_proxy_hatchery():
             self.publish(Messages.FOUND_ENEMY_PROXY_HATCHERY)
+        if self.scouted_research_neural_parasite():
+            self.publish(Messages.ALLOW_NEURAL_PARASITE_UPGRADE)
 
     async def run(self):
         await self.read_messages()

@@ -11,7 +11,7 @@ import uuid
 import lib.sc2 as sc2
 from lib.sc2.constants import *
 
-from lambdanaut.const2 import Messages
+from lambdanaut.const2 import BuildManagerFlags, Messages
 
 
 class SpecialBuildTarget(object):
@@ -183,6 +183,29 @@ class PublishMessage(SpecialBuildTarget):
         self.unit_type = None
         self.message = message
         self.value = value
+
+
+class IfFlagIsSet(SpecialBuildTarget):
+    """
+    Container object for use in builds
+
+    Functionally it means that if the const2.BuildManagerFlags `flag` is set,
+    then we can build one or more of `unit_type`
+
+    Example that will research Neural Parasite if the flag
+    `ALLOW_NEURAL_PARASITE_UPGRADE` has been set.
+
+        BUILD = [
+            IfFlagIsSet(BuildManagerFlags.ALLOW_NEURAL_PARASITE_UPGRADE,
+                        UpgradeId.NEURALPARASITE),
+        ]
+    """
+    def __init__(self, flag: BuildManagerFlags, unit_type, n=1):
+        super(IfFlagIsSet, self).__init__()
+
+        self.unit_type = unit_type
+        self.flag = flag
+        self.n = n
 
 
 class RunFunction(SpecialBuildTarget):
@@ -515,7 +538,7 @@ EARLY_GAME_HATCHERY_FIRST_GREEDY = [
     QUEEN,  # 1
     QUEEN,  # 2
     DRONE,  # 21
-]
+]  # 26 Supply
 
 
 # #################################### MID GAME #####################################
@@ -532,55 +555,59 @@ MID_GAME_LING_BANE = [
     QUEEN,
     DRONE, DRONE, DRONE, DRONE, DRONE,
     ZERGLING, ZERGLING, ZERGLING, ZERGLING,
-    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
+    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
     AtLeast(2, EXTRACTOR),
-    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
+    ZERGLING, ZERGLING,
+    DRONE, DRONE, DRONE, DRONE, DRONE,
     AtLeast(1, BANELINGNEST),
-    DRONE, DRONE,
+    ZERGLING, ZERGLING, ZERGLING, ZERGLING,
     QUEEN,
-    DRONE, DRONE,
-    EVOLUTIONCHAMBER,
+    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
     CanAfford(LAIR),
 ]
-MID_GAME_LING_BANE += ([ZERGLING] * 6)
 MID_GAME_LING_BANE += ([BANELING] * 6)
 MID_GAME_LING_BANE += ([ZERGLING] * 10)
 MID_GAME_LING_BANE += ([BANELING] * 2)
-MID_GAME_LING_BANE += ([ZERGLING] * 4)
 MID_GAME_LING_BANE += [
+    EVOLUTIONCHAMBER, EVOLUTIONCHAMBER,
+    ZERGLING, ZERGLING, ZERGLING, ZERGLING,
     CanAfford(ZERGMELEEWEAPONSLEVEL1),
     QUEEN,
-    EXTRACTOR,
-    EVOLUTIONCHAMBER,
-    DRONE, DRONE, DRONE, DRONE, DRONE,
     CanAfford(ZERGGROUNDARMORSLEVEL1),
-    UpgradeId.CENTRIFICALHOOKS,
-    EXTRACTOR,
-    EXTRACTOR,
-    # CanAfford(UpgradeId.OVERLORDSPEED),  # Baneling drops
-]
-MID_GAME_LING_BANE += ([ZERGLING] * 10 + [BANELING] * 10)
-MID_GAME_LING_BANE += [
-    CanAfford(BURROW),
-    INFESTATIONPIT,
+    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
+    EXTRACTOR,  # 3
+    OVERSEER,
+    HYDRALISKDEN,
     HATCHERY,
-]
-MID_GAME_LING_BANE += [
-    UpgradeId.INFESTORENERGYUPGRADE,
+    EXTRACTOR,  # 4
+    QUEEN,
+    HATCHERY,
+    HYDRALISK, HYDRALISK, HYDRALISK, HYDRALISK, HYDRALISK,
+    UpgradeId.CENTRIFICALHOOKS,
+    UpgradeId.EVOLVEMUSCULARAUGMENTS,
+    HYDRALISK, HYDRALISK, HYDRALISK, HYDRALISK, HYDRALISK,
+    # CanAfford(UpgradeId.OVERLORDSPEED),  # Baneling drops
     CanAfford(ZERGMELEEWEAPONSLEVEL2),
     CanAfford(ZERGGROUNDARMORSLEVEL2),
+    LURKERDENMP,  # Lurkers
+    ZERGLING, ZERGLING,
+    BANELING, BANELING,
 ]
-MID_GAME_LING_BANE += ([ZERGLING] * 4 + [BANELING] * 2)
+MID_GAME_LING_BANE += [
+    INFESTATIONPIT,
+    EXTRACTOR, EXTRACTOR,  # 6
+    UpgradeId.INFESTORENERGYUPGRADE,
+    LURKERMP, LURKERMP, LURKERMP, LURKERMP, LURKERMP,
+]
 MID_GAME_LING_BANE += [
     INFESTOR, INFESTOR, INFESTOR,
-]
-MID_GAME_LING_BANE += ([ZERGLING] * 10 + [BANELING] * 4)
-MID_GAME_LING_BANE += [
-    DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
-    QUEEN,
+    IfFlagIsSet(BuildManagerFlags.ALLOW_NEURAL_PARASITE_UPGRADE, UpgradeId.NEURALPARASITE),
     OVERSEER,
+    HYDRALISK, HYDRALISK,
+]
+MID_GAME_LING_BANE += [
     QUEEN,
-    QUEEN,
+    BURROW,
 ]
 
 
@@ -641,6 +668,7 @@ MID_GAME_ROACH_HYDRA_LURKER = [
     UpgradeId.INFESTORENERGYUPGRADE,
     HYDRALISK, HYDRALISK,
     INFESTOR, INFESTOR, INFESTOR,
+    IfFlagIsSet(BuildManagerFlags.ALLOW_NEURAL_PARASITE_UPGRADE, UpgradeId.NEURALPARASITE),
     LURKERDENMP,
     OVERSEER,
     EVOLVEMUSCULARAUGMENTS,
@@ -904,6 +932,7 @@ DEFAULT_NEXT_BUILDS_TERRAN = {
     Builds.OPENER_DEFAULT: Builds.EARLY_GAME_HATCHERY_FIRST,
     Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS: Builds.MID_GAME_ROACH_HYDRA_LURKER,
     Builds.EARLY_GAME_HATCHERY_FIRST: Builds.MID_GAME_ROACH_HYDRA_LURKER,
+    Builds.EARLY_GAME_HATCHERY_FIRST_GREEDY: Builds.MID_GAME_ROACH_HYDRA_LURKER,
     Builds.EARLY_GAME_POOL_FIRST: Builds.MID_GAME_ROACH_HYDRA_LURKER,
     Builds.EARLY_GAME_SPORE_CRAWLERS: Builds.MID_GAME_ROACH_HYDRA_LURKER,
 }
@@ -911,15 +940,17 @@ DEFAULT_NEXT_BUILDS_ZERG = {
     Builds.OPENER_DEFAULT: Builds.EARLY_GAME_POOL_FIRST,
     Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS: Builds.MID_GAME_LING_BANE,
     Builds.EARLY_GAME_HATCHERY_FIRST: Builds.MID_GAME_LING_BANE,
+    Builds.EARLY_GAME_HATCHERY_FIRST_GREEDY: Builds.MID_GAME_LING_BANE,
     Builds.EARLY_GAME_POOL_FIRST: Builds.MID_GAME_LING_BANE,
     Builds.EARLY_GAME_SPORE_CRAWLERS: Builds.MID_GAME_LING_BANE,
 }
 DEFAULT_NEXT_BUILDS_PROTOSS = {
     Builds.OPENER_DEFAULT: Builds.EARLY_GAME_HATCHERY_FIRST,
-    Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS: Builds.MID_GAME_ROACH_HYDRA_LURKER,
-    Builds.EARLY_GAME_HATCHERY_FIRST: Builds.MID_GAME_ROACH_HYDRA_LURKER,
-    Builds.EARLY_GAME_POOL_FIRST: Builds.MID_GAME_ROACH_HYDRA_LURKER,
-    Builds.EARLY_GAME_SPORE_CRAWLERS: Builds.MID_GAME_ROACH_HYDRA_LURKER,
+    Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS: Builds.MID_GAME_LING_BANE,
+    Builds.EARLY_GAME_HATCHERY_FIRST: Builds.MID_GAME_LING_BANE,
+    Builds.EARLY_GAME_HATCHERY_FIRST_GREEDY: Builds.MID_GAME_LING_BANE,
+    Builds.EARLY_GAME_POOL_FIRST: Builds.MID_GAME_LING_BANE,
+    Builds.EARLY_GAME_SPORE_CRAWLERS: Builds.MID_GAME_LING_BANE,
 }
 
 

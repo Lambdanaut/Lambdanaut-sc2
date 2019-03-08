@@ -2,7 +2,7 @@ import math
 import random
 from collections import Counter
 from itertools import takewhile
-from typing import List, Union
+from typing import List, Set, Union
 
 import lib.sc2 as sc2
 import lib.sc2.constants as const
@@ -12,7 +12,7 @@ from lib.sc2.ids.upgrade_id import UpgradeId
 import lambdanaut.builds as builds
 import lambdanaut.const2 as const2
 from lambdanaut.builds import Builds, BuildStages, BUILD_MAPPING, DEFAULT_NEXT_BUILDS
-from lambdanaut.const2 import BuildManagerCommands, DefenseStates, Messages
+from lambdanaut.const2 import BuildManagerCommands, BuildManagerFlags, DefenseStates, Messages
 from lambdanaut.expiringlist import ExpiringList
 from lambdanaut.managers import Manager
 
@@ -53,6 +53,9 @@ class BuildManager(Manager):
         # Recent commands issued. Uses constants defined in const2.py
         self._recent_commands = ExpiringList()
 
+        # Flags that control the build manager
+        self.build_flags: Set[BuildManagerFlags] = set()
+
         # Message subscriptions
         self.subscribe(Messages.ENEMY_EARLY_NATURAL_EXPAND_TAKEN)
         self.subscribe(Messages.ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN)
@@ -70,6 +73,7 @@ class BuildManager(Manager):
         self.subscribe(Messages.DEFENDING_AGAINST_MULTIPLE_ENEMIES)
         self.subscribe(Messages.STATE_EXITED)
         self.subscribe(Messages.BUILD_OFFENSIVE_SPINES)
+        self.subscribe(Messages.ALLOW_NEURAL_PARASITE_UPGRADE)
 
         # Expansion index used for trying other expansions if the one we're trying is blocked
         self.next_expansion_index: int = 0
@@ -345,12 +349,17 @@ class BuildManager(Manager):
                     self.stop_townhall_production = True
                     self.stop_worker_production = True
 
-
             # We should build spine crawlers in opponent's base rather than at home
             build_offensive_spines = {Messages.BUILD_OFFENSIVE_SPINES, }
             if message in build_offensive_spines:
                 self.ack(message)
                 self.build_offensive_spines = True
+
+            # We should research neural parasite
+            research_neural_parasite = {Messages.ALLOW_NEURAL_PARASITE_UPGRADE, }
+            if message in research_neural_parasite:
+                self.ack(message)
+                self.build_flags.add(BuildManagerFlags.ALLOW_NEURAL_PARASITE_UPGRADE)
 
     def parse_special_build_target(self,
                                    unit: builds.SpecialBuildTarget,
@@ -503,6 +512,25 @@ class BuildManager(Manager):
                 self.publish(message, value)
 
             return None
+
+        elif isinstance(unit, builds.IfFlagIsSet):
+            # IfFlagIsSet is a "special" unittype that only adds `n`
+            # unit_type if the BuildMangerFlags `flag` is set
+
+            if_flag_is_set = unit
+            unit = if_flag_is_set.unit_type
+            flag = if_flag_is_set.flag
+            amount_to_add = if_flag_is_set.n
+
+            if flag in self.build_flags:
+                if isinstance(unit, builds.SpecialBuildTarget):
+                    return self.parse_special_build_target(
+                        unit, existing_unit_counts, build_order_counts, build_targets)
+                else:
+                    build_order_counts[unit] += amount_to_add
+                    return unit
+            else:
+                return unit
 
         elif isinstance(unit, builds.RunFunction):
             # RunFunction is a "special" unittype that runs a function the

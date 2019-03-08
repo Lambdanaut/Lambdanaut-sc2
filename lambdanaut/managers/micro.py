@@ -301,11 +301,16 @@ class MicroManager(Manager):
                 const.MARINE, const.MARAUDER, const.REAPER, const.GHOST, const.VIKING, const.BANSHEE, const.MEDIVAC,
                 const.HELLION, const.HELLIONTANK,
                 const.ZEALOT, const.STALKER, const.ADEPT, const.DARKTEMPLAR, const.VOIDRAY, const.TEMPEST,
-                const.IMMORTAL, const.SENTRY, const.COLOSSUS, const.HIGHTEMPLAR, const.PHOENIX,}
+                const.IMMORTAL, const.SENTRY, const.HIGHTEMPLAR, const.PHOENIX,}
 
             infested_terran_priorities = const2.TOWNHALLS | {
                 const.SIEGETANKSIEGED, const.CARRIER, const.PHOENIX, const.BROODLORD, const.ULTRALISK,
                 const.PHOTONCANNON, const.SPINECRAWLER, const.BUNKER
+            }
+
+            neural_parasite_priorities = {
+                const.SIEGETANKSIEGED, const.THOR, const.BATTLECRUISER,
+                const.COLOSSUS, const.CARRIER, const.MOTHERSHIP,
             }
 
             def splash_action(infestor, enemy):
@@ -338,7 +343,19 @@ class MicroManager(Manager):
                     priorities=fungal_priorities,)
 
             for infestor in infestors | burrowed_infestors:
-                if const.BURROW in self.bot.state.upgrades \
+
+                nearby_neural_priorities = self.bot.known_enemy_units(
+                    neural_parasite_priorities).closer_than(15, infestor)
+
+                if const.UpgradeId.NEURALPARASITE in self.bot.state.upgrades \
+                        and infestor.energy >= 100 and nearby_neural_priorities:
+
+                    # Cast neural parasite on nearby enemy priorities
+
+                    target = nearby_neural_priorities.closest_to(infestor.position)
+                    self.bot.actions.append(infestor(const.AbilityId.NEURALPARASITE_NEURALPARASITE, target))
+
+                elif const.BURROW in self.bot.state.upgrades \
                         and not infestor.is_burrowed \
                         and infestor.health_percentage < 0.40:
                     # Burrow damaged infestors
