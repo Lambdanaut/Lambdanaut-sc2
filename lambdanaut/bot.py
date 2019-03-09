@@ -1,9 +1,8 @@
 from collections import defaultdict
 import copy
-import functools
 import itertools
 import math
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 import lib.sc2 as sc2
 import lib.sc2.constants as const
@@ -11,6 +10,7 @@ from lib.sc2.position import Point2, Point3
 from lib.sc2.pixel_map import PixelMap
 from lib.sc2.unit import Unit
 from lib.sc2.units import Units
+import numpy
 
 from lambdanaut import VERSION, DEBUG, CREATE_DEBUG_UNITS
 import lambdanaut.builds as builds
@@ -598,6 +598,25 @@ class Lambdanaut(sc2.BotAI):
             else:
                 return None
 
+    def points_between_points(self, p1: Point2, p2: Point2, point_count=6) -> Iterable[Point2]:
+        """
+        Returns a generator of points in a straight line between `p1` and `p2`.
+
+        NOTE: Not guaranteed to return `point_counts`. Could be fewer by 1.
+        """
+
+        p1x = round(p1.x)
+        p1y = round(p1.y)
+        p2x = round(p2.x)
+        p2y = round(p2.y)
+
+        steps_x = -(p1x - p2x) / point_count
+        steps_y = -(p1y - p2y) / point_count
+
+        if steps_x and steps_y:
+            return (Point2((x, y)) for x, y in zip(numpy.arange(p1x, p2x, steps_x), numpy.arange(p1y, p2y, steps_y)))
+        return ()
+
     def rect_corners(self, rect):
         p1 = sc2.position.Point2((rect.x, rect.y))
         p2 = p1 + sc2.position.Point2((rect.width, 0))
@@ -781,6 +800,10 @@ class Lambdanaut(sc2.BotAI):
 
             # Multiply structure values so we prefer non-structures
             non_structure_bonus = 25 if u.is_structure else 1
+
+            # Multiple neural parasited units so we prefer not to attack them
+            # Commented out because sadly we cannot check if enemies have a buff :(
+            # neural_parasite_bonus = 100 if u.has_buff(const.BuffId.NEURALPARASITE) else 1:
 
             return health * u.distance_to(unit) * priority_bonus * non_structure_bonus
 

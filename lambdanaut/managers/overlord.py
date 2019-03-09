@@ -1,6 +1,7 @@
 import math
 
 import lib.sc2.constants as const
+from lib.sc2.position import Point2
 
 import lambdanaut.const2 as const2
 from lambdanaut.const2 import Messages, OverlordStates
@@ -36,7 +37,6 @@ class OverlordManager(StatefulManager):
         overlords = self.bot.units(const.OVERLORD)
         self.scouting_overlord_tag = overlords.first.tag if overlords else None
         self.proxy_scouting_overlord_tag = None
-        self.third_expansion_scouting_overlord_tag = None
         self.baneling_drop_overlord_tag = None
 
         # Move second overlord to enemy ramp if this is true
@@ -57,7 +57,6 @@ class OverlordManager(StatefulManager):
     def scouting_overlord_tags(self):
         return {self.scouting_overlord_tag,
                 self.proxy_scouting_overlord_tag,
-                self.third_expansion_scouting_overlord_tag,
                 self.baneling_drop_overlord_tag}
 
     async def read_messages(self):
@@ -155,60 +154,15 @@ class OverlordManager(StatefulManager):
                     self.bot.enemy_start_location, distance, max_difference=(math.pi / 1.0))
                 self.bot.actions.append(overlord.move(target))
 
-    def proxy_scout_with_second_overlord(self):
-        overlords = self.bot.units(const.OVERLORD)
-
-        if self.proxy_scouting_overlord_tag is None and len(overlords) == 2:
-            overlord = overlords.filter(lambda ov: ov.tag not in self.scouting_overlord_tags).first
-
-            self.proxy_scouting_overlord_tag = overlord.tag
-
-            if not self.move_overlord_scout_2_to_enemy_ramp:
-                # Move Overlord around different expansion locations
-                expansion_locations = self.bot.get_expansion_positions()
-                if expansion_locations:
-                    shortest_path = self.bot.shortest_path_between_points(expansion_locations[1:6])
-                    for expansion_location in shortest_path:
-                        self.bot.actions.append(overlord.move(expansion_location, queue=True))
-
-                    try:
-                        # This is the expected enemy 5th expand location
-                        enemy_fifth_expansion = expansion_locations[-5]
-                        self.bot.actions.append(overlord.move(enemy_fifth_expansion, queue=True))
-                        self.bot.actions.append(overlord.stop(queue=True))
-                    except IndexError:
-                        # The indexed expansion doesn't exist
-                        pass
-
-        if overlords and self.proxy_scouting_overlord_tag is not None:
-            scouting_overlord = overlords.find_by_tag(self.proxy_scouting_overlord_tag)
-            if not scouting_overlord:
-                # Overlord has died :(
-                self.proxy_scouting_overlord_tag = None
-                return
-
-            if self.move_overlord_scout_2_to_enemy_ramp and scouting_overlord.is_idle:
-                # Move the scouting overlord directly to the enemy ramp for vision
-                self.move_overlord_to_enemy_ramp(scouting_overlord)
-
-    def scout_enemy_third_expansion_with_third_overlord(self):
-        overlords = self.bot.units(const.OVERLORD)
-
-        if self.third_expansion_scouting_overlord_tag is None:
-            if len(overlords) == 3:
-                overlord = overlords.filter(lambda ov: ov.tag not in self.scouting_overlord_tags).first
-                self.third_expansion_scouting_overlord_tag = overlord.tag
-
-                enemy_expansion_locations = self.bot.get_enemy_expansion_positions()
-                third_and_fourth_expansions = enemy_expansion_locations[2:4]
-
-                # Move Overlord around different expansion locations
-                for expansion_location in third_and_fourth_expansions:
-                    self.bot.actions.append(overlord.move(expansion_location, queue=True))
-
     def overlord_flee(self):
         """
         Flee overlords when they're near an enemy that can attack air
+
+        Also halt overlords if their current path is long and is nearby enemy air attackers
+          * If target point is > 20 from overlord
+          * Get x points between target point and current point
+          * If any enemy units that can attack air are within 10 distance of any of those points
+          * Then stop the overlord
         """
 
         enemy_air_attacking_defensive_structures = {
@@ -221,11 +175,12 @@ class OverlordManager(StatefulManager):
 
         overlords = self.bot.units(const.OVERLORD).tags_not_in(dont_flee_tags)
 
-        enemy_units = self.bot.enemy_cache.values()
+
+        enemy_units = [u.snapshot for u in self.bot.enemy_cache.values()
+                       if u.can_attack_air]
         for overlord in overlords:
-            nearby_enemy_units = [u.snapshot for u in enemy_units
-                                  if u.can_attack_air
-                                  and u.distance_to(overlord) < u.air_range * 1.5
+            nearby_enemy_units = [u for u in enemy_units
+                                  if u.distance_to(overlord) < u.air_range * 1.5
                                   # For air-attacking static defense
                                   or (u.type_id in enemy_air_attacking_defensive_structures
                                       and u.distance_to(overlord) < u.air_range * 1.2)
@@ -234,9 +189,57 @@ class OverlordManager(StatefulManager):
                                   ]
 
             if nearby_enemy_units:
+                # Flee from nearby enemy units
                 nearby_enemy_unit = overlord.position.closest(nearby_enemy_units)
                 away_from_enemy = overlord.position.towards(nearby_enemy_unit, -3)
                 self.bot.actions.append(overlord.move(away_from_enemy))
+
+            elif overlord.is_moving and isinstance(overlord.order_target, Point2):
+                # Check if any enemies are between the overlord and its current trajectory
+                # Halt movement if that is the case
+
+                if overlord.distance_to(overlord.order_target) > 15:
+
+                    # Get a generator of points between the overlord and its target
+                    points_between = self.bot.points_between_points(
+                        overlord.position, overlord.order_target)
+
+                    for point in points_between:
+                        nearby_enemy_units = any(True for u in enemy_units
+                                                 if u.distance_to(point) < u.air_range)
+
+                        if nearby_enemy_units:
+                            self.bot.actions.append(overlord.stop())
+                            break
+
+    def proxy_scout_with_second_overlord(self):
+        overlords = self.bot.units(const.OVERLORD)
+
+        if self.proxy_scouting_overlord_tag is None and len(overlords) == 2:
+            overlord = overlords.filter(lambda ov: ov.tag not in self.scouting_overlord_tags).first
+
+            self.proxy_scouting_overlord_tag = overlord.tag
+
+            if not self.move_overlord_scout_2_to_enemy_ramp:
+                # Move Overlord around different expansion locations
+                expansion_locations = self.bot.get_expansion_positions()
+                if expansion_locations:
+                    shortest_path = self.bot.shortest_path_between_points(expansion_locations[1:7])
+                    for expansion_location in shortest_path:
+                        self.bot.actions.append(overlord.move(expansion_location, queue=True))
+
+                    self.bot.actions.append(overlord.stop(queue=True))
+
+        if overlords and self.proxy_scouting_overlord_tag is not None:
+            scouting_overlord = overlords.find_by_tag(self.proxy_scouting_overlord_tag)
+            if not scouting_overlord:
+                # Overlord has died :(
+                self.proxy_scouting_overlord_tag = None
+                return
+
+            if self.move_overlord_scout_2_to_enemy_ramp and scouting_overlord.is_idle:
+                # Move the scouting overlord directly to the enemy ramp for vision
+                self.move_overlord_to_enemy_ramp(scouting_overlord)
 
     def baneling_drops(self):
         """
@@ -477,7 +480,6 @@ class OverlordManager(StatefulManager):
                             value=closest_enemy_defensive_structure.position)
 
                     # Take note of enemy rush structures/units sighted
-
                     barracks_count = len(enemy_structures.of_type(const.BARRACKS)) > 1
                     gateway_count = len(enemy_structures.of_type(const.GATEWAY)) > 1
                     zergling_count = len(self.bot.known_enemy_units.of_type(const.ZERGLING)) > 5
@@ -511,7 +513,6 @@ class OverlordManager(StatefulManager):
 
         self.turn_on_generate_creep()
         self.proxy_scout_with_second_overlord()
-        self.scout_enemy_third_expansion_with_third_overlord()
         self.baneling_drops()
         self.overlord_flee()
         self.overlord_dispersal()
