@@ -62,6 +62,8 @@
   * If we haven't scouted enemy natural expand by the time we take our third, then overlord-scout their natural expand.
     * If we still haven't scouted an enemy natural expand, switch to a 2-base aggressive/defensive build like nydus.
 
+  * Optimize overlord fleeing from points in a line.
+
 ## MEDIUM PRIORITY
 
   * Use A* when we switch to ATTACKING to hit the enemy where they're most vulnerable

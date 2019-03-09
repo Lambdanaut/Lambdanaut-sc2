@@ -278,32 +278,36 @@ class ForceManager(StatefulManager):
         banelings = self.bot.units(const.BANELING) \
             .tags_not_in(self.bot.occupied_units)
         if banelings:
+
+            # Split off 4 banelings to attack another townhall.
+            # TAKEN OUT BECAUSE BANELINGS WOULDN'T TURN AROUND AFTER BEING SENT ON THEIR WAY
+
             # Take 4 banelings if we have 4, otherwise just don't harass
             # This returns a list (not a Units Group)
-            try:
-                harass_banelings: List = banelings.take(4)
-            except AssertionError:
-                # Backwards compatibility with older python-sc2 versions
-                harass_banelings = []
-            if harass_banelings:
-                enemy_structures = self.bot.known_enemy_structures
-
-                if enemy_structures:
-                    # Get expansion locations starting from enemy start location
-                    enemy_townhalls = enemy_structures.of_type(
-                        const2.TOWNHALLS)
-
-                    if enemy_townhalls:
-                        # Get the enemy townhall that we know of that is the furthest away from
-                        # the closest enemy structure we know of. Hopefully this means they attack
-                        # far away from where the main army will be attacking
-                        enemy_townhall = enemy_townhalls.furthest_to(
-                            enemy_structures.closest_to(self.bot.start_location))
-
-                        for baneling in harass_banelings:
-                            target = enemy_townhall
-                            self.bot.actions.append(baneling.move(target.position))
-                            self.banelings_harassing.add(baneling.tag)
+            # try:
+            #     harass_banelings: List = banelings.take(4)
+            # except AssertionError:
+            #     # Backwards compatibility with older python-sc2 versions
+            #     harass_banelings = []
+            # if harass_banelings:
+            #     enemy_structures = self.bot.known_enemy_structures
+            #
+            #     if enemy_structures:
+            #         # Get expansion locations starting from enemy start location
+            #         enemy_townhalls = enemy_structures.of_type(
+            #             const2.TOWNHALLS)
+            #
+            #         if enemy_townhalls:
+            #             # Get the enemy townhall that we know of that is the furthest away from
+            #             # the closest enemy structure we know of. Hopefully this means they attack
+            #             # far away from where the main army will be attacking
+            #             enemy_townhall = enemy_townhalls.furthest_to(
+            #                 enemy_structures.closest_to(self.bot.start_location))
+            #
+            #             for baneling in harass_banelings:
+            #                 target = enemy_townhall
+            #                 self.bot.actions.append(baneling.move(target.position))
+            #                 self.banelings_harassing.add(baneling.tag)
 
             # Burrow banelings
             burrowed_banelings = self.bot.units(const.BANELINGBURROWED)
