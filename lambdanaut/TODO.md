@@ -56,9 +56,6 @@
   * Don't switch to moving_to_attacking if we have an upgrade that is 0.5-0.85% done
    
   * Only spawn creep tumors with non-townhall queens
-  
-  * If we have a baneling nest and we're being attacked with an army greater than ours made of lings, 
-    send lings to a corner of main to mutate into banelings. Would defend against hammerbot. 
 
   * Prefer visible enemies to use bile on. This will prevent us from attempting to bile where we can't see.
 
@@ -69,8 +66,12 @@
 
   * Use A* when we switch to ATTACKING to hit the enemy where they're most vulnerable
   
+  * If we have a baneling nest and we're being attacked with an army greater than ours made of lings, 
+    send lings to a corner of main to mutate into banelings. Would defend against hammerbot. 
+
   * Better baneling vs marine micro. 
     * Have banelings explode on marines before they reach the marine
+    * Having banelings explode when they're close enough to the best splash target could be good enough. 
 
   * Add attention function that keeps army moving towards a target destination during attacks. 
     We want to walk by low priority targets. Would be useful against AdditionalPylons during ravager rushes when the

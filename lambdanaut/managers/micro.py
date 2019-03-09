@@ -437,7 +437,7 @@ class MicroManager(Manager):
                 if enemies_in_range:
                     # Burrow lurkers with enemies nearby
                     self.bot.actions.append(lurker(const.AbilityId.BURROWDOWN_LURKER))
-                elif enemies_nearby:
+                elif enemies_nearby and not self.bot.unit_is_busy(lurker):
                     # Move towards nearby enemies
                     closest_enemy = lurker.position.closest(enemies_nearby)
                     self.bot.actions.append(lurker.attack(closest_enemy.position))
@@ -759,7 +759,7 @@ class MicroManager(Manager):
                             #         self.bot.actions.append(unit.snapshot.move(away_from_enemy))
 
                             # Close the distance if our cluster isn't in range
-                            elif unit_is_combatant and ranged_units_in_attack_range_ratio < 0.5 \
+                            elif unit_is_combatant and ranged_units_in_attack_range_ratio < 0.8 \
                                     and not self.bot.is_melee(unit) \
                                     and len(army_cluster) > 6 \
                                     and unit.weapon_cooldown \

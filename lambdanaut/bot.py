@@ -253,13 +253,11 @@ class Lambdanaut(sc2.BotAI):
             self.force_manager.dont_stop_attacking = True; self.force_manager.state = const2.ForcesStates.ATTACKING
 
             # await self._client.debug_create_unit([[const.ZERGLING, 22, self.start_location - Point2((10, 0)), 1]])
-            await self._client.debug_create_unit([[const.INFESTOR, 20, self.start_location - Point2((10, 0)), 1]])
-            await self._client.debug_create_unit([[const.INFESTATIONPIT, 1, self.start_location - Point2((10, 0)), 1]])
-            await self._client.debug_create_unit([[const.HATCHERY, 1, self.start_location - Point2((10, 0)), 1]])
+            await self._client.debug_create_unit([[const.HYDRALISK, 20, self.start_location - Point2((10, 0)), 1]])
             await self._client.debug_create_unit([[const.UnitTypeId.COLOSSUS, 5, self.start_location + Point2((6, 0)), 2]])
-            await self._client.debug_create_unit([[const.UnitTypeId.IMMORTAL, 5, self.start_location + Point2((6, 0)), 2]])
+            # await self._client.debug_create_unit([[const.UnitTypeId.IMMORTAL, 5, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.PHOTONCANNON, 6, self.start_location + Point2((6, 0)), 2]])
-            await self._client.debug_create_unit([[const.PYLON, 2, self.start_location + Point2((6, 0)), 2]])
+            await self._client.debug_create_unit([[const.PYLON, 1, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.SUPPLYDEPOT, 3, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.PROBE, 20, self.start_location + Point2((9, 0)), 2]])
             # await self._client.debug_create_unit([[const.NEXUS, 1, self.start_location + Point2((2, 0)), 2]])

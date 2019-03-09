@@ -1,4 +1,3 @@
-import functools
 from typing import Callable, List
 
 import lib.sc2.constants as const
@@ -116,9 +115,9 @@ class ForceManager(StatefulManager):
         """
         return {
             BuildStages.OPENING: 60,  # Allow greater distances for rush
-            BuildStages.EARLY_GAME: 10,
-            BuildStages.MID_GAME: 10,
-            BuildStages.LATE_GAME: 10,
+            BuildStages.EARLY_GAME: 7,
+            BuildStages.MID_GAME: 8,
+            BuildStages.LATE_GAME: 15,
         }[build_stage]
 
     def get_target(self):
@@ -568,7 +567,7 @@ class ForceManager(StatefulManager):
                     army, self.bot.enemy_cache.values(), ignore_workers=True)
 
                 if self.allow_attacking \
-                        and ((relative_army_strength > 7 and len(army) > 4)
+                        and ((relative_army_strength > 4 and len(army) > 4)
                              or (relative_army_strength > -6
                                  and army_value > self.army_value_to_attack)) \
                              or self.bot.supply_used > 195:
@@ -592,7 +591,7 @@ class ForceManager(StatefulManager):
                 expansion_location = await self.bot.get_next_expansion()
 
                 # Worker made it to the destination.
-                if escorting_worker.distance_to(expansion_location) < 1:
+                if expansion_location and escorting_worker.distance_to(expansion_location) < 1:
                     return await self.change_state(ForcesStates.HOUSEKEEPING)
 
         # MOVING_TO_ATTACK
