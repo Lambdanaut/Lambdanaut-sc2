@@ -63,6 +63,8 @@
     * If we still haven't scouted an enemy natural expand, switch to a 2-base aggressive/defensive build like nydus.
 
   * Optimize overlord fleeing from points in a line.
+    * Right now we generate a list of points in a line to check if enemies are nearby them
+    * What if instead we checked enemy distances to the line itself (linear function..? y=mx+b?)
 
 ## MEDIUM PRIORITY
 

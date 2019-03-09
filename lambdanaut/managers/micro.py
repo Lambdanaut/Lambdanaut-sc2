@@ -69,6 +69,9 @@ class MicroManager(Manager):
         # Micro zerglings
         for zergling in zerglings:
 
+            if zergling.tag in self.bot.occupied_units:
+                continue
+
             nearby_enemy_units = self.bot.known_enemy_units.closer_than(6, zergling)
             if nearby_enemy_units:
 

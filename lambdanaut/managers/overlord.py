@@ -11,6 +11,9 @@ import lambdanaut.utils as utils
 
 
 class OverlordManager(StatefulManager):
+    """
+    Handles overlord management and broad scouting procedures like zergling scouting.
+    """
 
     name = 'Overlord Manager'
 
@@ -52,6 +55,9 @@ class OverlordManager(StatefulManager):
 
         # Expiring list of recent expansions we've sent an overlord to
         self._recent_expansions_visited = ExpiringList()
+
+        # Tags of zerglings that are scouting enemy units
+        self.scouting_zergling_tags = set()
 
     @property
     def scouting_overlord_tags(self):
@@ -242,6 +248,57 @@ class OverlordManager(StatefulManager):
             if self.move_overlord_scout_2_to_enemy_ramp and scouting_overlord.is_idle:
                 # Move the scouting overlord directly to the enemy ramp for vision
                 self.move_overlord_to_enemy_ramp(scouting_overlord)
+
+    def zergling_scouting(self):
+        """
+        Scout enemy units with zerglings
+        """
+        zerglings = self.bot.units(const.ZERGLING)
+
+        if len(zerglings) >= 8:
+            if self.scouting_zergling_tags:
+                zergling_tags_to_remove = set()
+                for zergling_tag in self.scouting_zergling_tags:
+
+                    # Make sure the zergling tag is always in the occupied units set
+                    self.bot.occupied_units.add(zergling_tag)
+
+                    zergling = zerglings.find_by_tag(zergling_tag)
+
+                    enemy_townhalls = self.bot.known_enemy_structures(const2.TOWNHALLS)
+                    enemies = [u.snapshot for u in self.bot.enemy_cache.values()
+                               if u.can_attack_ground]
+
+                    if enemy_townhalls:
+                        enemy_target = enemy_townhalls.furthest_to(
+                            self.bot.enemy_start_location).position
+                    else:
+                        enemy_target = self.bot.enemy_start_location
+
+                    if zergling:
+                        closest_enemy = zergling.position.closest(enemies)
+
+                        if zergling.distance_to(enemy_target) < \
+                            self.bot.start_location_to_enemy_start_location_distance / 2 \
+                                and closest_enemy.distance_to(zergling) < max(6, closest_enemy.ground_range * 2) \
+                                and len(self.bot.units.closer_than(20, zergling)) < 5:
+                            target = zergling.position.towards(self.bot.start_location, 20)
+                            self.bot.actions.append(zergling.move(target))
+                        elif zergling.distance_to(enemy_target) > 10 \
+                                and not self.bot.unit_is_busy(zergling) \
+                                and not zergling.is_attacking:
+                            self.bot.actions.append(zergling.move(enemy_target))
+
+                    else:
+                        # Zergling is dead. Remove its tag.
+                        zergling_tags_to_remove.add(zergling_tag)
+
+                self.scouting_zergling_tags -= zergling_tags_to_remove
+            else:
+                # Add zergling to scouting_zergling_tags
+                for zergling in zerglings[:1]:
+                    self.scouting_zergling_tags.add(zergling.tag)
+
 
     def baneling_drops(self):
         """
@@ -518,3 +575,4 @@ class OverlordManager(StatefulManager):
         self.baneling_drops()
         self.overlord_flee()
         self.overlord_dispersal()
+        self.zergling_scouting()
