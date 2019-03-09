@@ -209,7 +209,9 @@ class OverlordManager(StatefulManager):
                                                  if u.distance_to(point) < u.air_range)
 
                         if nearby_enemy_units:
-                            self.bot.actions.append(overlord.stop())
+                            target = utils.towards_direction(overlord.position, overlord.facing, -4)
+                            self.bot.actions.append(overlord.move(target))
+
                             break
 
     def proxy_scout_with_second_overlord(self):

@@ -47,14 +47,6 @@
 
 ## HIGH PRIORITY
 
-  * Validate that `unit_is_melee` returns False for melee units.
-  
-  * Keep overlords away from enemy when they're dispersing
-    * If target point is > 20 from overlord
-    * Get x points between target point and current point
-    * If any enemy units that can attack air are within 10 distance of any of those points
-    * Then stop the overlord
-
   * Keep army together when attacking. Right now zerglings run ahead first. 
   
   * Attack multiple bases with zerglings
@@ -331,4 +323,12 @@
 
   * When defending, defend close to the townhall. No need to leave it. 
     * Attack-move non-busy units to the townhall with the nearest enemy unit
+
+  * Validate that `unit_is_melee` returns False for melee units.
+  
+  * Keep overlords away from enemy when they're dispersing
+    * If target point is > 20 from overlord
+    * Get x points between target point and current point
+    * If any enemy units that can attack air are within 10 distance of any of those points
+    * Then stop the overlord
 
