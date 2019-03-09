@@ -314,8 +314,10 @@ class ForceManager(StatefulManager):
             # Only burrow up to six banelings at a time
             if const.BURROW in self.bot.state.upgrades and \
                     (not burrowed_banelings or len(burrowed_banelings) < 4):
+
                 # Get the banelings that aren't harassing mineral lines
-                banelings = banelings.tags_not_in(self.banelings_harassing)
+                banelings = banelings.tags_not_in(self.banelings_harassing).sorted(
+                    lambda b: b.distance_to(self.bot.enemy_start_location))
 
                 if len(banelings) >= 4:
                     # Get two banelings
