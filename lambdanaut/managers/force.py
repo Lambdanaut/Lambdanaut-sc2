@@ -573,7 +573,7 @@ class ForceManager(StatefulManager):
                     army, self.bot.enemy_cache.values(), ignore_workers=True)
 
                 if self.allow_attacking \
-                        and ((relative_army_strength > 4 and len(army) > 4)
+                        and ((relative_army_strength > 3 and len(army) > 4)
                              or (relative_army_strength > -6
                                  and army_value > self.army_value_to_attack)) \
                              or self.bot.supply_used > 195:
