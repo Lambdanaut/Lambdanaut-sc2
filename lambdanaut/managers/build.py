@@ -573,6 +573,11 @@ class BuildManager(Manager):
             overlord_egg_count = self.bot.already_pending(const.OVERLORD)
             overlord_egg_supply = overlord_egg_count * 8  # Overlords provide 8 supply
 
+            # Calculate the supply coming from nearly-done hatcheries
+            hatcheries_in_progress_count = len(self.bot.units(const.HATCHERY).filter(
+                lambda u: not u.is_ready and u.build_progress > 0.55))
+            hatcheries_in_progress_supply = hatcheries_in_progress_count * 8
+
             supply_left = self.bot.supply_left + overlord_egg_supply - damaged_overlord_supply
 
             # Controls how soon we build overlords when we near supply cap.
