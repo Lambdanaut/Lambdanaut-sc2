@@ -208,26 +208,26 @@ class IntelManager(Manager):
             if (
                     enemy_counter[const.ZERGLING] >= 6
                     or enemy_counter[const.RAVAGER] >= 1
-                    or enemy_counter[const.MARINE] >= 6
+                    or enemy_counter[const.MARINE] >= 5
                     or enemy_counter[const.REAPER] >= 3
                     or enemy_counter[const.MARAUDER] >= 3
-                    or enemy_counter[const.ZEALOT] >= 6
+                    or enemy_counter[const.ZEALOT] >= 3
                     or enemy_counter[const.ADEPT] >= 4
-                    or enemy_counter[const.STALKER] >= 5):
+                    or enemy_counter[const.STALKER] >= 3):
                 self.has_scouted_enemy_rush = True
                 return True
 
             # Count nearby enemy units
             elif (
-                    nearby_enemy_counter[const.DRONE] >= 6
+                    nearby_enemy_counter[const.DRONE] >= 5
                     or nearby_enemy_counter[const.ZERGLING] >= 4
                     or enemy_counter[const.RAVAGER] >= 1
-                    or nearby_enemy_counter[const.SCV] >= 7
+                    or nearby_enemy_counter[const.SCV] >= 5
                     or nearby_enemy_counter[const.MARINE] >= 1
                     or nearby_enemy_counter[const.REAPER] >= 2
                     or nearby_enemy_counter[const.MARAUDER] >= 1
-                    or nearby_enemy_counter[const.PROBE] >= 7
-                    or nearby_enemy_counter[const.ZEALOT] >= 2
+                    or nearby_enemy_counter[const.PROBE] >= 5
+                    or nearby_enemy_counter[const.ZEALOT] >= 1
                     or nearby_enemy_counter[const.ADEPT] >= 3
                     or nearby_enemy_counter[const.STALKER] >= 2):
                 self.has_scouted_enemy_rush = True

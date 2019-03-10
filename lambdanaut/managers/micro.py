@@ -190,8 +190,6 @@ class MicroManager(Manager):
                                 closest_enemy = None
 
                             if closest_enemy is not None \
-                                    and zergling.distance_to(enemy_target) < \
-                                    self.bot.start_location_to_enemy_start_location_distance / 2 \
                                     and closest_enemy.distance_to(zergling) < max(
                                         5, closest_enemy.ground_range * self.scouting_zergling_proximity) \
                                     and len(self.bot.units.closer_than(20, zergling)) < 5:
