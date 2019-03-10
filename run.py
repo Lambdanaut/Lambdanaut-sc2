@@ -52,7 +52,7 @@ DIFFICULTY = sc2.Difficulty.CheatMoney
 # DIFFICULTY = sc2.Difficulty.Easy
 
 RACE = sc2.Race.Zerg
-ENEMY_RACE = sc2.Race.Protoss
+ENEMY_RACE = sc2.Race.Terran
 REPLAY_NAME = os.path.join("replays", "last_lambdanaut_replay{}.*.sc2replay".format(datetime_str))
 
 if not MAP_NAME:
