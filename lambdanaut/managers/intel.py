@@ -244,12 +244,13 @@ class IntelManager(Manager):
         publish a message to search for further enemy tech structures.
         """
         if not self.has_published_need_more_enemy_tech_intel \
-                and self.bot.build_manager.build_stage in {BuildStages.MID_GAME, BuildStages.LATE_GAME}:
+                and not self.has_published_scouted_enemy_tech_intel \
+                and len(self.bot.townhalls.ready) > 2:
 
             non_tech_structures = {const.SUPPLYDEPOT, const.PYLON}
             enemy_tech_structures = self.bot.known_enemy_structures.exclude_type(non_tech_structures)
 
-            if len(enemy_tech_structures) < 2:
+            if len(enemy_tech_structures) < 3:
                 self.has_published_need_more_enemy_tech_intel = True
                 return True
 
