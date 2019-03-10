@@ -56,7 +56,7 @@ class UnitCached(object):
                 const.EffectId.RAVAGERCORROSIVEBILECP,
                 const.EffectId.BLINDINGCLOUDCP,
                 const.EffectId.PSISTORMPERSISTENT,
-                const.EffectId.LURKERMP,
+                # const.EffectId.LURKERMP,
             }
 
             for effect in filter(lambda e: e.id in effects_to_avoid, effects):

@@ -39,6 +39,9 @@ class BuildManager(Manager):
         self.build_target: Union[UpgradeId, UnitTypeId] = None
         self.last_build_target: Union[UpgradeId, UnitTypeId] = None
 
+        # Ratio (0.0 - 1.0) of how far we've reached in the current build stage
+        self.build_stage_percentage: float = 0.0
+
         # Flag for if we've already changed the midgame. We only want to do this once
         self.has_switched_midgame = False
 
@@ -91,6 +94,10 @@ class BuildManager(Manager):
     async def init(self):
         self.determine_opening_builds()
         self.add_build(self.starting_build)
+
+    @property
+    def percentage_done_with_build_stage(self):
+        return self.build_stage_index / len()
 
     def can_afford(self, unit):
         """Returns boolean indicating if the player has enough minerals,
@@ -749,6 +756,10 @@ class BuildManager(Manager):
                         # Found build target
                         self.last_build_target = self.build_target
                         self.build_target = unit
+
+                        # Update build_stage_index if we haven't started accumulating build_targets
+                        if not build_targets:
+                            self.build_stage_percentage = unit_i / len(build_queue)
 
                         build_stage = builds.get_build_stage(build)
                         if build_stage != self.build_stage and build_targets == []:

@@ -30,9 +30,9 @@ MAPS = [
 
 MAP_NAME = "ParaSiteLE"
 MICRO_MAP_NAME = "kairo_training"
-VS_HUMAN = False
+VS_HUMAN = True
 VS_BOT = False
-REALTIME = False
+REALTIME = True
 
 BUILD = None
 # BUILD = sc2.AIBuild.RandomBuild
@@ -51,7 +51,7 @@ DIFFICULTY = sc2.Difficulty.CheatMoney
 # DIFFICULTY = sc2.Difficulty.Easy
 
 RACE = sc2.Race.Zerg
-ENEMY_RACE = sc2.Race.Protoss
+ENEMY_RACE = sc2.Race.Zerg
 REPLAY_NAME = os.path.join("replays", "last_lambdanaut_replay{}.*.sc2replay".format(datetime_str))
 
 if not MAP_NAME:

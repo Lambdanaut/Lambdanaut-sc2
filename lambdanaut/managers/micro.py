@@ -7,8 +7,9 @@ from lib.sc2.position import Point2
 from lib.sc2.unit import Unit
 import lib.sc2.constants as const
 
+from lambdanaut.builds import BuildStages
 import lambdanaut.const2 as const2
-from lambdanaut.const2 import DefenseStates, Messages
+from lambdanaut.const2 import Messages
 from lambdanaut.expiringlist import ExpiringList
 from lambdanaut.managers import Manager
 from lambdanaut.pathfinding import Pathfinder
@@ -35,6 +36,7 @@ class MicroManager(Manager):
         # Subscribe to messages
         self.subscribe(Messages.UNROOT_ALL_SPINECRAWLERS)
         self.subscribe(Messages.BUILD_OFFENSIVE_SPINES)
+        self.subscribe(Messages.NEW_BUILD_STAGE)
 
         # Track the last fungal growth used
         # Because the sc2 protocol doesn't let us see buffs on enemies, we only allow
@@ -43,6 +45,14 @@ class MicroManager(Manager):
 
         # Flag indicating whether we should unroot spines or not
         self.should_unroot_spines = True
+
+        # Tags of zerglings that are scouting enemy units
+        self.scouting_zergling_tags = set()
+
+        # Track whether we're performing a zergling run-by.
+        # If there is a `True` in this list, we are performing one.
+        self._performing_zergling_runby = ExpiringList()
+        self.has_performed_zergling_runby = False
 
     async def manage_drones(self):
         # Burrow damaged workers if enemies are nearby
@@ -69,7 +79,7 @@ class MicroManager(Manager):
         # Micro zerglings
         for zergling in zerglings:
 
-            if zergling.tag in self.bot.occupied_units:
+            if zergling.tag in self.scouting_zergling_tags:
                 continue
 
             nearby_enemy_units = self.bot.known_enemy_units.closer_than(6, zergling)
@@ -125,6 +135,81 @@ class MicroManager(Manager):
         #                         # Never burrow more than 5 zerglings at a time
         #                         if self.bot.units(const.UnitTypeId.ZERGLINGBURROWED).amount < 5:
         #                             self.bot.actions.append(zergling(const.BURROWDOWN_ZERGLING))
+
+    async def manage_zergling_scouting(self):
+        """
+        Scout enemy units with zerglings
+        """
+        zerglings = self.bot.units(const.ZERGLING)
+
+        if len(zerglings) >= 4:
+            if self.scouting_zergling_tags:
+                zergling_tags_to_remove = set()
+                for zergling_tag in self.scouting_zergling_tags:
+
+                    zergling = zerglings.find_by_tag(zergling_tag)
+
+                    if zergling:
+                        if self._performing_zergling_runby.contains(True, self.bot.state.game_loop) \
+                                and not zergling.is_moving:
+                            # Perform a zergling runby of the enemy base
+
+                            loc1 = self.bot.enemy_start_location + Point2((5, 0))
+                            loc2 = self.bot.enemy_start_location + Point2((5, 5))
+                            loc3 = self.bot.enemy_start_location + Point2((0, 5))
+
+                            self.bot.actions.append(zergling.move(loc1))
+                            self.bot.actions.append(zergling.move(loc2, queue=True))
+                            self.bot.actions.append(zergling.move(loc3, queue=True))
+                            self.bot.actions.append(zergling.move(self.bot.start_location, queue=True))
+
+                        else:
+                            # Perform zergling cautious scouting
+
+                            enemy_townhalls = self.bot.known_enemy_structures(const2.TOWNHALLS)
+                            enemies = [u.snapshot for u in self.bot.enemy_cache.values()
+                                       if u.can_attack_ground]
+
+                            if enemy_townhalls:
+                                enemy_target = enemy_townhalls.furthest_to(
+                                    self.bot.enemy_start_location).position
+                            else:
+                                enemy_target = self.bot.enemy_start_location
+
+                            if enemies:
+                                closest_enemy = zergling.position.closest(enemies)
+                            else:
+                                closest_enemy = None
+
+                            ground_range_ratio = 2.5
+                            if self.bot.enemy_race is sc2.Race.Zerg:
+                                ground_range_ratio = 1.5
+
+                            if closest_enemy is not None \
+                                    and zergling.distance_to(enemy_target) < \
+                                    self.bot.start_location_to_enemy_start_location_distance / 2 \
+                                    and closest_enemy.distance_to(zergling) < max(
+                                        5, closest_enemy.ground_range * ground_range_ratio) \
+                                    and len(self.bot.units.closer_than(20, zergling)) < 5:
+                                target = zergling.position.towards(self.bot.start_location, 20)
+                                self.bot.actions.append(zergling.move(target))
+                            elif zergling.distance_to(enemy_target) > 10 \
+                                    and not self.bot.unit_is_busy(zergling) \
+                                    and not zergling.is_attacking:
+                                self.bot.actions.append(zergling.attack(enemy_target))
+
+                    else:
+                        # Zergling is dead. Remove its tag.
+                        zergling_tags_to_remove.add(zergling_tag)
+
+                self.scouting_zergling_tags -= zergling_tags_to_remove
+            else:
+                # Add zergling to scouting_zergling_tags
+                for zergling in zerglings[:1]:
+                    self.scouting_zergling_tags.add(zergling.tag)
+
+                    # Make sure this units tag is in occupied units
+                    self.bot.occupied_units.add(zergling.tag)
 
     async def manage_banelings(self):
         banelings = self.bot.units(const.BANELING)
@@ -862,6 +947,18 @@ class MicroManager(Manager):
 
                 self.should_unroot_spines = False
 
+            # Messages indicating we should perform a zergling runby
+            if message is Messages.NEW_BUILD_STAGE:
+                self.ack(message)
+
+                if val is BuildStages.MID_GAME \
+                        and not self.has_performed_zergling_runby \
+                        and self.bot.enemy_race in {sc2.Race.Zerg, sc2.Race.Protoss}:
+
+                    self.has_performed_zergling_runby = True
+                    self._performing_zergling_runby.add(
+                        True, self.bot.state.game_loop, expiry=60)
+
     async def run(self):
         await super(MicroManager, self).run()
 
@@ -875,6 +972,7 @@ class MicroManager(Manager):
 
         await self.manage_drones()
         await self.manage_zerglings()
+        await self.manage_zergling_scouting()
         await self.manage_banelings()
         await self.manage_roaches()
         await self.manage_ravagers()

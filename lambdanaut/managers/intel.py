@@ -206,20 +206,20 @@ class IntelManager(Manager):
 
             # Count any and all enemy units
             if (
-                    enemy_counter[const.ZERGLING] >= 14
-                    or enemy_counter[const.RAVAGER] >= 2
-                    or enemy_counter[const.MARINE] >= 7
+                    enemy_counter[const.ZERGLING] >= 6
+                    or enemy_counter[const.RAVAGER] >= 1
+                    or enemy_counter[const.MARINE] >= 6
                     or enemy_counter[const.REAPER] >= 3
-                    or enemy_counter[const.MARAUDER] >= 4
-                    or enemy_counter[const.ZEALOT] >= 7
-                    or enemy_counter[const.ADEPT] >= 5
-                    or enemy_counter[const.STALKER] >= 6):
+                    or enemy_counter[const.MARAUDER] >= 3
+                    or enemy_counter[const.ZEALOT] >= 6
+                    or enemy_counter[const.ADEPT] >= 4
+                    or enemy_counter[const.STALKER] >= 5):
                 self.has_scouted_enemy_rush = True
                 return True
 
             # Count nearby enemy units
             elif (
-                    nearby_enemy_counter[const.DRONE] >= 7
+                    nearby_enemy_counter[const.DRONE] >= 6
                     or nearby_enemy_counter[const.ZERGLING] >= 4
                     or enemy_counter[const.RAVAGER] >= 1
                     or nearby_enemy_counter[const.SCV] >= 7
