@@ -140,6 +140,20 @@ UNUPGRADED_TOWNHALLS = {const.HATCHERY, const.NEXUS, const.COMMANDCENTER}
 ATTRIBUTES = dict(data_pb2.Attribute.items())
 
 
+# Map for units that have no dps, but we'd like to treat as if they do
+DEFAULT_DPS_MAP = {
+    const.BUNKER: 30,
+    const.SIEGETANKSIEGED: 40,
+    const.RAVEN: 25,
+    const.HIGHTEMPLAR: 30,
+    const.DISRUPTOR: 30,
+    const.BANELING: 30,
+    const.INFESTOR: 30,
+    const.VIPER: 30,
+    const.LURKERMP: 30,
+    const.LURKERMPBURROWED: 30,
+}
+
 # Messages
 class Messages(enum.Enum):
     # # ENEMY START LOCATION MESSAGES

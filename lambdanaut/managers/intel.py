@@ -104,14 +104,16 @@ class IntelManager(Manager):
 
             enemy_counter_with_roach_units = self.bot.known_enemy_units.of_type(enemy_counter_with_roach_types)
 
-            factory_count = len(self.bot.known_enemy_units.of_type(const.FACTORY))
-            # reaper_count = len(self.bot.known_enemy_units.of_type(const.REAPER))
-            tank_count = len(self.bot.known_enemy_units.of_type(
-                {const.SIEGETANK, const.SIEGETANKSIEGED}))
+            # Removed countering with roaches vs Terran
 
-            if enemy_counter_with_roach_units.exists \
-                    or factory_count > 1 \
-                    or tank_count > 1:
+            # factory_count = len(self.bot.known_enemy_units.of_type(const.FACTORY))
+            # reaper_count = len(self.bot.known_enemy_units.of_type(const.REAPER))
+            # tank_count = len(self.bot.known_enemy_units.of_type(
+            #     {const.SIEGETANK, const.SIEGETANKSIEGED}))
+
+            if enemy_counter_with_roach_units.exists:
+                    # or factory_count > 1 \
+                    # or tank_count > 1:
                 self.has_scouted_enemy_counter_with_roaches = True
                 return True
 

@@ -47,6 +47,9 @@
 
 ## HIGH PRIORITY
 
+  * Better relative army strength prediction
+    * Ranged units should be weighted
+
   * Keep army together when attacking. Right now zerglings run ahead first. 
 
   * Switch into 2 base nydus build if we scout multiple banshees and have fewer than 4 townhalls

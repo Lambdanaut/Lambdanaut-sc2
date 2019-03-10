@@ -269,8 +269,8 @@ class Lambdanaut(sc2.BotAI):
             self.force_manager.dont_stop_attacking = True; self.force_manager.state = const2.ForcesStates.ATTACKING
 
             # await self._client.debug_create_unit([[const.ZERGLING, 22, self.start_location - Point2((10, 0)), 1]])
-            await self._client.debug_create_unit([[const.ULTRALISK, 20, self.start_location - Point2((10, 0)), 1]])
-            await self._client.debug_create_unit([[const.UnitTypeId.COLOSSUS, 20, self.start_location + Point2((6, 0)), 2]])
+            await self._client.debug_create_unit([[const.ZERGLING, 5, self.start_location - Point2((10, 0)), 1]])
+            await self._client.debug_create_unit([[const.UnitTypeId.MARINE, 5, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.UnitTypeId.IMMORTAL, 5, self.start_location + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.PHOTONCANNON, 6, self.start_location + Point2((6, 0)), 2]])
             await self._client.debug_create_unit([[const.PYLON, 1, self.start_location + Point2((6, 0)), 2]])
@@ -853,20 +853,7 @@ class Lambdanaut(sc2.BotAI):
         unit doesn't have dps, but still does damage (like banelings)
         """
 
-        default_dps_map = {
-            const.BUNKER: 30,
-            const.SIEGETANKSIEGED: 40,
-            const.RAVEN: 25,
-            const.HIGHTEMPLAR: 30,
-            const.DISRUPTOR: 30,
-            const.BANELING: 30,
-            const.INFESTOR: 30,
-            const.VIPER: 30,
-            const.LURKERMP: 30,
-            const.LURKERMPBURROWED: 30,
-        }
-
-        default_dps = default_dps_map.get(unit.type_id)
+        default_dps = const2.DEFAULT_DPS_MAP.get(unit.type_id)
         if default_dps is not None:
             return default_dps
 
@@ -906,10 +893,40 @@ class Lambdanaut(sc2.BotAI):
               and (not ignore_defensive_structures or u not in const2.DEFENSIVE_STRUCTURES)
               and (ignore_workers or u.type_id not in const2.WORKERS)]
 
-        u1_dps = sum(self.adjusted_dps(u) for u in u1)
-        u2_dps = sum(self.adjusted_dps(u) for u in u2)
+        u1_melee = []
+        u1_ranged = []
+        for u in u1:
+            if self.is_melee(u):
+                # Melee
+                u1_melee.append(u)
+            elif u.type_id in const2.DEFAULT_DPS_MAP:
+                # Spellcasters
+                u1_ranged.append(u)
+            else:
+                # Ranged
+                u1_ranged.append(u)
 
-        if u1_dps == 0 and u2_dps == 0:
+        u2_melee = []
+        u2_ranged = []
+        for u in u2:
+            if self.is_melee(u):
+                # Melee
+                u2_melee.append(u)
+            elif u.type_id in const2.DEFAULT_DPS_MAP:
+                # Spellcasters
+                u2_ranged.append(u)
+            else:
+                # Ranged
+                u2_ranged.append(u)
+
+        u1_melee_dps = sum(self.adjusted_dps(u) for u in u1_melee)
+        u1_ranged_dps = sum(self.adjusted_dps(u) for u in u1_ranged)
+
+        u2_melee_dps = sum(self.adjusted_dps(u) for u in u2_melee)
+        u2_ranged_dps = sum(self.adjusted_dps(u) for u in u2_ranged)
+
+        if u1_melee_dps == 0 and u1_ranged_dps == 0 and u2_melee_dps == 0 and u2_ranged_dps == 0:
+            # Return 0 if there are no units with dps
             return 0
 
         def calc_health(u: Unit) -> int:
@@ -925,38 +942,49 @@ class Lambdanaut(sc2.BotAI):
         elif u2_health == 0 or not u2:
             return len(u1)
 
-        u1_avg_dps = u1_dps / len(u1)
-        u2_avg_dps = u2_dps / len(u2)
-
         u1_avg_health = u1_health / len(u1)
         u2_avg_health = u2_health / len(u2)
+
+        u1_melee_avg_dps = u1_melee_dps / len(u1_melee) if u1_melee_dps else 0
+        u1_ranged_avg_dps = u1_ranged_dps / len(u1_ranged) if u1_ranged else 0
+
+        u2_melee_avg_dps = u2_melee_dps / len(u2_melee) if u2_melee_dps else 0
+        u2_ranged_avg_dps = u2_ranged_dps / len(u2_ranged) if u2_ranged else 0
 
         if not ignore_height_difference:
             u1_avg_height = sum(u.position3d.z for u in u1) / len(u1)
             u2_avg_height = sum(u.position3d.z for u in u2) / len(u2)
 
-            # Simulate high ground advantage with 1.5x DPS
+            # Simulate high ground advantage with 1.5x ranged DPS
             if u1_avg_height * 0.85 > u2_avg_height:
-                u1_avg_dps *= 1.5
+                u1_ranged_avg_dps *= 1.5
             elif u2_avg_height * 0.85 > u1_avg_height:
-                u2_avg_dps *= 1.5
+                u2_ranged_avg_dps *= 1.5
 
         # How many enemy units are destroyed per second
-        u1_loss_rate = u1_avg_dps / u2_avg_health
-        u2_loss_rate = u2_avg_dps / u1_avg_health
+        u1_loss_rate = (u1_melee_avg_dps + u1_ranged_avg_dps) / u2_avg_health
+        u2_loss_rate = (u2_melee_avg_dps + u2_ranged_avg_dps) / u1_avg_health
 
         # Lanchesters law calls for an exponent of 2.
-        # Use 1.5 to slightly bias towards the linear law
-        power = 1.5
+        # Use 1.2 to bias towards the linear law for melee
+        # Use 1.6 for ranged
+        power_m = 1.2
+        power_r = 1.6
 
-        u1_term = u1_loss_rate * len(u1) ** power
-        u2_term = u2_loss_rate * len(u2) ** power
+        u1_melee_powered = len(u1_melee) ** power_m
+        u1_ranged_powered = len(u1_ranged) ** power_r
+
+        u2_melee_powered = len(u2_melee) ** power_m
+        u2_ranged_powered = len(u2_ranged) ** power_r
+
+        u1_term = u1_loss_rate * (u1_melee_powered + u1_ranged_powered)
+        u2_term = u2_loss_rate * (u2_melee_powered + u2_ranged_powered)
 
         if u1_term > u2_term:
-            result = math.sqrt(len(u1) ** power - u2_loss_rate / u1_loss_rate * len(u2) ** power)
+            result = math.sqrt((u1_melee_powered + u1_ranged_powered) - u2_loss_rate / u1_loss_rate * (u2_melee_powered + u2_ranged_powered))
             return result
         elif u2_term > u1_term:
-            result = math.sqrt(len(u2) ** power - u1_loss_rate / u2_loss_rate * len(u1) ** power)
+            result = math.sqrt((u2_melee_powered + u2_ranged_powered) - u1_loss_rate / u2_loss_rate * (u1_melee_powered + u1_ranged_powered))
             return -result
 
         return 0
