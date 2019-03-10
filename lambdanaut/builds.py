@@ -544,9 +544,9 @@ EARLY_GAME_HATCHERY_FIRST = [
 # Get a hatchery first with 4 defensive Zerglings. Go for another hatchery soon after.
 EARLY_GAME_HATCHERY_FIRST_GREEDY = [
     HATCHERY,  # 2 (First expand)
+    DRONE,  # 18
     EXTRACTOR,  # 1
     AtLeast(1, SPAWNINGPOOL),
-    DRONE,  # 18
     DRONE, DRONE,  # 20
     AtLeast(3, OVERLORD),  # 3
     CanAfford(ZERGLINGMOVEMENTSPEED),

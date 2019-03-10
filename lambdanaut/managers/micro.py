@@ -106,15 +106,10 @@ class MicroManager(Manager):
                     self.bot.actions.append(zergling.attack(target))
 
                 closest_enemy_unit = nearby_enemy_units.closest_to(zergling)
+                closest_enemy_neighbors = self.bot.known_enemy_units.\
+                    closer_than(7, closest_enemy_unit.position).not_structure
 
-                # COMMENTED OUT ZERGLING SURROUND CODE
-                # Get groups of nearby zerglings at different distances to enemy unit
-                # nearby_zerglings_7 = zerglings.closer_than(7, closest_enemy_unit)
-                # nearby_zerglings_4 = nearby_zerglings_7.closer_than(4, closest_enemy_unit)
-                # nearby_zerglings_2 = nearby_zerglings_4.closer_than(2, closest_enemy_unit)
-                #
-                # majority_of_zerglings_closer_than_4_are_not_closer_than_2 = \
-                #     len(nearby_zerglings_4) / 2 > len(nearby_zerglings_2)
+                nearby_zerglings = zerglings.closer_than(9, closest_enemy_unit)
 
                 if closest_enemy_unit.type_id == const.BANELING:
                     # Micro away from banelings
@@ -122,32 +117,35 @@ class MicroManager(Manager):
                     distance_to_enemy = zergling.distance_to(closest_enemy_unit)
                     if nearby_friendly_units:
                         closest_friendly_unit_to_enemy = nearby_friendly_units.closest_to(closest_enemy_unit)
-                        if len(nearby_friendly_units) >= 1 and \
-                                distance_to_enemy < 5.5 and \
-                                closest_friendly_unit_to_enemy.tag != zergling.tag:
+                        if len(nearby_friendly_units) >= 1 \
+                                and distance_to_enemy < 5.5 \
+                                and closest_friendly_unit_to_enemy.tag != zergling.tag:
                             away_from_enemy = zergling.position.towards(closest_enemy_unit, -1)
                             self.bot.actions.append(zergling.move(away_from_enemy))
 
-                # COMMENTED OUT ZERGLING SURROUND CODE
-                # elif \
-                #         const.UpgradeId.ZERGLINGMOVEMENTSPEED in self.bot.state.upgrades \
-                #         and len(nearby_zerglings_7) > 4 \
-                #         and len(nearby_zerglings_7) > len(nearby_enemy_units) \
-                #         and self.bot.can_attack(zergling, closest_enemy_unit) \
-                #         and majority_of_zerglings_closer_than_4_are_not_closer_than_2:
-                #     # Attempt to surround nearby enemy
-                #
-                #     target = closest_enemy_unit.position.towards(
-                #         zergling.position, -1 - closest_enemy_unit.radius)
-                #     self.bot.actions.append(zergling.move(target))
-                #
-                # elif \
-                #         not self.bot.unit_is_engaged(zergling) \
-                #         and self.bot.can_attack(zergling, closest_enemy_unit):
-                #     # Attack nearby enemy
-                #
-                #     self.bot.actions.append(zergling.attack(closest_enemy_unit))
+                elif closest_enemy_neighbors and self.bot.can_attack(zergling, closest_enemy_unit):
+                    zerglings_center = nearby_zerglings.center
+                    closest_enemy_neighbors_center = closest_enemy_neighbors.center
 
+                    center_distances = zerglings_center.distance_to(closest_enemy_neighbors_center)
+
+                    if center_distances > 0.8 \
+                            and len(nearby_zerglings) >= len(closest_enemy_neighbors) * 4\
+                            and not zergling.weapon_cooldown:
+
+                        # const.UpgradeId.ZERGLINGMOVEMENTSPEED in self.bot.state.upgrades \
+
+                        # Attempt to surround nearby enemy
+
+                        target = closest_enemy_neighbors_center.towards(
+                            zerglings_center,
+                            -closest_enemy_unit.radius * 3 - len(closest_enemy_neighbors))
+                        self.bot.actions.append(zergling.move(target))
+
+                    elif center_distances < 0.8 \
+                            and not self.bot.unit_is_engaged(zergling)\
+                            and not zergling.weapon_cooldown:
+                        self.bot.actions.append(zergling.attack(closest_enemy_neighbors_center))
 
         # # Burrow zerglings near enemy townhall
         # # Decided not to use for now
@@ -798,11 +796,7 @@ class MicroManager(Manager):
 
         enemy_units = self.bot.known_enemy_units
         if enemy_units:
-            if self.bot.is_melee(unit):
-                # Search for closer priorities if unit is melee
-                enemy_units = enemy_units.closer_than(0.5, unit)
-            else:
-                enemy_units = enemy_units.closer_than(unit.ground_range * 1.8, unit)
+            enemy_units = enemy_units.closer_than(unit.ground_range * 1.8, unit)
 
             if enemy_units:
                 target = self.bot.closest_and_most_damaged(
