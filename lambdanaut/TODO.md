@@ -47,8 +47,14 @@
 
 ## HIGH PRIORITY
 
-  * Better relative army strength prediction
-    * Ranged units should be weighted
+  * Zergling surround micro
+    * If we have zergling speed
+    * If we can attack the enemy
+    * If there are more nearby zerglings than there are nearby enemies
+    * If the majority of the zerglings within distance 4 of enemy are not within distance 2 of enemy
+        * Move just past the enemy by 2
+    * else
+        * Attack enemy
 
   * Keep army together when attacking. Right now zerglings run ahead first. 
 
@@ -337,3 +343,5 @@
     * If any enemy units that can attack air are within 10 distance of any of those points
     * Then stop the overlord
 
+  * Better relative army strength prediction
+    * Ranged units should be weighted
