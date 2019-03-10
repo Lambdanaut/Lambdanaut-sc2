@@ -115,8 +115,8 @@ class ForceManager(StatefulManager):
         """
         return {
             BuildStages.OPENING: 60,  # Allow greater distances for rush
-            BuildStages.EARLY_GAME: 7,
-            BuildStages.MID_GAME: 8,
+            BuildStages.EARLY_GAME: 8,
+            BuildStages.MID_GAME: 10,
             BuildStages.LATE_GAME: 15,
         }[build_stage]
 
@@ -638,7 +638,7 @@ class ForceManager(StatefulManager):
                     enemy = self.bot.known_enemy_units.exclude_type(const2.WORKERS).not_structure
                     if enemy:
                         relative_army_strength = self.bot.relative_army_strength(
-                            army, enemy, ignore_workers=True, ignore_height_difference=False)
+                            army, enemy, ignore_workers=True)
                         if relative_army_strength < -4 and self.bot.supply_used < 170:
                             return await self.change_state(ForcesStates.RETREATING)
 

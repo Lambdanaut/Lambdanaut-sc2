@@ -8,6 +8,7 @@ from __init__ import run_ladder_game
 
 import lambdanaut
 import lambdanaut.bot as bot
+from lambdanaut.builds import Builds
 
 datetime_str = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M")
 
@@ -30,9 +31,9 @@ MAPS = [
 
 MAP_NAME = "ParaSiteLE"
 MICRO_MAP_NAME = "kairo_training"
-VS_HUMAN = True
+VS_HUMAN = False
 VS_BOT = False
-REALTIME = True
+REALTIME = False
 
 BUILD = None
 # BUILD = sc2.AIBuild.RandomBuild
@@ -67,9 +68,11 @@ if VS_BOT:
     from lib.examples.zerg.zerg_rush import ZergRushBot
     from lib.examples.terran.mass_reaper import MassReaperBot
 
-    OPPONENT_BOT = bot.Lambdanaut
-    # OPPONENT_BOT = ZergRushBot
-    # OPPONENT_BOT = MassReaperBot
+    KWARGS = {'additional_builds': [Builds.EARLY_GAME_HATCHERY_FIRST_LING_RUSH]}
+    OPPONENT_BOT = bot.Lambdanaut(**KWARGS)
+
+    # OPPONENT_BOT = ZergRushBot()
+    # OPPONENT_BOT = MassReaperBot()
 
 
 # Start game
@@ -95,7 +98,7 @@ if __name__ == '__main__':
                 bot_config,
             ]
         elif VS_BOT:
-            opponent_config = sc2.player.Bot(ENEMY_RACE, OPPONENT_BOT())
+            opponent_config = sc2.player.Bot(ENEMY_RACE, OPPONENT_BOT)
             player_config = [
                 bot_config,
                 opponent_config,

@@ -49,6 +49,10 @@ class MicroManager(Manager):
         # Tags of zerglings that are scouting enemy units
         self.scouting_zergling_tags = set()
 
+        # Distance factor to get away from ranged units with scouting zergling
+        # Usage: enemy.ground_range * self.scouting_zergling_proximity
+        self.scouting_zergling_proximity= 1.1
+
         # Track whether we're performing a zergling run-by.
         # If there is a `True` in this list, we are performing one.
         self._performing_zergling_runby = ExpiringList()
@@ -142,7 +146,7 @@ class MicroManager(Manager):
         """
         zerglings = self.bot.units(const.ZERGLING)
 
-        if len(zerglings) >= 4:
+        if len(zerglings) >= 2:
             if self.scouting_zergling_tags:
                 zergling_tags_to_remove = set()
                 for zergling_tag in self.scouting_zergling_tags:
@@ -181,15 +185,11 @@ class MicroManager(Manager):
                             else:
                                 closest_enemy = None
 
-                            ground_range_ratio = 2.5
-                            if self.bot.enemy_race is sc2.Race.Zerg:
-                                ground_range_ratio = 1.5
-
                             if closest_enemy is not None \
                                     and zergling.distance_to(enemy_target) < \
                                     self.bot.start_location_to_enemy_start_location_distance / 2 \
                                     and closest_enemy.distance_to(zergling) < max(
-                                        5, closest_enemy.ground_range * ground_range_ratio) \
+                                        5, closest_enemy.ground_range * self.scouting_zergling_proximity) \
                                     and len(self.bot.units.closer_than(20, zergling)) < 5:
                                 target = zergling.position.towards(self.bot.start_location, 20)
                                 self.bot.actions.append(zergling.move(target))
@@ -947,13 +947,17 @@ class MicroManager(Manager):
 
                 self.should_unroot_spines = False
 
-            # Messages indicating we should perform a zergling runby
             if message is Messages.NEW_BUILD_STAGE:
                 self.ack(message)
+
+                if val is BuildStages.MID_GAME:
+                    # Scout further out in the mid game
+                    self.scouting_zergling_proximity = 2.5
 
                 if val is BuildStages.MID_GAME \
                         and not self.has_performed_zergling_runby \
                         and self.bot.enemy_race in {sc2.Race.Zerg, sc2.Race.Protoss}:
+                    # Perform a zergling runby
 
                     self.has_performed_zergling_runby = True
                     self._performing_zergling_runby.add(

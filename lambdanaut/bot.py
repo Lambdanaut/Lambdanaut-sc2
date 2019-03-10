@@ -36,10 +36,15 @@ BUILD = Builds.OPENER_DEFAULT
 
 
 class Lambdanaut(sc2.BotAI):
-    def __init__(self):
+    def __init__(self, **kwargs):
+        """
+        :param kwargs: Optional flags to alter bot behavior
+        """
         super(Lambdanaut, self).__init__()
 
         self.debug = DEBUG
+
+        self.kwargs = kwargs
 
         self.intel_manager: IntelManager = None
         self.build_manager: BuildManager = None
@@ -152,6 +157,17 @@ class Lambdanaut(sc2.BotAI):
             # Initialize managers
             for manager in self.managers:
                 await manager.init()
+
+            # Load bot kwargs(passed into Lambdanaut.__init__)
+            for key, value in self.kwargs.items():
+                if key is 'starting_build':
+                    # Alter starting build
+                    self.build_manager.starting_build = value
+
+                elif key is 'additional_builds':
+                    assert isinstance(value, list)
+                    for build in value:
+                        self.build_manager.add_build(build, force=True)
 
             await self.chat_send("λ LΛMBDANAUT λ - {}".format(VERSION))
 
@@ -840,6 +856,7 @@ class Lambdanaut(sc2.BotAI):
         default_dps_map = {
             const.BUNKER: 30,
             const.SIEGETANKSIEGED: 40,
+            const.RAVEN: 25,
             const.HIGHTEMPLAR: 30,
             const.DISRUPTOR: 30,
             const.BANELING: 30,

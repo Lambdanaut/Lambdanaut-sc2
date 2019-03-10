@@ -226,7 +226,7 @@ class OverlordManager(StatefulManager):
                 # Move Overlord around different expansion locations
                 expansion_locations = self.bot.get_expansion_positions()
                 if expansion_locations:
-                    shortest_path = self.bot.shortest_path_between_points(expansion_locations[1:7])
+                    shortest_path = self.bot.shortest_path_between_points(expansion_locations[1:6])
                     for expansion_location in shortest_path:
                         self.bot.actions.append(overlord.move(expansion_location, queue=True))
 
