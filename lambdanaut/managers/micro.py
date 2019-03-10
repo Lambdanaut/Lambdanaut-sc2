@@ -99,7 +99,7 @@ class MicroManager(Manager):
                             continue
 
                 # Focus down priorities
-                nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priority_types)
+                nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priority_types).closer_than(4, zergling)
                 if nearby_enemy_priorities:
                     target = self.bot.closest_and_most_damaged(
                         nearby_enemy_priorities, zergling)
@@ -176,11 +176,11 @@ class MicroManager(Manager):
                                 self.bot.start_location
                             )
                             enemies = [u.snapshot for u in self.bot.enemy_cache.values()
-                                       if u.can_attack_ground]
+                                       if u.can_attack_ground
+                                       and u.snapshot.type_id not in const2.WORKERS]
 
                             if enemy_townhalls:
-                                enemy_target = enemy_townhalls.furthest_to(
-                                    self.bot.enemy_start_location).position
+                                enemy_target = enemy_townhalls.random
                             else:
                                 enemy_target = self.bot.enemy_start_location
 

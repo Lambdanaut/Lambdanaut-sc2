@@ -116,8 +116,8 @@ class ForceManager(StatefulManager):
         return {
             BuildStages.OPENING: 60,  # Allow greater distances for rush
             BuildStages.EARLY_GAME: 8,
-            BuildStages.MID_GAME: 10,
-            BuildStages.LATE_GAME: 15,
+            BuildStages.MID_GAME: 11,
+            BuildStages.LATE_GAME: 14,
         }[build_stage]
 
     def get_target(self):
@@ -573,7 +573,7 @@ class ForceManager(StatefulManager):
                     army, self.bot.enemy_cache.values(), ignore_workers=True)
 
                 if self.allow_attacking \
-                        and ((relative_army_strength > 3 and len(army) > 4)
+                        and ((relative_army_strength > 3 and len(army) > 6)
                              or (relative_army_strength > -6
                                  and army_value > self.army_value_to_attack)) \
                              or self.bot.supply_used > 195:
@@ -628,19 +628,11 @@ class ForceManager(StatefulManager):
 
                 # If we're allowed to stop attacking
                 if not self.dont_stop_attacking:
-                    # Value of the army
-                    army_value = sum(const2.ZERG_ARMY_VALUE[unit.type_id] for unit in army)
-
-                    if army_value < self.army_value_to_attack * 0.4:
-                        return await self.change_state(ForcesStates.HOUSEKEEPING)
-
                     # Retreat if our entire army is weaker than the army we see from them and we're not near max
-                    enemy = self.bot.known_enemy_units.exclude_type(const2.WORKERS).not_structure
-                    if enemy:
-                        relative_army_strength = self.bot.relative_army_strength(
-                            army, enemy, ignore_workers=True)
-                        if relative_army_strength < -4 and self.bot.supply_used < 170:
-                            return await self.change_state(ForcesStates.RETREATING)
+                    relative_army_strength = self.bot.relative_army_strength(
+                        army, self.bot.enemy_cache.values(), ignore_workers=True)
+                    if relative_army_strength < -4 and self.bot.supply_used < 170:
+                        return await self.change_state(ForcesStates.RETREATING)
 
                 enemy_start_location = self.bot.enemy_start_location.position
                 # Start searching the map if we're at the enemy's base and can't find them.

@@ -185,7 +185,8 @@ class IntelManager(Manager):
         """
 
         if not self.has_scouted_enemy_rush and \
-                self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
+                self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME} \
+                or len(self.bot.townhalls.ready) < 3:
 
             enemy = self.bot.enemy_cache.values()
 

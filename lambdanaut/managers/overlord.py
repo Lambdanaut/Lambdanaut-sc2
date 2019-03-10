@@ -30,6 +30,7 @@ class OverlordManager(StatefulManager):
 
         self.state_start_map = {
             OverlordStates.INITIAL_DIVE: self.start_initial_dive,
+            OverlordStates.INITIAL_BACKOUT: self.start_initial_backout,
         }
 
         # Overlords used for scouting
@@ -393,6 +394,11 @@ class OverlordManager(StatefulManager):
                 self.bot.actions.append(overlord.move(point_along_path))
 
             self.bot.actions.append(overlord.move(enemy_natural_expansion, queue=True))
+
+    async def start_initial_backout(self):
+        overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
+        if overlord:
+            self.bot.actions.append(overlord.stop())
 
     async def do_initial_backout(self):
         """
