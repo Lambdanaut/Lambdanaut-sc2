@@ -48,8 +48,6 @@
 ## HIGH PRIORITY
 
   * Keep army together when attacking. Right now zerglings run ahead first. 
-  
-  * Attack multiple bases with zerglings
 
   * Switch into 2 base nydus build if we scout multiple banshees and have fewer than 4 townhalls
 
@@ -62,11 +60,11 @@
   * If we haven't scouted enemy natural expand by the time we take our third, then overlord-scout their natural expand.
     * If we still haven't scouted an enemy natural expand, switch to a 2-base aggressive/defensive build like nydus.
 
+## MEDIUM PRIORITY
+
   * Optimize overlord fleeing from points in a line.
     * Right now we generate a list of points in a line to check if enemies are nearby them
     * What if instead we checked enemy distances to the line itself (linear function..? y=mx+b?)
-
-## MEDIUM PRIORITY
 
   * Use A* when we switch to ATTACKING to hit the enemy where they're most vulnerable
   
