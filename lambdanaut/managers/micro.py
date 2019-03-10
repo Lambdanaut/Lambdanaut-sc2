@@ -51,7 +51,7 @@ class MicroManager(Manager):
 
         # Distance factor to get away from ranged units with scouting zergling
         # Usage: enemy.ground_range * self.scouting_zergling_proximity
-        self.scouting_zergling_proximity= 1.1
+        self.scouting_zergling_proximity = 1.2
 
         # Track whether we're performing a zergling run-by.
         # If there is a `True` in this list, we are performing one.
@@ -170,7 +170,11 @@ class MicroManager(Manager):
                         else:
                             # Perform zergling cautious scouting
 
-                            enemy_townhalls = self.bot.known_enemy_structures(const2.TOWNHALLS)
+                            # Get enemy townhalls on their side of the map
+                            enemy_townhalls = self.bot.known_enemy_structures(const2.TOWNHALLS).further_than(
+                                self.bot.start_location_to_enemy_start_location_distance / 2,
+                                self.bot.start_location
+                            )
                             enemies = [u.snapshot for u in self.bot.enemy_cache.values()
                                        if u.can_attack_ground]
 
