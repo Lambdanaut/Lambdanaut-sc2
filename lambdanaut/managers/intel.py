@@ -187,8 +187,7 @@ class IntelManager(Manager):
         """
 
         if not self.has_scouted_enemy_rush and \
-                self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME} \
-                or len(self.bot.townhalls.ready) < 3:
+                self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
 
             enemy = self.bot.enemy_cache.values()
 
@@ -209,7 +208,7 @@ class IntelManager(Manager):
 
             # Count any and all enemy units
             if (
-                    enemy_counter[const.ZERGLING] >= 9
+                    enemy_counter[const.ZERGLING] >= 7
                     or enemy_counter[const.RAVAGER] >= 2
                     or enemy_counter[const.MARINE] >= 6
                     or enemy_counter[const.REAPER] >= 3
