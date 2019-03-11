@@ -209,8 +209,8 @@ class IntelManager(Manager):
 
             # Count any and all enemy units
             if (
-                    enemy_counter[const.ZERGLING] >= 7
-                    or enemy_counter[const.RAVAGER] >= 1
+                    enemy_counter[const.ZERGLING] >= 9
+                    or enemy_counter[const.RAVAGER] >= 2
                     or enemy_counter[const.MARINE] >= 6
                     or enemy_counter[const.REAPER] >= 3
                     or enemy_counter[const.MARAUDER] >= 4
