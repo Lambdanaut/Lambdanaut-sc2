@@ -363,10 +363,13 @@ class ResourceManager(Manager):
 
             new_build = {Messages.NEW_BUILD}
             if message in new_build:
-                # Early game pool first defense started.
+                # Builds to get back onto mining vespene gas
                 # We need to be mining vespene for banelings nest
                 self.ack(message)
-                if val == Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE:
+                builds_to_stay_on_vespene = {
+                    Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE,
+                    Builds.EARLY_GAME_HATCHERY_FIRST_LING_RUSH}
+                if val in builds_to_stay_on_vespene:
 
                     self.pull_off_gas_early = False
                     self._recent_commands.remove(

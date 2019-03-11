@@ -225,7 +225,7 @@ class IntelManager(Manager):
                     or nearby_enemy_counter[const.ZERGLING] >= 4
                     or enemy_counter[const.RAVAGER] >= 1
                     or nearby_enemy_counter[const.SCV] >= 5
-                    or nearby_enemy_counter[const.MARINE] >= 1
+                    or nearby_enemy_counter[const.MARINE] >= 2
                     or nearby_enemy_counter[const.REAPER] >= 2
                     or nearby_enemy_counter[const.MARAUDER] >= 1
                     or nearby_enemy_counter[const.PROBE] >= 5
