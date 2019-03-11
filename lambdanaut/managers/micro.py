@@ -221,7 +221,7 @@ class MicroManager(Manager):
                             if closest_enemy is not None \
                                     and closest_enemy.distance_to(zergling) < max(
                                         5, closest_enemy.ground_range * self.scouting_zergling_proximity) \
-                                    and len(self.bot.units.closer_than(20, zergling)) < 5:
+                                    and len(self.bot.units.closer_than(7, zergling)) < 5:
                                 target = zergling.position.towards(self.bot.start_location, 20)
                                 self.bot.actions.append(zergling.move(target))
                             elif zergling.distance_to(enemy_target) > 10 \

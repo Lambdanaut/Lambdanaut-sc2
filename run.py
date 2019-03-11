@@ -33,7 +33,7 @@ MAP_NAME = "ParaSiteLE"
 MICRO_MAP_NAME = "kairo_training"
 VS_HUMAN = False
 VS_BOT = False
-REALTIME = True
+REALTIME = False
 
 BUILD = None
 # BUILD = sc2.AIBuild.RandomBuild
