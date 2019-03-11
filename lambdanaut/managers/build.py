@@ -68,6 +68,7 @@ class BuildManager(Manager):
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH)
         self.subscribe(Messages.FOUND_ENEMY_PROXY_HATCHERY)
         self.subscribe(Messages.FOUND_ENEMY_RUSH)
+        self.subscribe(Messages.FOUND_ENEMY_WORKER_RUSH)
         self.subscribe(Messages.ENEMY_MOVING_OUT_SCOUTED)
         self.subscribe(Messages.FOUND_ENEMY_EARLY_AGGRESSION)
         self.subscribe(Messages.ENEMY_AIR_TECH_SCOUTED)
@@ -244,14 +245,23 @@ class BuildManager(Manager):
                 self.add_build(Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS)
 
             # Messages indicating we need to defend a rush
-            rush_detected = {
-                Messages.OVERLORD_SCOUT_FOUND_ENEMY_PROXY,
-                Messages.OVERLORD_SCOUT_FOUND_ENEMY_WORKER_RUSH,
-                Messages.OVERLORD_SCOUT_FOUND_ENEMY_RUSH,
-                Messages.FOUND_ENEMY_RUSH}
+            rush_detected = {Messages.FOUND_ENEMY_RUSH}
             if message in rush_detected:
                 self.ack(message)
 
+                self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
+
+            worker_rush_detected = {Messages.FOUND_ENEMY_WORKER_RUSH}
+            if message in worker_rush_detected:
+                self.ack(message)
+
+                # Cancel in-progress structures
+                for structure in self.bot.units.filter(
+                        lambda u: u.is_structure and u.build_progress < 0.96):
+                    self.bot.actions.append(structure(const.AbilityId.CANCEL_BUILDINPROGRESS))
+
+                # Stop any rushing low-worker builds if we scout an enemy worker rush
+                self.add_build(Builds.OPENER_DEFAULT)
                 self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
 
             # Messages indicating we need to defend an early aggression

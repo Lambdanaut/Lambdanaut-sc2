@@ -27,6 +27,7 @@ class IntelManager(Manager):
         self.has_scouted_enemy_counter_with_roaches = False
         self.has_scouted_enemy_counter_midgame_broodlord_rush = False
         self.has_scouted_enemy_rush = False
+        self.has_scouted_enemy_worker_rush = False
         self.has_published_need_more_enemy_tech_intel = False
         self.has_published_scouted_enemy_tech_intel = False
         self.has_published_scouted_enemy_proxy_hatchery = False
@@ -237,6 +238,21 @@ class IntelManager(Manager):
 
             return False
 
+    def enemy_worker_rush_scouted(self):
+        if not self.has_scouted_enemy_worker_rush and \
+                self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
+
+            enemy = self.bot.enemy_cache.values()
+
+            nearby_worker_count = len([
+                u for u in enemy if u.type_id in const2.WORKERS
+                and u.distance_to(self.bot.start_location) <
+                self.bot.start_location_to_enemy_start_location_distance * 0.75])
+
+            if nearby_worker_count > 5:
+                self.has_scouted_enemy_worker_rush = True
+                return True
+
     def need_more_enemy_tech_intel(self):
         """
         If we're in mid to late game and we've seen few enemy structures,
@@ -324,6 +340,8 @@ class IntelManager(Manager):
             self.publish(Messages.ENEMY_MOVING_OUT_SCOUTED)
         if self.enemy_rush_scouted():
             self.publish(Messages.FOUND_ENEMY_RUSH)
+        if self.enemy_worker_rush_scouted():
+            self.publish(Messages.FOUND_ENEMY_WORKER_RUSH)
         if self.need_more_enemy_tech_intel():
             self.publish(Messages.NEED_MORE_ENEMY_TECH_INTEL)
         if self.scouted_enemy_tech_intel():

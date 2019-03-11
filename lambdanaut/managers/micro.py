@@ -6,6 +6,7 @@ from typing import Iterable, List, Tuple
 import lib.sc2 as sc2
 from lib.sc2.position import Point2
 from lib.sc2.unit import Unit
+from lib.sc2.units import Units
 import lib.sc2.constants as const
 
 from lambdanaut.builds import BuildStages
@@ -59,22 +60,86 @@ class MicroManager(Manager):
         self._performing_zergling_runby = ExpiringList()
         self.has_performed_zergling_runby = False
 
+    def perform_surround_micro(self,
+                               unit: Unit,
+                               nearby_units: Units,
+                               closest_enemy_unit: Unit,
+                               nearby_units_factor: float=4.0) -> bool:
+        """
+        Perform surround micro with `unit` against `nearby_enemy_units`
+
+        :param unit: Unit to perform surround micro action
+        :param nearby_units: Units nearby `unit` to include in surround micro
+        :param closest_enemy_unit: Closest enemy unit to `unit` that `unit` can attack
+        :param nearby_units_factor: Require this many times of our units than theirs to do a surround
+        """
+
+        closest_enemy_neighbors = self.bot.known_enemy_units.filter(
+            lambda u:
+            not u.is_flying
+            and not u.is_structure
+            and u.distance_to(closest_enemy_unit) < 6)
+
+        units_center = nearby_units.center
+        closest_enemy_neighbors_center = closest_enemy_neighbors.center
+        center_distances = units_center.distance_to(closest_enemy_neighbors_center)
+
+        if center_distances > 0.8 \
+                and len(nearby_units) >= len(closest_enemy_neighbors) * nearby_units_factor \
+                and not unit.weapon_cooldown:
+
+            # Attempt to surround nearby enemy
+
+            target = closest_enemy_neighbors_center.towards(
+                units_center,
+                -closest_enemy_unit.radius * 3 - len(closest_enemy_neighbors) * 0.5)
+            self.bot.actions.append(unit.move(target))
+            return True
+
+        elif center_distances < 0.8 \
+                and not self.bot.unit_is_engaged(unit) \
+                and not unit.weapon_cooldown:
+
+            # Attack nearby enemy after a surround
+            self.bot.actions.append(unit.attack(closest_enemy_neighbors_center))
+            return True
+        return False
+
     async def manage_drones(self):
-        # Burrow damaged workers if enemies are nearby
-        if const.BURROW in self.bot.state.upgrades:
-            drones = self.bot.units(const.UnitTypeId.DRONE)
-            drones_burrowed = self.bot.units(const.UnitTypeId.DRONEBURROWED)
-            for drone in drones:
+        drones = self.bot.units(const.UnitTypeId.DRONE)
+        drones_burrowed = self.bot.units(const.UnitTypeId.DRONEBURROWED)
+
+        for drone in drones:
+            # Burrow damaged workers if enemies are nearby
+            if const.BURROW in self.bot.state.upgrades:
                 if drone.health_percentage < 0.6:
                     nearby_enemy_units = self.bot.known_enemy_units.closer_than(9, drone).filter(
                         lambda u: u.can_attack_ground)
                     if nearby_enemy_units:
                         self.bot.actions.append(drone(const.AbilityId.BURROWDOWN_DRONE))
-            for drone in drones_burrowed:
+
+            # Commented out doing drone surround
+
+            if drone.tag in self.bot.workers_defending:
+                # Perform surround micro
+                nearby_units = drones.filter(
+                    lambda u: u.distance_to(drone) < 7 and u.tag in self.bot.workers_defending)
                 nearby_enemy_units = self.bot.known_enemy_units.closer_than(9, drone).filter(
-                    lambda u: u.can_attack_ground)
-                if not nearby_enemy_units:
-                    self.bot.actions.append(drone(const.AbilityId.BURROWUP_DRONE))
+                    lambda u: self.bot.can_attack(drone, u))
+
+                if nearby_enemy_units:
+                    closest_nearby_enemy = nearby_enemy_units.closest_to(drone)
+                    self.perform_surround_micro(
+                        drone,
+                        nearby_units,
+                        closest_nearby_enemy,
+                        nearby_units_factor=1.0)
+
+        for drone in drones_burrowed:
+            nearby_enemy_units = self.bot.known_enemy_units.closer_than(9, drone).filter(
+                lambda u: u.can_attack_ground)
+            if not nearby_enemy_units:
+                self.bot.actions.append(drone(const.AbilityId.BURROWUP_DRONE))
 
     async def manage_zerglings(self):
         zerglings = self.bot.units(const.ZERGLING)
@@ -87,7 +152,8 @@ class MicroManager(Manager):
             if zergling.tag in self.scouting_zergling_tags:
                 continue
 
-            nearby_enemy_units = self.bot.known_enemy_units.closer_than(6, zergling)
+            nearby_enemy_units = self.bot.known_enemy_units.filter(
+                lambda u: u.distance_to(zergling) < 6 and self.bot.can_attack(zergling, u))
             if nearby_enemy_units:
 
                 # Return to start location if damaged and near home
@@ -107,10 +173,6 @@ class MicroManager(Manager):
                     self.bot.actions.append(zergling.attack(target))
 
                 closest_enemy_unit = nearby_enemy_units.closest_to(zergling)
-                closest_enemy_neighbors = self.bot.known_enemy_units.\
-                    closer_than(6, closest_enemy_unit.position).not_structure
-
-                nearby_zerglings = zerglings.closer_than(7, closest_enemy_unit)
 
                 if closest_enemy_unit.type_id == const.BANELING:
                     # Micro away from banelings
@@ -124,34 +186,35 @@ class MicroManager(Manager):
                             away_from_enemy = zergling.position.towards(closest_enemy_unit, -1)
                             self.bot.actions.append(zergling.move(away_from_enemy))
 
-                elif closest_enemy_neighbors \
-                        and self.bot.can_attack(zergling, closest_enemy_unit) \
-                        and const.UpgradeId.ZERGLINGMOVEMENTSPEED in self.bot.state.upgrades:
-
+                elif const.UpgradeId.ZERGLINGMOVEMENTSPEED in self.bot.state.upgrades:
                     # Perform surround micro
 
-                    zerglings_center = nearby_zerglings.center
-                    closest_enemy_neighbors_center = closest_enemy_neighbors.center
+                    nearby_units = zerglings.closer_than(7, closest_enemy_unit)
+                    self.perform_surround_micro(zergling, nearby_units, closest_enemy_unit)
 
-                    center_distances = zerglings_center.distance_to(closest_enemy_neighbors_center)
-
-                    if center_distances > 0.8 \
-                            and len(nearby_zerglings) >= len(closest_enemy_neighbors) * 4\
-                            and not zergling.weapon_cooldown:
-
-                        # Attempt to surround nearby enemy
-
-                        target = closest_enemy_neighbors_center.towards(
-                            zerglings_center,
-                            -closest_enemy_unit.radius * 3 - len(closest_enemy_neighbors))
-                        self.bot.actions.append(zergling.move(target))
-
-                    elif center_distances < 0.8 \
-                            and not self.bot.unit_is_engaged(zergling)\
-                            and not zergling.weapon_cooldown:
-
-                        # Attack nearby enemy after a surround
-                        self.bot.actions.append(zergling.attack(closest_enemy_neighbors_center))
+                    # Commented out zergling specific surround micro
+                    # zerglings_center = nearby_zerglings.center
+                    # closest_enemy_neighbors_center = closest_enemy_neighbors.center
+                    #
+                    # center_distances = zerglings_center.distance_to(closest_enemy_neighbors_center)
+                    #
+                    # if center_distances > 0.8 \
+                    #         and len(nearby_zerglings) >= len(closest_enemy_neighbors) * 4\
+                    #         and not zergling.weapon_cooldown:
+                    #
+                    #     # Attempt to surround nearby enemy
+                    #
+                    #     target = closest_enemy_neighbors_center.towards(
+                    #         zerglings_center,
+                    #         -closest_enemy_unit.radius * 3 - len(closest_enemy_neighbors))
+                    #     self.bot.actions.append(zergling.move(target))
+                    #
+                    # elif center_distances < 0.8 \
+                    #         and not self.bot.unit_is_engaged(zergling)\
+                    #         and not zergling.weapon_cooldown:
+                    #
+                    #     # Attack nearby enemy after a surround
+                    #     self.bot.actions.append(zergling.attack(closest_enemy_neighbors_center))
 
         # # Burrow zerglings near enemy townhall
         # # Decided not to use for now
@@ -292,7 +355,7 @@ class MicroManager(Manager):
         for roach in roaches:
             # Burrow damaged roaches
             if const.BURROW in self.bot.state.upgrades:
-                if roach.health_percentage < 0.20:
+                if roach.health_percentage < 0.22:
                     # Move away from the direction we're facing
                     target = utils.towards_direction(roach.position, roach.facing, -20)
 
@@ -942,7 +1005,7 @@ class MicroManager(Manager):
                             #             self.bot.actions.append(unit.snapshot.move(target))
 
                             # Handle combat priority targeting
-                            else:
+                            elif not self.bot.is_melee(unit):
                                 priorities = const2.WORKERS | {
                                     const.STARPORTTECHLAB, const.FACTORYTECHLAB, const.FUSIONCORE,
                                     const.SIEGETANK, const.SIEGETANKSIEGED, const.MEDIVAC, const.CYCLONE,

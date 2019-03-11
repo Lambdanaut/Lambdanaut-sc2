@@ -45,9 +45,13 @@ class DefenseManager(StatefulManager):
         # If this flag is false, we wont switch to DEFENDING state
         self.allow_defending = True
 
+        # Flag that determines whether we mineral-walk damaged workers away from combat
+        self.retreat_damaged_workers = True
+
         # Subscribe to Messages
         self.subscribe(Messages.ALLOW_DEFENDING)
         self.subscribe(Messages.DONT_DEFEND)
+        self.subscribe(Messages.FOUND_ENEMY_WORKER_RUSH)
 
     async def do_not_defending(self):
         pass
@@ -125,9 +129,15 @@ class DefenseManager(StatefulManager):
                     ground_enemies = [enemy for enemy in enemies_nearby if not enemy.is_flying]
                     workers = self.bot.workers.closer_than(14, th.position.closest(enemies_nearby).position)
                     if ground_enemies and len(workers) > len(ground_enemies):
-                        for worker in workers:
+                        for worker_i in range(len(workers)):
+                            worker = workers[worker_i]
                             if worker.tag in self.bot.workers_defending:
-                                target = self.bot.closest_and_most_damaged(ground_enemies, worker)
+                                ground_enemies_in_range = [u for u in ground_enemies if u.distance_to(worker) < 0.5]
+                                if ground_enemies_in_range:
+                                    target = self.bot.closest_and_most_damaged(ground_enemies_in_range, worker)
+                                else:
+                                    target = worker.position.closest(ground_enemies)
+
                                 if target.type_id not in worker_non_targets:
                                     self.bot.actions.append(worker.attack(target))
 
@@ -137,18 +147,25 @@ class DefenseManager(StatefulManager):
                                 # OR
                                 # If the enemy is a single worker, just send one worker
                                 if len(ground_enemies) == 1 and ground_enemies[0].type_id in const2.WORKERS:
+                                    # Use one worker
                                     defend_with_more_workers = len(self.bot.workers_defending) < 1
+                                elif len(ground_enemies) > 5 \
+                                        and all(u.type_id in const2.WORKERS for u in ground_enemies):
+                                    # Use all workers against a worker rush
+                                    defend_with_more_workers = True
                                 else:
+                                    # Use one more worker than there are enemies
                                     defend_with_more_workers = len(self.bot.workers_defending) <= len(ground_enemies)
 
                                 if defend_with_more_workers \
-                                        and worker.health_percentage > defending_worker_min_health + 0.05:
+                                        and (not self.retreat_damaged_workers or
+                                             worker.health_percentage > defending_worker_min_health):
                                     target = self.bot.closest_and_most_damaged(ground_enemies, worker)
                                     if target.type_id not in worker_non_targets:
                                         self.bot.workers_defending.add(worker.tag)
                                         self.bot.actions.append(worker.attack(target.position))
                     else:
-                        # If they have more than us, stop the worker from defending
+                        # If they have more than us, stop workers from defending
                         for worker in workers:
                             if worker.tag in self.bot.workers_defending:
                                 self.bot.workers_defending.remove(worker.tag)
@@ -181,7 +198,7 @@ class DefenseManager(StatefulManager):
                         nearest_townhall = townhalls.closest_to(worker.position)
 
                         # Return hurt workers to working
-                        if worker.health_percentage < defending_worker_min_health:
+                        if self.retreat_damaged_workers and worker.health_percentage < defending_worker_min_health:
                             minerals = self.bot.state.mineral_field.closer_than(8, nearest_townhall)
                             if minerals:
                                 workers_defending_to_remove.add(worker_id)
@@ -227,6 +244,11 @@ class DefenseManager(StatefulManager):
                 self.ack(message)
 
                 self.allow_defending = False
+
+            elif message in {Messages.FOUND_ENEMY_WORKER_RUSH}:
+                self.ack(message)
+
+                self.retreat_damaged_workers = False
 
         # DEFENDING
         if self.state == DefenseStates.DEFENDING:

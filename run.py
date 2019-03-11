@@ -29,10 +29,10 @@ MAPS = [
     'BlueshiftLE',
     'PortAleksanderLE', ]
 
-MAP_NAME = "ParaSiteLE"
+MAP_NAME = "KairosJunctionLE"
 MICRO_MAP_NAME = "kairo_training"
 VS_HUMAN = False
-VS_BOT = False
+VS_BOT = True
 REALTIME = False
 
 BUILD = None
@@ -67,12 +67,14 @@ if TESTING_MICRO:
 if VS_BOT:
     from lib.examples.zerg.zerg_rush import ZergRushBot
     from lib.examples.terran.mass_reaper import MassReaperBot
+    from lib.examples.worker_rush import WorkerRushBot
 
     KWARGS = {'additional_builds': [Builds.EARLY_GAME_HATCHERY_FIRST_LING_RUSH]}
     OPPONENT_BOT = bot.Lambdanaut(**KWARGS)
 
     # OPPONENT_BOT = ZergRushBot()
     # OPPONENT_BOT = MassReaperBot()
+    OPPONENT_BOT = WorkerRushBot()
 
 
 # Start game

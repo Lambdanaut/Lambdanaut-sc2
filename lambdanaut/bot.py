@@ -76,7 +76,7 @@ class Lambdanaut(sc2.BotAI):
         self.townhall_queens: Dict[int, int] = {}
 
         # Set of worker ids of workers currently defending an attack.
-        self.workers_defending = set()
+        self.workers_defending: Set[int] = set()
 
         # Map of all our unit's tags to UnitCached objects with their remembered
         # properties (Last health, shields, location, etc)
