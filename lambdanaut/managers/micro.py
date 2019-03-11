@@ -80,6 +80,9 @@ class MicroManager(Manager):
             and not u.is_structure
             and u.distance_to(closest_enemy_unit) < 6)
 
+        if not closest_enemy_neighbors:
+            return False
+
         units_center = nearby_units.center
         closest_enemy_neighbors_center = closest_enemy_neighbors.center
         center_distances = units_center.distance_to(closest_enemy_neighbors_center)
