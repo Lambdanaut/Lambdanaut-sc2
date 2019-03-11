@@ -211,12 +211,12 @@ class IntelManager(Manager):
             if (
                     enemy_counter[const.ZERGLING] >= 7
                     or enemy_counter[const.RAVAGER] >= 1
-                    or enemy_counter[const.MARINE] >= 5
+                    or enemy_counter[const.MARINE] >= 6
                     or enemy_counter[const.REAPER] >= 3
-                    or enemy_counter[const.MARAUDER] >= 2
-                    or enemy_counter[const.ZEALOT] >= 3
-                    or enemy_counter[const.ADEPT] >= 3
-                    or enemy_counter[const.STALKER] >= 3):
+                    or enemy_counter[const.MARAUDER] >= 4
+                    or enemy_counter[const.ZEALOT] >= 4
+                    or enemy_counter[const.ADEPT] >= 4
+                    or enemy_counter[const.STALKER] >= 4):
                 self.has_scouted_enemy_rush = True
                 return True
 

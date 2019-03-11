@@ -110,7 +110,7 @@ class MicroManager(Manager):
                 closest_enemy_neighbors = self.bot.known_enemy_units.\
                     closer_than(6, closest_enemy_unit.position).not_structure
 
-                nearby_zerglings = zerglings.closer_than(8, closest_enemy_unit)
+                nearby_zerglings = zerglings.closer_than(7, closest_enemy_unit)
 
                 if closest_enemy_unit.type_id == const.BANELING:
                     # Micro away from banelings
@@ -124,7 +124,12 @@ class MicroManager(Manager):
                             away_from_enemy = zergling.position.towards(closest_enemy_unit, -1)
                             self.bot.actions.append(zergling.move(away_from_enemy))
 
-                elif closest_enemy_neighbors and self.bot.can_attack(zergling, closest_enemy_unit):
+                elif closest_enemy_neighbors \
+                        and self.bot.can_attack(zergling, closest_enemy_unit) \
+                        and const.UpgradeId.ZERGLINGMOVEMENTSPEED in self.bot.state.upgrades:
+
+                    # Perform surround micro
+
                     zerglings_center = nearby_zerglings.center
                     closest_enemy_neighbors_center = closest_enemy_neighbors.center
 
@@ -133,8 +138,6 @@ class MicroManager(Manager):
                     if center_distances > 0.8 \
                             and len(nearby_zerglings) >= len(closest_enemy_neighbors) * 4\
                             and not zergling.weapon_cooldown:
-
-                        # const.UpgradeId.ZERGLINGMOVEMENTSPEED in self.bot.state.upgrades \
 
                         # Attempt to surround nearby enemy
 
@@ -146,6 +149,8 @@ class MicroManager(Manager):
                     elif center_distances < 0.8 \
                             and not self.bot.unit_is_engaged(zergling)\
                             and not zergling.weapon_cooldown:
+
+                        # Attack nearby enemy after a surround
                         self.bot.actions.append(zergling.attack(closest_enemy_neighbors_center))
 
         # # Burrow zerglings near enemy townhall
@@ -207,7 +212,8 @@ class MicroManager(Manager):
 
                             if expansion_locations:
                                 # Get random expansion location that will tend to be closer to the enemy start location
-                                expansion_index = min(round(random.expovariate(0.5)), len(expansion_locations) - 1)
+                                expansion_index = min(round(random.expovariate(0.5)),
+                                                      len(expansion_locations) - 1)
                                 enemy_target = expansion_locations[expansion_index]
                             else:
                                 enemy_target = self.bot.enemy_start_location
