@@ -1,5 +1,6 @@
 import copy
 import math
+import random
 from typing import Iterable, List, Tuple
 
 import lib.sc2 as sc2
@@ -107,9 +108,9 @@ class MicroManager(Manager):
 
                 closest_enemy_unit = nearby_enemy_units.closest_to(zergling)
                 closest_enemy_neighbors = self.bot.known_enemy_units.\
-                    closer_than(7, closest_enemy_unit.position).not_structure
+                    closer_than(6, closest_enemy_unit.position).not_structure
 
-                nearby_zerglings = zerglings.closer_than(9, closest_enemy_unit)
+                nearby_zerglings = zerglings.closer_than(8, closest_enemy_unit)
 
                 if closest_enemy_unit.type_id == const.BANELING:
                     # Micro away from banelings
@@ -198,18 +199,16 @@ class MicroManager(Manager):
 
                         else:
                             # Perform zergling cautious scouting
-
-                            # Get enemy townhalls on their side of the map
-                            enemy_townhalls = self.bot.known_enemy_structures(const2.TOWNHALLS).further_than(
-                                self.bot.start_location_to_enemy_start_location_distance / 2,
-                                self.bot.start_location
-                            )
                             enemies = [u.snapshot for u in self.bot.enemy_cache.values()
                                        if u.can_attack_ground
                                        and u.snapshot.type_id not in const2.WORKERS]
 
-                            if enemy_townhalls:
-                                enemy_target = enemy_townhalls.random
+                            expansion_locations = self.bot.get_enemy_expansion_positions()
+
+                            if expansion_locations:
+                                # Get random expansion location that will tend to be closer to the enemy start location
+                                expansion_index = min(round(random.expovariate(0.5)), len(expansion_locations) - 1)
+                                enemy_target = expansion_locations[expansion_index]
                             else:
                                 enemy_target = self.bot.enemy_start_location
 

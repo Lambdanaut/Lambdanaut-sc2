@@ -631,7 +631,7 @@ class ForceManager(StatefulManager):
                     # Retreat if our entire army is weaker than the army we see from them and we're not near max
                     relative_army_strength = self.bot.relative_army_strength(
                         army, self.bot.enemy_cache.values(), ignore_workers=True)
-                    if relative_army_strength < -4 and self.bot.supply_used < 170:
+                    if relative_army_strength < -5 and self.bot.supply_used < 170:
                         return await self.change_state(ForcesStates.RETREATING)
 
                 enemy_start_location = self.bot.enemy_start_location.position

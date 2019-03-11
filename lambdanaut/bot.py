@@ -968,9 +968,9 @@ class Lambdanaut(sc2.BotAI):
 
         # Lanchesters law calls for an exponent of 2.
         # Use 1.2 to bias towards the linear law for melee
-        # Use 1.6 for ranged
+        # Use 1.5 for ranged
         power_m = 1.2
-        power_r = 1.6
+        power_r = 1.5
 
         u1_melee_powered = len(u1_melee) ** power_m
         u1_ranged_powered = len(u1_ranged) ** power_r
