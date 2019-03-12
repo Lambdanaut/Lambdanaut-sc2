@@ -131,7 +131,7 @@ class BuildManager(Manager):
                 # Average rush distance is around 155. Longer rush distances are over 160.
                 if rush_distance < 160:
                     # Do ravager harass into macro on small to medium rush distance maps
-                    self.starting_build = Builds.OPENER_RAVAGER_HARASS
+                    self.starting_build = Builds.RAVAGER_ALL_IN
                 elif rush_distance > 165:
                     # Rush distance is long. Play more greedily.
                     self.add_build(Builds.EARLY_GAME_HATCHERY_FIRST_GREEDY)
@@ -159,14 +159,22 @@ class BuildManager(Manager):
             if Builds.EARLY_GAME_SPORE_CRAWLERS in self.builds:
                 return False
 
+        if build in {Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS}:
+            # If we are defending strongly, don't start defending cautiously
+            if any(build in self.builds for build in {
+                Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE}):
+                return False
+
         if build in {Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS,
                      Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE,
-                     Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE}:
-            # If we're we have a focused early game build, don't start defending cautiously
+                     Builds.EARLY_GAME_HATCHERY_FIRST_LING_RUSH}:
+            # If we have a focused early game build, don't switch to another focussed build
             if any(build in self.builds for build in {
                     Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE,
                     Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE,
                     Builds.EARLY_GAME_HATCHERY_FIRST_LING_RUSH,
+                    Builds.RAVAGER_ALL_IN,
+                    Builds.OPENER_RAVAGER_HARASS,
                     Builds.EARLY_GAME_POOL_SPINE_ALL_IN}):
                 return False
 

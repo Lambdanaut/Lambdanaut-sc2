@@ -322,6 +322,9 @@ class IntelManager(Manager):
             #     greedy_enough = len(enemy_expansions) > 1
             elif self.bot.enemy_race is sc2.Race.Protoss:
                 greedy_enough = len(enemy_expansions) > 0
+            else:
+                # TODO: Just count enemy townhalls of a specific race. We can catch greedy randoms like this.
+                greedy_enough = len(enemy_expansions) > 1
 
             if greedy_enough:
                 self.has_published_scouted_greedy_early_opponent = True
