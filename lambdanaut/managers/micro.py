@@ -168,13 +168,6 @@ class MicroManager(Manager):
                             self.bot.actions.append(zergling.move(self.bot.start_location))
                             continue
 
-                # Focus down priorities
-                nearby_enemy_priorities = nearby_enemy_units.of_type(attack_priority_types).closer_than(4, zergling)
-                if nearby_enemy_priorities:
-                    target = self.bot.closest_and_most_damaged(
-                        nearby_enemy_priorities, zergling)
-                    self.bot.actions.append(zergling.attack(target))
-
                 closest_enemy_unit = nearby_enemy_units.closest_to(zergling)
 
                 if closest_enemy_unit.type_id == const.BANELING:
@@ -1008,7 +1001,7 @@ class MicroManager(Manager):
                             #             self.bot.actions.append(unit.snapshot.move(target))
 
                             # Handle combat priority targeting
-                            elif not self.bot.is_melee(unit):
+                            else:
                                 priorities = const2.WORKERS | {
                                     const.STARPORTTECHLAB, const.FACTORYTECHLAB, const.FUSIONCORE,
                                     const.SIEGETANK, const.SIEGETANKSIEGED, const.MEDIVAC, const.CYCLONE,

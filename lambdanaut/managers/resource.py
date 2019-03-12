@@ -37,6 +37,7 @@ class ResourceManager(Manager):
         self.subscribe(Messages.UPGRADE_STARTED)
         self.subscribe(Messages.PULL_WORKERS_OFF_VESPENE)
         self.subscribe(Messages.PULL_WORKERS_OFF_VESPENE_FOR_X_SECONDS)
+        self.subscribe(Messages.CLEAR_PULLING_WORKERS_OFF_VESPENE)
         self.subscribe(Messages.DONT_RETURN_DISTANT_WORKERS_TO_TOWNHALLS)
 
         # If this flag is set, pull off gas when zergling speed is researched
@@ -389,6 +390,14 @@ class ResourceManager(Manager):
                 self._recent_commands.add(
                     ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
                     self.bot.state.game_loop, expiry=val)
+
+            return_all_workers_to_vespene = {Messages.CLEAR_PULLING_WORKERS_OFF_VESPENE}
+            if message in return_all_workers_to_vespene:
+                # Reset all workers back to mining vespene at full saturation
+                self.ack(message)
+
+                self._ideal_vespene_worker_count = None
+                self._recent_commands.remove(ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE)
 
             dont_return_distant_workers_to_townhalls = {Messages.DONT_RETURN_DISTANT_WORKERS_TO_TOWNHALLS}
             if message in dont_return_distant_workers_to_townhalls:

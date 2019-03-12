@@ -1,5 +1,6 @@
 from collections import Counter
 
+import lib.sc2 as sc2
 import lib.sc2.constants as const
 
 from lambdanaut.builds import BuildStages
@@ -31,6 +32,7 @@ class IntelManager(Manager):
         self.has_published_need_more_enemy_tech_intel = False
         self.has_published_scouted_enemy_tech_intel = False
         self.has_published_scouted_enemy_proxy_hatchery = False
+        self.has_published_scouted_greedy_early_opponent = False
         self.has_published_research_neural_parasite = False
         self.has_scouted_enemy_greater_force = ExpiringList()  # Will contain True or nothing
 
@@ -306,6 +308,27 @@ class IntelManager(Manager):
 
         return False
 
+    def scouted_greedy_early_opponent(self):
+        if not self.has_published_scouted_greedy_early_opponent \
+                and self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
+
+            # Enemy expansions excluding the starting location
+            enemy_expansions = self.bot.known_enemy_units(const2.TOWNHALLS).further_than(
+                11, self.bot.enemy_start_location).filter(lambda th: th.is_ready or th.build_progress > 0.75)
+
+            if self.bot.enemy_race is sc2.Race.Terran:
+                greedy_enough = len(enemy_expansions) > 0
+            elif self.bot.enemy_race is sc2.Race.Zerg:
+                greedy_enough = len(enemy_expansions) > 1
+            elif self.bot.enemy_race is sc2.Race.Protoss:
+                greedy_enough = len(enemy_expansions) > 0
+
+            if greedy_enough:
+                self.has_published_scouted_greedy_early_opponent = True
+                return True
+
+        return False
+
     def scouted_research_neural_parasite(self):
         if not self.has_published_research_neural_parasite:
 
@@ -348,6 +371,8 @@ class IntelManager(Manager):
             self.publish(Messages.SCOUTED_ENOUGH_ENEMY_TECH_INTEL)
         if self.scouted_enemy_proxy_hatchery():
             self.publish(Messages.FOUND_ENEMY_PROXY_HATCHERY)
+        if self.scouted_greedy_early_opponent():
+            self.publish(Messages.FOUND_ENEMY_EARLY_GREED)
         if self.scouted_research_neural_parasite():
             self.publish(Messages.ALLOW_NEURAL_PARASITE_UPGRADE)
 

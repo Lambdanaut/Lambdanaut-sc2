@@ -57,7 +57,7 @@ class ExpiringList(object):
 
     def remove(self, item):
         """
-        Removes `item` from the list.
+        Removes first instance of `item` from the list.
         """
         for i in range(len(self.l)):
             list_item, item_iteration, expiry = self.l[i]
@@ -98,6 +98,9 @@ class ExpiringList(object):
 
     def length(self, current_iteration):
         return len(self.items(current_iteration))
+
+    def clear(self):
+        self.l.clear()
 
     def __contains__(self, item_tuple):
         item, current_iteration = item_tuple

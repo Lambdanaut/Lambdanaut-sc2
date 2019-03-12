@@ -173,47 +173,49 @@ class Messages(enum.Enum):
     FOUND_ENEMY_EARLY_AGGRESSION = 11
     FOUND_ENEMY_GREATER_FORCE = 12
     FOUND_ENEMY_PROXY_HATCHERY = 13
-    ENEMY_AIR_TECH_SCOUTED = 14
-    ENEMY_COUNTER_WITH_ROACHES_SCOUTED = 15
-    ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD = 16
-    DEFENDING_AGAINST_MULTIPLE_ENEMIES = 17
-    ENEMY_MOVING_OUT_SCOUTED = 18
+    FOUND_ENEMY_EARLY_GREED = 14
+    ENEMY_AIR_TECH_SCOUTED = 15
+    ENEMY_COUNTER_WITH_ROACHES_SCOUTED = 16
+    ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD = 17
+    DEFENDING_AGAINST_MULTIPLE_ENEMIES = 18
+    ENEMY_MOVING_OUT_SCOUTED = 19
 
     # # STRATEGIC NOTES MESSAGES
-    ENEMY_EARLY_NATURAL_EXPAND_TAKEN = 19
-    ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN = 20
-    NEW_BUILD = 21  # New build added
-    NEW_BUILD_STAGE = 22  # New build stage entered
-    NEED_MORE_ENEMY_TECH_INTEL = 23  # Message indicating that we need to scout for more enemy tech
-    SCOUTED_ENOUGH_ENEMY_TECH_INTEL = 24  # Message indicating that we have scouted "enough" enemy tech intel
+    ENEMY_EARLY_NATURAL_EXPAND_TAKEN = 20
+    ENEMY_EARLY_NATURAL_EXPAND_NOT_TAKEN = 21
+    NEW_BUILD = 22  # New build added
+    NEW_BUILD_STAGE = 23  # New build stage entered
+    NEED_MORE_ENEMY_TECH_INTEL = 24  # Message indicating that we need to scout for more enemy tech
+    SCOUTED_ENOUGH_ENEMY_TECH_INTEL = 25  # Message indicating that we have scouted "enough" enemy tech intel
 
     # # UNITS TRAINED MESSAGES
-    UNIT_CREATED = 25
-    STRUCTURE_COMPLETE = 26
-    UPGRADE_STARTED = 27
+    UNIT_CREATED = 26
+    STRUCTURE_COMPLETE = 27
+    UPGRADE_STARTED = 28
 
     # # UNIT ORDER MESSAGES
-    DRONE_LEAVING_TO_CREATE_HATCHERY = 28  # Value is Drone's tag
-    OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 29  # Move the second overlord scout to the enemy's main ramp
-    PULL_WORKERS_OFF_VESPENE = 30  # Value is int of workers to mine vespene. None if return to default.
-    PULL_WORKERS_OFF_VESPENE_FOR_X_SECONDS = 31  # Value is float of seconds to pull off vespene
-    UNROOT_ALL_SPINECRAWLERS = 32  # Message indicating we should uproot and reposition spinecrawlers
+    DRONE_LEAVING_TO_CREATE_HATCHERY = 29  # Value is Drone's tag
+    OVERLORD_SCOUT_2_TO_ENEMY_RAMP = 30  # Move the second overlord scout to the enemy's main ramp
+    PULL_WORKERS_OFF_VESPENE = 31  # Value is int of workers to mine vespene. None if return to default.
+    PULL_WORKERS_OFF_VESPENE_FOR_X_SECONDS = 32  # Value is float of seconds to pull off vespene
+    CLEAR_PULLING_WORKERS_OFF_VESPENE = 33  # Clears all counters keeping units from full vespene saturation
+    UNROOT_ALL_SPINECRAWLERS = 34  # Message indicating we should uproot and reposition spinecrawlers
 
     # # STATE MACHINE
-    STATE_ENTERED = 33  # Value is State being left
-    STATE_EXITED = 34  # Value is State entered
-    DONT_ATTACK = 35  # Indicates that we shouldn't ever enter ATTACKING or MOVING_TO_ATTACK forces state
-    DONT_DEFEND = 36  # Indicates that we shouldn't ever enter DEFENDING forces state
-    ALLOW_DEFENDING = 37  # Indicates that we can enter the DEFENDING forces state
-    ALLOW_ATTACKING_THROUGH_NYDUS = 38  # Indicates that we can enter the ATTACKING_THROUGH_NYDUS state
+    STATE_ENTERED = 35  # Value is State being left
+    STATE_EXITED = 36  # Value is State entered
+    DONT_ATTACK = 37  # Indicates that we shouldn't ever enter ATTACKING or MOVING_TO_ATTACK forces state
+    DONT_DEFEND = 38  # Indicates that we shouldn't ever enter DEFENDING forces state
+    ALLOW_DEFENDING = 39  # Indicates that we can enter the DEFENDING forces state
+    ALLOW_ATTACKING_THROUGH_NYDUS = 40  # Indicates that we can enter the ATTACKING_THROUGH_NYDUS state
     # Starts an attack and doesn't stop until condition returns True.
     # Val is a function of type [[manager], bool]. It takes the manager that receives the message as input.
-    DONT_STOP_ATTACKING_UNTIL_CONDITION = 39
+    DONT_STOP_ATTACKING_UNTIL_CONDITION = 41
 
     # # STRATEGY CHANGE
-    BUILD_OFFENSIVE_SPINES = 40  # Builds spines in enemy base rather than at home. Turns off uprooting.
-    DONT_RETURN_DISTANT_WORKERS_TO_TOWNHALLS = 41  # Turn off returning distant workers to townhalls
-    ALLOW_NEURAL_PARASITE_UPGRADE = 42
+    BUILD_OFFENSIVE_SPINES = 42  # Builds spines in enemy base rather than at home. Turns off uprooting.
+    DONT_RETURN_DISTANT_WORKERS_TO_TOWNHALLS = 43  # Turn off returning distant workers to townhalls
+    ALLOW_NEURAL_PARASITE_UPGRADE = 44
 
 
 # Build Manager Commands

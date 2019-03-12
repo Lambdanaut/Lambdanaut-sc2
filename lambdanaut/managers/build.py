@@ -69,6 +69,7 @@ class BuildManager(Manager):
         self.subscribe(Messages.FOUND_ENEMY_PROXY_HATCHERY)
         self.subscribe(Messages.FOUND_ENEMY_RUSH)
         self.subscribe(Messages.FOUND_ENEMY_WORKER_RUSH)
+        self.subscribe(Messages.FOUND_ENEMY_EARLY_GREED)
         self.subscribe(Messages.ENEMY_MOVING_OUT_SCOUTED)
         self.subscribe(Messages.FOUND_ENEMY_EARLY_AGGRESSION)
         self.subscribe(Messages.ENEMY_AIR_TECH_SCOUTED)
@@ -151,17 +152,31 @@ class BuildManager(Manager):
                     pass
 
     def check_build_requirements(self, build: Builds) -> bool:
-        if build in {Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE, Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS}:
+        if build in {Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE,
+                     Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS,
+                     Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE}:
             # Don't switch out of early game spore crawlers
             if Builds.EARLY_GAME_SPORE_CRAWLERS in self.builds:
                 return False
 
-        if build in {Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS, Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE}:
+        if build in {Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS,
+                     Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE,
+                     Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE}:
             # If we're we have a focused early game build, don't start defending cautiously
             if any(build in self.builds for build in {
                     Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE,
                     Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE,
+                    Builds.EARLY_GAME_HATCHERY_FIRST_LING_RUSH,
                     Builds.EARLY_GAME_POOL_SPINE_ALL_IN}):
+                return False
+
+        if build in {Builds.EARLY_GAME_HATCHERY_FIRST_LING_RUSH,}:
+            # If we're committed to a defense, don't switch to a timing
+            if any(build in self.builds for build in {
+                    Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE,
+                    Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE,
+                    Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS}):
+
                 return False
 
         return True
@@ -292,6 +307,19 @@ class BuildManager(Manager):
 
                     self.add_build(Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE)
                     self.add_build(Builds.MID_GAME_ROACH_HYDRA_LURKER)
+
+            # Messages indicating the enemy played greedy early and must be punished :3
+            two_base_early_timing = {
+                Messages.FOUND_ENEMY_EARLY_GREED}
+            if message in two_base_early_timing:
+                self.ack(message)
+
+                # Switch to an offensive 2 base build, cancel hatcheries in construction
+                if len(self.bot.townhalls) > 2:
+                    for townhall in self.bot.townhalls.not_ready:
+                        self.bot.actions.append(townhall(const.AbilityId.CANCEL_BUILDINPROGRESS))
+
+                self.add_build(Builds.EARLY_GAME_HATCHERY_FIRST_LING_RUSH)
 
             # Switch to Defensive build if early game
             # Stop townhall and worker production for a short duration
@@ -843,7 +871,7 @@ class BuildManager(Manager):
 
         # Check type of unit we're building to determine how to build
 
-        if build_target == const.HATCHERY:
+        if build_target is const.HATCHERY:
             expansion_locations = await self.bot.get_open_expansions()
             try:
                 expansion_location = expansion_locations[self.next_expansion_index]
@@ -890,7 +918,7 @@ class BuildManager(Manager):
                             self._recent_commands.add(
                                 BuildManagerCommands.EXPAND_MOVE, self.bot.state.game_loop, expiry=22)
 
-        elif build_target == const.LAIR:
+        elif build_target is const.LAIR:
             # Get a hatchery
             hatcheries = self.bot.units(const.HATCHERY).idle
 
@@ -900,7 +928,7 @@ class BuildManager(Manager):
                 self.bot.actions.append(hatchery.build(build_target))
                 return True
 
-        elif build_target == const.HIVE:
+        elif build_target is const.HIVE:
             # Get a lair
             lairs = self.bot.units(const.LAIR).idle
 
@@ -909,7 +937,7 @@ class BuildManager(Manager):
                 self.bot.actions.append(lairs.random.build(build_target))
                 return True
 
-        elif build_target == const.EXTRACTOR:
+        elif build_target is const.EXTRACTOR:
             if self.can_afford(build_target):
                 townhalls = self.bot.townhalls.ready
                 for townhall in townhalls:
@@ -926,7 +954,7 @@ class BuildManager(Manager):
 
                     return True
 
-        elif build_target == const.GREATERSPIRE:
+        elif build_target is const.GREATERSPIRE:
             # Get a spire
             spire = self.bot.units(const.SPIRE).idle
 
@@ -936,7 +964,7 @@ class BuildManager(Manager):
 
                 return True
 
-        elif build_target == const.SPINECRAWLER:
+        elif build_target is const.SPINECRAWLER:
             if self.build_offensive_spines:
                 if self.can_afford(build_target):
                     # Build offensive spine crawlers
@@ -971,7 +999,7 @@ class BuildManager(Manager):
 
                         return True
 
-        elif build_target == const.SPORECRAWLER:
+        elif build_target is const.SPORECRAWLER:
             townhalls = self.bot.townhalls.ready
 
             if townhalls:
@@ -1038,7 +1066,7 @@ class BuildManager(Manager):
 
                     return True
 
-        elif build_target == const.QUEEN:
+        elif build_target is const.QUEEN:
 
             townhalls = self.bot.townhalls.ready.idle
 
@@ -1056,21 +1084,38 @@ class BuildManager(Manager):
                 return True
 
         elif build_target in const2.ZERG_UNITS_FROM_LARVAE:
-            # Get a larvae
-            larvae = self.bot.units(const.LARVA)
+            # Get larva
+            larvas = self.bot.units(const.LARVA)
 
             # Train the unit
-            if self.can_afford(build_target) and larvae:
+            if self.can_afford(build_target) and larvas:
+
+                unsaturated_townhalls = self.bot.townhalls.sorted(
+                    lambda th: th.assigned_harvesters / th.ideal_harvesters if th.ideal_harvesters else 1)
+
+                if unsaturated_townhalls:
+                    if build_target is const.DRONE:
+                        # Prefer building drones from unsaturated townhalls
+                        townhall = unsaturated_townhalls[0]
+                        larva = larvas.closest_to(townhall)
+                    else:
+                        # Prefer building other units from saturated townhalls
+                        townhall = unsaturated_townhalls[0]
+                        larva = larvas.furthest_to(townhall)
+                else:
+                    larva = larvas.random
+
+
                 if build_target == const.OVERLORD:
                     # Keep from issuing another overlord build command too soon
                     # Overlords are built in 18 seconds.
                     self._recent_commands.add(
                         BuildManagerCommands.BUILD_OVERLORD, self.bot.state.game_loop, expiry=18)
 
-                self.bot.actions.append(larvae.random.train(build_target))
+                self.bot.actions.append(larva.train(build_target))
                 return True
 
-        elif build_target == const.BANELING:
+        elif build_target is const.BANELING:
             # Get zerglings
             zerglings = self.bot.units(const.ZERGLING).idle
 
@@ -1081,7 +1126,7 @@ class BuildManager(Manager):
                 self.bot.actions.append(zergling.train(build_target, queue=True))
                 return True
 
-        elif build_target == const.RAVAGER:
+        elif build_target is const.RAVAGER:
             # Get roaches
             roaches = self.bot.units(const.ROACH).filter(
                 lambda r: not self.bot.unit_is_engaged(r))
@@ -1097,7 +1142,7 @@ class BuildManager(Manager):
             # We can skip the ravager if all the roaches are engaged
             return True
 
-        elif build_target == const.LURKERMP:
+        elif build_target is const.LURKERMP:
             # Get hydras
             hydralisks = self.bot.units(const.HYDRALISK).filter(
                 lambda r: not self.bot.unit_is_engaged(r))
@@ -1113,7 +1158,7 @@ class BuildManager(Manager):
             # We can skip the lurker if all the hydralisks are engaged
             return True
 
-        elif build_target == const.BROODLORD:
+        elif build_target is const.BROODLORD:
             # Get a Corruptor
             corruptors = self.bot.units(const.CORRUPTOR)
 
@@ -1128,7 +1173,7 @@ class BuildManager(Manager):
                 self.bot.actions.append(corruptor.train(build_target))
                 return True
 
-        elif build_target == const.OVERSEER:
+        elif build_target is const.OVERSEER:
             # Get an overlord
             overlords = self.bot.units(const.OVERLORD)
 

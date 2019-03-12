@@ -130,7 +130,7 @@ class OverlordManager(StatefulManager):
                 expansion_locations = [
                     expansion for expansion in self.bot.expansion_locations.keys()
                     if not self.bot.is_visible(expansion)
-                    and expansion.distance_to_closest(self.bot.enemy_cache.values()) > 17
+                    and expansion.distance_to_closest(self.bot.enemy_cache.values()) > 30
                     and expansion.distance_to_closest(overlords) > 16
                     and not self._recent_expansions_visited.contains(expansion, self.bot.state.game_loop)
                 ]
