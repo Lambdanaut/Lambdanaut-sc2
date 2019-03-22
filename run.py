@@ -36,8 +36,8 @@ VS_BOT = False
 REALTIME = False
 
 BUILD = None
-BUILD = sc2.AIBuild.RandomBuild
-# BUILD = sc2.AIBuild.Rush
+# BUILD = sc2.AIBuild.RandomBuild
+BUILD = sc2.AIBuild.Rush
 # BUILD = sc2.AIBuild.Timing
 # BUILD = sc2.AIBuild.Power
 # BUILD = sc2.AIBuild.Macro

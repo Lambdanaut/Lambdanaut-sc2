@@ -522,12 +522,12 @@ EARLY_GAME_SPORE_CRAWLERS = [
     QUEEN,  # 2
     # One Spore Crawler for each Hatchery we own
     OneForEach(SPORECRAWLER, HATCHERY),
-    IfHasThenDontBuild(ROACHWARREN, ZERGLING, ),
     # One more Spore Crawler for each Hatchery we own if we're defending aggressively. Also two extra.
     IfFlagIsSet(BuildManagerFlags.AGGRESSIVE_AIR_DEFENSE, OneForEach(SPORECRAWLER, HATCHERY)),
     IfFlagIsSet(BuildManagerFlags.AGGRESSIVE_AIR_DEFENSE, SPORECRAWLER, n=2),
-    HATCHERY,  # 2 (First expand)
     QUEEN,  # 3
+    HATCHERY,  # 2 (First expand)
+    QUEEN,  # 4
 ]
 
 
@@ -791,14 +791,15 @@ MID_GAME_TWO_BASE_HYDRA_TIMING = [
     # Put workers on vespene gas. Gas heavy work coming
     PublishMessage(Messages.CLEAR_PULLING_WORKERS_OFF_VESPENE),
     ZERGLING, ZERGLING, ZERGLING, ZERGLING,
+    ZERGLING, ZERGLING, ZERGLING, ZERGLING,
     AtLeast(3, QUEEN),
     DRONE, DRONE, DRONE, DRONE, DRONE,
     AtLeast(2, EXTRACTOR),
-    DRONE, DRONE, DRONE, DRONE,
     LAIR,
-    AtLeast(4, EXTRACTOR),
     DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE, DRONE,
     HYDRALISKDEN,
+    AtLeast(4, EXTRACTOR),
+    DRONE, DRONE, DRONE, DRONE,
     QUEEN,
     OVERSEER, OVERSEER,
     HYDRALISK, HYDRALISK, HYDRALISK,
