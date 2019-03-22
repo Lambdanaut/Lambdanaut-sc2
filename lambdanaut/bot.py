@@ -279,8 +279,7 @@ class Lambdanaut(sc2.BotAI):
             self.force_manager.dont_stop_attacking = True; self.force_manager.state = const2.ForcesStates.ATTACKING
 
             # await self._client.debug_create_unit([[const.ZERGLING, 22, self.start_location - Point2((10, 0)), 1]])
-            await self._client.debug_create_unit([[const.ZERGLING, 15, self.start_location - Point2((10, 0)), 1]])
-            await self._client.debug_create_unit([[const.BANELING, 4, self.start_location - Point2((12, 0)), 1]])
+            await self._client.debug_create_unit([[const.BANELING, 10, self.start_location - Point2((12, 0)), 1]])
             await self._client.debug_create_unit([[const.UnitTypeId.ZERGLING, 40, self.start_location + Point2((5, 0)), 2]])
             # await self._client.debug_create_unit([[const.PHOTONCANNON, 6, self.start_location + Point2((6, 0)), 2]])
             await self._client.debug_create_unit([[const.PYLON, 1, self.start_location + Point2((8, 0)), 2]])
