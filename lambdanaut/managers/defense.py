@@ -68,9 +68,14 @@ class DefenseManager(StatefulManager):
 
             if enemies:
                 # Get townhall with closest enemy unit by sorting them on their distance
-                townhalls_sorted = sorted([(enemies.closest_distance_to(th), th)
+                townhalls_sorted = sorted([(enemies.closest_distance_to(th), th.tag)
                                            for th in townhalls])
-                closest_townhall = townhalls_sorted[0][1]
+                closest_townhall_tag = townhalls_sorted[0][1]
+                closest_townhall = townhalls.find_by_tag(closest_townhall_tag)
+
+                if closest_townhall is None:
+                    self.print("ERROR :: closest_townhall was `None`. This shouldn't ever happen.")
+                    return
 
                 # Get nearby enemies
                 enemies_nearby = [u.snapshot for u in self.bot.enemy_cache.values()
