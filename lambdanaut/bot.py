@@ -99,6 +99,10 @@ class Lambdanaut(sc2.BotAI):
         # Copy of self.game_info.pathing_grid except the starting structures are removed
         self.pathing_grid: PixelMap = None
 
+        # Sorted list of points that designate high-priority attack points. Sorted from high->low.
+        # High priority usually means lots of workers to kill.
+        self.priority_spaces: List[Point2] = []
+
         # Sets enemy_race.
         # This is a hack to fix a bug on our test maps.
         try:
@@ -133,6 +137,9 @@ class Lambdanaut(sc2.BotAI):
 
             # Update the pathing variables
             self.update_shortest_path_to_enemy_start_location()
+
+            # Set the priority space to be the enemy start location
+            self.priority_spaces.append(self.enemy_start_location)
 
             # Load up managers
             self.intel_manager = IntelManager(self)
@@ -194,6 +201,9 @@ class Lambdanaut(sc2.BotAI):
             await self.draw_debug()
             if CREATE_DEBUG_UNITS:
                 await self.create_debug_units()
+
+        # Update high priority spaces we should favor attacking
+        self.update_priority_spaces()
 
         # "Do" actions
         await self.do_actions(self.actions)
@@ -304,6 +314,11 @@ class Lambdanaut(sc2.BotAI):
             g = 0
             b = 0
 
+        class Blue:
+            r = 0
+            g = 0
+            b = 255
+
         # Draw clusters
         for cluster in self.army_clusters:
             if cluster:
@@ -322,6 +337,13 @@ class Lambdanaut(sc2.BotAI):
                 self._client.debug_sphere_out(cluster_position, radius, color=Red())
                 self._client.debug_text_world(str('Size: {}'.format(len(cluster))),
                                               cluster_position, color=Red(), size=18)
+
+        priority_index = 0
+        for priority_space in self.priority_spaces:
+            position = priority_space + Point3((0, 3, 0))
+            self._client.debug_text_world(str('Priority index: {}'.format(priority_index)),
+                                          position, color=Blue(), size=18)
+            priority_index += 1
 
         await self._client.send_debug()
 
@@ -372,6 +394,54 @@ class Lambdanaut(sc2.BotAI):
                     cached_enemy_tags_to_delete.add(cached_unit.tag)
         for cached_tag in cached_enemy_tags_to_delete:
             del self.enemy_cache[cached_tag]
+
+    def update_priority_spaces(self):
+        """
+        Updates priority space list of points of enemy high priority targets on the minimap
+        """
+        # List of [Cluster Score, Cluster Position] for sorting clusters by priority score
+        spaces: List[Tuple[float, Point2]] = []
+
+        for cluster in self.enemy_clusters:
+
+            if cluster:
+
+                # Get counts of cluster units.
+                # Add `1` so we don't multiple or divide by zero
+                worker_count = sum(1 for u in cluster if u.type_id in const2.WORKERS) + 1
+                structure_count = sum(1 for u in cluster if u.is_structure) + 1
+                static_defense_count = sum(1 for u in cluster if u.type_id in const2.DEFENSIVE_STRUCTURES) + 1
+
+                # Distance from their start location. Further == better
+                # Divide by 100 so it's not such a powerful weight
+                distance_from_them = max(1, cluster.position.distance_to(self.enemy_start_location)) / 100
+
+                # Determine the cluster's score
+                score = (
+                    worker_count
+                    * structure_count
+                    * distance_from_them)\
+                    / static_defense_count
+
+                spaces.append((score, cluster.position))
+
+        # Add enemy start location to priority spaces as an edge-case
+        # Safely assume 16 workers, and 3 structures total
+        start_location_score = 16 * 3
+        spaces.append((start_location_score, self.enemy_start_location))
+
+        # Sort spaces based on score
+        spaces = sorted(spaces, reverse=True)
+
+        # Get cluster positions for each pairing in `spaces`
+        spaces = [position for (_, position) in spaces]
+
+        # If we have no enemy priority spaces, then just use the enemy's start location
+        if not spaces:
+            spaces = [self.enemy_start_location]
+
+        # Update the priority spaces
+        self.priority_spaces = spaces
 
     def publish(self, manager, message_type: const2.Messages, value: Optional[Any] = None):
         """
@@ -668,6 +738,11 @@ class Lambdanaut(sc2.BotAI):
         midgame_tech = {const.UnitTypeId.ROACHWARREN, const.UnitTypeId.ROACHWARREN}
 
         return bool(self.units(midgame_tech))
+
+    def cooldown_speed_movement_distance(self, unit: Unit) -> float:
+        max_weapon_cooldown = const2.UNIT_WEAPON_COOLDOWNS.get(unit.type_id) or 1.0
+
+        return unit.movement_speed * max_weapon_cooldown
 
     def unit_is_engaged(self, unit: Unit) -> bool:
         """

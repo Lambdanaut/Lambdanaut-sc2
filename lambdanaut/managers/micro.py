@@ -894,8 +894,8 @@ class MicroManager(Manager):
         """Handles combat priority targeting for the given unit"""
 
         if not unit.can_priority_retarget(self.bot.state.game_loop):
-            # If the unit has priority retarged recently, don't retarget again
-            return
+            # If the unit has priority re-targeted recently, don't retarget again
+            return False
 
         unit.last_priority_retarget = self.bot.state.game_loop
 
@@ -920,6 +920,9 @@ class MicroManager(Manager):
         # Micro closer to nearest enemy army cluster if our dps is higher
         # Micro further from nearest enemy army cluster if our dps is lower
 
+        townhalls = self.bot.townhalls
+        highest_priority_space = self.bot.priority_spaces[0]
+
         # enemy_cached = self.bot.enemy_cache.values()
         for army_cluster in self.bot.army_clusters:
             army_center = army_cluster.position
@@ -931,8 +934,8 @@ class MicroManager(Manager):
             if army_center.distance_to(enemy_army_center) < 17:
                 # Micro against enemy clusters
                 if nearby_army and nearest_enemy_cluster:
-                    # army_strength = self.bot.relative_army_strength(
-                    #     army_cluster, nearest_enemy_cluster, ignore_height_difference=False)
+                    army_strength = self.bot.relative_army_strength(
+                        army_cluster, nearest_enemy_cluster, ignore_height_difference=False)
 
                     ranged_units_in_attack_range_count = self.bot.count_units_in_attack_range(
                         nearby_army, nearest_enemy_cluster, ranged_only=True)
@@ -978,6 +981,32 @@ class MicroManager(Manager):
                             #             nearest_enemy_unit, -1.5)
                             #         self.bot.actions.append(unit.snapshot.move(away_from_enemy))
 
+                            # Move towards priority space if our cluster is stronger
+                            elif army_strength > 3 \
+                                    and unit_is_combatant \
+                                    and unit.distance_to(highest_priority_space) > 5 \
+                                    and not self.bot.is_melee(unit) \
+                                    and unit.weapon_cooldown \
+                                    and townhalls \
+                                    and unit.snapshot.distance_to(townhalls.closest_to(unit.snapshot)) > 30 \
+                                    and not unit.is_moving:
+
+                                distance_to_move = self.bot.cooldown_speed_movement_distance(unit)
+
+                                towards_priority_target = unit.position.towards(
+                                    highest_priority_space, distance_to_move)
+
+                                pathable = not self.bot.game_info.pathing_grid.is_set(towards_priority_target.rounded)
+                                if pathable:
+                                    # We can move there. It's pathable.
+                                    target = towards_priority_target
+                                else:
+                                    # We can't move there. Attempt to move further
+                                    target = unit.position.towards(
+                                        highest_priority_space, 7)
+
+                                self.bot.actions.append(unit.snapshot.move(target))
+
                             # Close the distance if our cluster isn't in range
                             elif unit_is_combatant and ranged_units_in_attack_range_ratio < 0.8 \
                                     and not self.bot.is_melee(unit) \
@@ -989,18 +1018,16 @@ class MicroManager(Manager):
                                     nearest_enemy_unit, 1)
                                 self.bot.actions.append(unit.snapshot.move(towards_enemy))
 
-                            # Back off from enemy if we outrange them and are close
+                            # Back off from enemy if we out-range them and are close
                             elif unit_is_combatant and unit.weapon_cooldown \
                                     and not self.bot.is_melee(unit) \
                                     and not unit.is_moving \
                                     and unit.ground_range >= nearest_enemy_unit.ground_range \
                                     and unit_distance_to_enemy < unit.ground_range - 0.5:
 
-                                # Get the unit's weapon cooldown
-                                max_weapon_cooldown = const2.UNIT_WEAPON_COOLDOWNS.get(unit.type_id) or 1
-
+                                # Move the unit how far he can move before his cooldown runs out
                                 distance_to_move = 0.5 if nearest_enemy_unit.is_structure else \
-                                    unit.movement_speed * max_weapon_cooldown * 0.95
+                                    self.bot.cooldown_speed_movement_distance(unit) * 0.95
 
                                 away_from_enemy = unit.position.towards(nearest_enemy_unit, -distance_to_move)
 
@@ -1011,7 +1038,6 @@ class MicroManager(Manager):
                                 else:
                                     # We can't move backwards. Attempt to retreat to a townhall away from the enemy
                                     away_from_enemy = unit.position.towards(nearest_enemy_unit.position, distance=-8)
-                                    townhalls = self.bot.townhalls
                                     if townhalls:
                                         target = townhalls.closest_to(away_from_enemy).position
                                     else:

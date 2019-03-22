@@ -75,7 +75,7 @@ class UnitCached(object):
 
         Called from manager.micro.Micro.manage_priority_targeting()
         """
-        return game_loop - self.last_priority_retarget > 50  # Almost two seconds
+        return game_loop - self.last_priority_retarget > 12  # About half a second
 
     def __getattr__(self, item):
         """Passes calls down to the snapshot"""
