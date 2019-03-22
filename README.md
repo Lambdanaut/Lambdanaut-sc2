@@ -6,4 +6,5 @@ This bot can be run either locally against a computer opponent, or through the [
 ## Requirements
 * [Python 3.6+](https://www.python.org/downloads/)
 * [python-sc2](https://github.com/Dentosal/python-sc2)
+* [sc2client-proto](https://github.com/Blizzard/s2client-proto)
 
