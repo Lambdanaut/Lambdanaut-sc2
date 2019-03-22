@@ -151,8 +151,9 @@ class DefenseManager(StatefulManager):
                                     defend_with_more_workers = len(self.bot.workers_defending) < 1
                                 elif len(ground_enemies) > 5 \
                                         and all(u.type_id in const2.WORKERS for u in ground_enemies):
-                                    # Use all workers against a worker rush
-                                    defend_with_more_workers = True
+                                    # Use 3 more workers than there are enemies if it's a worker rush
+                                    defend_with_more_workers = \
+                                        len(self.bot.workers_defending) <= len(ground_enemies) + 2
                                 else:
                                     # Use one more worker than there are enemies
                                     defend_with_more_workers = len(self.bot.workers_defending) <= len(ground_enemies)
@@ -206,7 +207,7 @@ class DefenseManager(StatefulManager):
                                 self.bot.actions.append(worker.gather(mineral))
 
                         # Return distant workers to working
-                        elif worker.distance_to(nearest_townhall.position) > 18:
+                        elif worker.distance_to(nearest_townhall.position) > 35:
                             workers_defending_to_remove.add(worker_id)
                             self.bot.actions.append(worker.move(nearest_townhall.position))
                 else:

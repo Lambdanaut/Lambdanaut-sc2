@@ -104,6 +104,22 @@ ZERG_UPGRADES_TO_TECH_REQUIREMENT = {
     const.ANABOLICSYNTHESIS: const.ULTRALISKCAVERN,
 }
 
+# Unit default weapon cooldowns, as specified in liquipedia
+UNIT_WEAPON_COOLDOWNS = {
+    const.DRONE: 1.07,
+    const.ZERGLING: 0.497,
+    const.BANELING: -1,
+    const.ROACH: 1.43,
+    const.RAVAGER: 1.14,
+    const.HYDRALISK: 0.59,
+    const.LURKER: 1.43,
+    const.QUEEN: 0.71,
+    const.MUTALISK: 1.09,
+    const.CORRUPTOR: 1.36,
+    const.BROODLORD: 1.79,
+    const.ULTRALISK: 0.61,
+}
+
 ZERG_UPGRADES = ZERG_UPGRADES_TO_STRUCTURE.keys()
 
 ENEMY_NON_ARMY = \

@@ -1,4 +1,6 @@
+import copy
 import math
+from typing import List
 
 import lib.sc2.constants as const
 from lib.sc2.position import Point2
@@ -227,7 +229,10 @@ class OverlordManager(StatefulManager):
                 # Move Overlord around different expansion locations
                 expansion_locations = self.bot.get_expansion_positions()
                 if expansion_locations:
-                    shortest_path = self.bot.shortest_path_between_points(expansion_locations[1:6])
+                    last_expansion_index_to_check = 6
+
+                    shortest_path = self.bot.shortest_path_between_points(
+                        expansion_locations[1:last_expansion_index_to_check])
                     for expansion_location in shortest_path:
                         self.bot.actions.append(overlord.move(expansion_location, queue=True))
 
@@ -243,7 +248,6 @@ class OverlordManager(StatefulManager):
             if self.move_overlord_scout_2_to_enemy_ramp and scouting_overlord.is_idle:
                 # Move the scouting overlord directly to the enemy ramp for vision
                 self.move_overlord_to_enemy_ramp(scouting_overlord)
-
 
     def baneling_drops(self):
         """

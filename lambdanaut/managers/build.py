@@ -129,19 +129,22 @@ class BuildManager(Manager):
             if self.bot.enemy_race is sc2.Race.Terran:
                 # Use rush distance to determine build
                 # Average rush distance is around 155. Longer rush distances are over 160.
-                if rush_distance < 160:
-                    # Do ravager harass into macro on small to medium rush distance maps
-                    self.starting_build = Builds.RAVAGER_ALL_IN
-                elif rush_distance > 165:
-                    # Rush distance is long. Play more greedily.
-                    self.add_build(Builds.EARLY_GAME_HATCHERY_FIRST_GREEDY)
+
+                # if rush_distance < 160:
+                #     # Do ravager harass into macro on small to medium rush distance maps
+                #     self.starting_build = Builds.RAVAGER_ALL_IN
+                # elif rush_distance > 165:
+                #     # Rush distance is long. Play more greedily.
+                #     self.add_build(Builds.EARLY_GAME_HATCHERY_FIRST_GREEDY)
+
+                self.starting_build = Builds.RAVAGER_ALL_IN
 
             elif self.bot.enemy_race is sc2.Race.Protoss:
                 # Use rush distance to determine build
-                if rush_distance < 150:
+                if rush_distance < 160:
                     # Do ravager all ins on short rush distance maps
                     self.starting_build = Builds.RAVAGER_ALL_IN
-                elif rush_distance > 155:
+                elif rush_distance > 160:
                     # Rush distance is long. Play more greedily.
                     self.add_build(Builds.EARLY_GAME_HATCHERY_FIRST_GREEDY)
 
@@ -162,7 +165,7 @@ class BuildManager(Manager):
         if build in {Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS}:
             # If we are defending strongly, don't start defending cautiously
             if any(build in self.builds for build in {
-                Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE}):
+                    Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE}):
                 return False
 
         if build in {Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS,
@@ -271,6 +274,10 @@ class BuildManager(Manager):
             rush_detected = {Messages.FOUND_ENEMY_RUSH}
             if message in rush_detected:
                 self.ack(message)
+
+                # Return to mining vespene if we need to defend a rush
+                # For banelings
+                self.publish(Messages.CLEAR_PULLING_WORKERS_OFF_VESPENE)
 
                 self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
 

@@ -189,8 +189,7 @@ class IntelManager(Manager):
         Checks to see if we're being rushed
         """
 
-        if not self.has_scouted_enemy_rush and \
-                self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
+        if not self.has_scouted_enemy_rush and not self.bot.has_midgame_tech():
 
             enemy = self.bot.enemy_cache.values()
 
@@ -211,12 +210,12 @@ class IntelManager(Manager):
 
             # Count any and all enemy units
             if (
-                    enemy_counter[const.ZERGLING] >= 7
+                    enemy_counter[const.ZERGLING] >= 8
                     or enemy_counter[const.RAVAGER] >= 2
-                    or enemy_counter[const.MARINE] >= 6
-                    or enemy_counter[const.REAPER] >= 3
-                    or enemy_counter[const.MARAUDER] >= 4
-                    or enemy_counter[const.ZEALOT] >= 4
+                    or enemy_counter[const.MARINE] >= 7
+                    or enemy_counter[const.REAPER] >= 4
+                    or enemy_counter[const.MARAUDER] >= 5
+                    or enemy_counter[const.ZEALOT] >= 5
                     or enemy_counter[const.ADEPT] >= 4
                     or enemy_counter[const.STALKER] >= 4):
                 self.has_scouted_enemy_rush = True

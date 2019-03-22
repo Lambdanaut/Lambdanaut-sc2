@@ -1,3 +1,4 @@
+from collections import deque
 from typing import List, Union
 
 import lib.sc2 as sc2
@@ -6,7 +7,7 @@ from lib.sc2.game_state import EffectData
 from lib.sc2.position import Point2
 from lib.sc2.unit import Unit
 
-from collections import deque
+import lambdanaut.const2 as const2
 
 
 class UnitCached(object):
@@ -19,6 +20,9 @@ class UnitCached(object):
         self.tag: int = unit.tag
 
         self.is_taking_damage = False
+
+        # The last game loop we performed a priority retarget for this unit
+        self.last_priority_retarget: int = 0
 
         self.last_positions: List[sc2.position.Point2] = deque(maxlen=self.last_positions_maxlen)
         self.last_positions.append(unit.position)
@@ -48,7 +52,6 @@ class UnitCached(object):
         """
         Determines if we should be avoiding an effect.
         Returns the effects position if so, otherwise returns None
-
         """
 
         if unit.is_mine:
@@ -65,6 +68,14 @@ class UnitCached(object):
                         return position
 
         return None
+
+    def can_priority_retarget(self, game_loop):
+        """
+        The unit can priority retarget if the last priority retarget time was over X frames ago
+
+        Called from manager.micro.Micro.manage_priority_targeting()
+        """
+        return game_loop - self.last_priority_retarget > 50  # Almost two seconds
 
     def __getattr__(self, item):
         """Passes calls down to the snapshot"""

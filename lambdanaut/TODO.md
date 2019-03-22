@@ -47,14 +47,15 @@
 
 ## HIGH PRIORITY
 
-  * Zergling surround micro
-    * If we have zergling speed
-    * If we can attack the enemy
-    * If there are more nearby zerglings than there are nearby enemies
-    * If the majority of the zerglings within distance 4 of enemy are not within distance 2 of enemy
-        * Move just past the enemy by 2
-    * else
-        * Attack enemy
+  * Stop zergling surrounds from surrounding enemy larva
+
+  * Update unit_cache so that we cache the last time we forced a priority retarget on that unit, so that we can 
+    retarget less-often
+
+  * A* move proxy scouting overlord around enemy natural expand to behind natural expand's mineral line to watch worker
+    saturation
+    * Pathfind around the natural expand by a distance of 11 until we get to 
+      the back of their mineral line.
 
   * Keep army together when attacking. Right now zerglings run ahead first. 
 
@@ -345,3 +346,6 @@
 
   * Better relative army strength prediction
     * Ranged units should be weighted
+
+  * Zergling surround micro
+

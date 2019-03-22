@@ -1,7 +1,7 @@
 import copy
 import math
 import random
-from typing import Iterable, List, Tuple
+from typing import Iterable, List, Tuple, Union
 
 import lib.sc2 as sc2
 from lib.sc2.position import Point2
@@ -15,6 +15,7 @@ from lambdanaut.const2 import Messages
 from lambdanaut.expiringlist import ExpiringList
 from lambdanaut.managers import Manager
 from lambdanaut.pathfinding import Pathfinder
+from lambdanaut.unit_cache import UnitCached
 import lambdanaut.utils as utils
 
 
@@ -53,7 +54,7 @@ class MicroManager(Manager):
 
         # Distance factor to get away from ranged units with scouting zergling
         # Usage: enemy.ground_range * self.scouting_zergling_proximity
-        self.scouting_zergling_proximity = 1.2
+        self.scouting_zergling_proximity = 1.1
 
         # Track whether we're performing a zergling run-by.
         # If there is a `True` in this list, we are performing one.
@@ -78,7 +79,7 @@ class MicroManager(Manager):
             lambda u:
             not u.is_flying
             and not u.is_structure
-            and u.distance_to(closest_enemy_unit) < 6)
+            and u.distance_to(closest_enemy_unit) < 4.5)
 
         if not closest_enemy_neighbors:
             return False
@@ -96,8 +97,12 @@ class MicroManager(Manager):
             target = closest_enemy_neighbors_center.towards(
                 units_center,
                 -closest_enemy_unit.radius * 3 - len(closest_enemy_neighbors) * 0.5)
-            self.bot.actions.append(unit.move(target))
-            return True
+
+            if not self.bot.game_info.pathing_grid.is_set(target.rounded):
+                self.bot.actions.append(unit.move(target))
+                return True
+            else:
+                return False
 
         elif center_distances < 0.8 \
                 and not self.bot.unit_is_engaged(unit) \
@@ -146,8 +151,7 @@ class MicroManager(Manager):
 
     async def manage_zerglings(self):
         zerglings = self.bot.units(const.ZERGLING)
-
-        attack_priority_types = const2.WORKERS
+        banelings = self.bot.units(const.BANELING)
 
         # Micro zerglings
         for zergling in zerglings:
@@ -170,6 +174,8 @@ class MicroManager(Manager):
 
                 closest_enemy_unit = nearby_enemy_units.closest_to(zergling)
 
+                nearby_friendly_banelings = banelings.closer_than(3, zergling)
+
                 if closest_enemy_unit.type_id == const.BANELING:
                     # Micro away from banelings
                     nearby_friendly_units = self.bot.units.closer_than(3, closest_enemy_unit)
@@ -181,6 +187,14 @@ class MicroManager(Manager):
                                 and closest_friendly_unit_to_enemy.tag != zergling.tag:
                             away_from_enemy = zergling.position.towards(closest_enemy_unit, -1)
                             self.bot.actions.append(zergling.move(away_from_enemy))
+
+                elif nearby_friendly_banelings \
+                        and closest_enemy_unit.type_id is const.ZERGLING \
+                        and nearby_friendly_banelings.closest_to(zergling).distance_to(closest_enemy_unit) > \
+                        zergling.distance_to(closest_enemy_unit):
+
+                    away_from_enemy = zergling.position.towards(closest_enemy_unit, -1.5)
+                    self.bot.actions.append(zergling.move(away_from_enemy))
 
                 elif const.UpgradeId.ZERGLINGMOVEMENTSPEED in self.bot.state.upgrades:
                     # Perform surround micro
@@ -240,7 +254,15 @@ class MicroManager(Manager):
         """
         zerglings = self.bot.units(const.ZERGLING)
 
-        if len(zerglings) >= 2:
+        required_zergling_count = 2
+        # Scout slightly later vs Terran/Protoss
+        # Reapers/Adepts are bitches
+        if self.bot.enemy_race is sc2.Race.Terran:
+            required_zergling_count = 10
+        elif self.bot.enemy_race is sc2.Race.Protoss:
+            required_zergling_count = 10
+
+        if len(zerglings) >= required_zergling_count:
             if self.scouting_zergling_tags:
                 zergling_tags_to_remove = set()
                 for zergling_tag in self.scouting_zergling_tags:
@@ -267,6 +289,9 @@ class MicroManager(Manager):
                                        if u.can_attack_ground
                                        and u.snapshot.type_id not in const2.WORKERS]
 
+                            closest_enemy_workers = self.bot.known_enemy_units(const2.WORKERS).\
+                                closer_than(8, zergling)
+
                             expansion_locations = self.bot.get_enemy_expansion_positions()
 
                             if expansion_locations:
@@ -284,10 +309,17 @@ class MicroManager(Manager):
 
                             if closest_enemy is not None \
                                     and closest_enemy.distance_to(zergling) < max(
-                                        5, closest_enemy.ground_range * self.scouting_zergling_proximity) \
+                                        4, closest_enemy.ground_range * self.scouting_zergling_proximity) \
                                     and len(self.bot.units.closer_than(7, zergling)) < 5:
+                                # Retreat
                                 target = zergling.position.towards(self.bot.start_location, 20)
                                 self.bot.actions.append(zergling.move(target))
+
+                            elif closest_enemy is None and closest_enemy_workers:
+                                # Attack nearby workers if we're not retreating
+                                closest_enemy_worker = closest_enemy_workers.closest_to(zergling)
+                                self.bot.actions.append(zergling.attack(closest_enemy_worker))
+
                             elif zergling.distance_to(enemy_target) > 10 \
                                     and not self.bot.unit_is_busy(zergling) \
                                     and not zergling.is_attacking:
@@ -855,12 +887,21 @@ class MicroManager(Manager):
                 target = unit.avoiding_effect.towards(unit.position, 4)
                 self.bot.actions.append(unit.move(target))
 
-    async def manage_priority_targeting(self, unit: Unit, attack_priorities=None) -> bool:
+    async def manage_priority_targeting(
+            self,
+            unit: UnitCached,
+            attack_priorities=None) -> bool:
         """Handles combat priority targeting for the given unit"""
+
+        if not unit.can_priority_retarget(self.bot.state.game_loop):
+            # If the unit has priority retarged recently, don't retarget again
+            return
+
+        unit.last_priority_retarget = self.bot.state.game_loop
 
         enemy_units = self.bot.known_enemy_units
         if enemy_units:
-            enemy_units = enemy_units.closer_than(unit.ground_range * 1.8, unit)
+            enemy_units = enemy_units.closer_than((unit.ground_range + unit.radius) * 1.1, unit.position)
 
             if enemy_units:
                 target = self.bot.closest_and_most_damaged(
@@ -954,14 +995,30 @@ class MicroManager(Manager):
                                     and not unit.is_moving \
                                     and unit.ground_range >= nearest_enemy_unit.ground_range \
                                     and unit_distance_to_enemy < unit.ground_range - 0.5:
-                                # Move a bit further if the enemy is a unit rather than a structure
-                                distance_to_move = 1 if nearest_enemy_unit.is_structure else 1.5
+
+                                # Get the unit's weapon cooldown
+                                max_weapon_cooldown = const2.UNIT_WEAPON_COOLDOWNS.get(unit.type_id) or 1
+
+                                distance_to_move = 0.5 if nearest_enemy_unit.is_structure else \
+                                    unit.movement_speed * max_weapon_cooldown * 0.95
 
                                 away_from_enemy = unit.position.towards(nearest_enemy_unit, -distance_to_move)
 
                                 pathable = not self.bot.game_info.pathing_grid.is_set(away_from_enemy.rounded)
                                 if pathable:
-                                    self.bot.actions.append(unit.move(away_from_enemy))
+                                    # We can move backwards. It's pathable.
+                                    target = away_from_enemy
+                                else:
+                                    # We can't move backwards. Attempt to retreat to a townhall away from the enemy
+                                    away_from_enemy = unit.position.towards(nearest_enemy_unit.position, distance=-8)
+                                    townhalls = self.bot.townhalls
+                                    if townhalls:
+                                        target = townhalls.closest_to(away_from_enemy).position
+                                    else:
+                                        target = None
+
+                                if target is not None:
+                                    self.bot.actions.append(unit.move(target))
                                     self.bot.actions.append(unit.attack(nearest_enemy_unit.position, queue=True))
 
                             # Close the distance if our unit's range is lower than the nearest enemy's range
@@ -1001,7 +1058,7 @@ class MicroManager(Manager):
                             #             self.bot.actions.append(unit.snapshot.move(target))
 
                             # Handle combat priority targeting
-                            else:
+                            elif not unit.weapon_cooldown:
                                 priorities = const2.WORKERS | {
                                     const.STARPORTTECHLAB, const.FACTORYTECHLAB, const.FUSIONCORE,
                                     const.SIEGETANK, const.SIEGETANKSIEGED, const.MEDIVAC, const.CYCLONE,
@@ -1014,7 +1071,7 @@ class MicroManager(Manager):
                                     const.INFESTOR, const.QUEEN, const.LURKERMP, const.LURKERMPBURROWED,
                                     const.ULTRALISK, const.BROODLORD,
                                 }
-                                await self.manage_priority_targeting(unit.snapshot, attack_priorities=priorities)
+                                await self.manage_priority_targeting(unit, attack_priorities=priorities)
 
     async def read_messages(self):
         """
@@ -1043,11 +1100,11 @@ class MicroManager(Manager):
 
                 if val is BuildStages.MID_GAME:
                     # Scout further out in the mid game
-                    self.scouting_zergling_proximity = 2.5
+                    self.scouting_zergling_proximity = 2.0
 
                 if val is BuildStages.MID_GAME \
                         and not self.has_performed_zergling_runby \
-                        and self.bot.enemy_race in {sc2.Race.Zerg, sc2.Race.Protoss}:
+                        and self.bot.enemy_race is sc2.Race.Zerg:
                     # Perform a zergling runby
 
                     self.has_performed_zergling_runby = True
