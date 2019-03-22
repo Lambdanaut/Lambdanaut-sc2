@@ -85,9 +85,9 @@ class DefenseManager(StatefulManager):
                 army_clusters = self.bot.army_clusters
 
                 # The harder we're attacked, the further-out army to pull back
-                # 1-3 Enemies: 0.3 of map. 4 enemy: 0.4 of map. 5 enemy: 0.5 of map. 6 enemy: 0.6 of map...
+                # 1-2 Enemies: 0.2 of map. 3 enemy: 0.3 of map. 4 enemy: 0.4 of map. 5 enemy: 0.5 of map.
                 # 8 or more enemy: 0.8 of map
-                distance_ratio_to_pull_back = max(0.3, min(0.8, len(enemies_nearby) * 0.1))
+                distance_ratio_to_pull_back = max(0.2, min(0.8, len(enemies_nearby) * 0.1))
                 army_clusters = \
                     [cluster for cluster in army_clusters
                      if closest_townhall.distance_to(cluster.position) <
