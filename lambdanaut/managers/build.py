@@ -184,6 +184,7 @@ class BuildManager(Manager):
         # If we're committed to a defense, don't switch to a timing
         if build in {Builds.EARLY_GAME_HATCHERY_FIRST_LING_RUSH, }:
             if any(build in self.builds for build in {
+                    Builds.EARLY_GAME_SPORE_CRAWLERS,
                     Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE,
                     Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE,
                     Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS}):

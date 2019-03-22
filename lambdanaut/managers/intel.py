@@ -313,7 +313,7 @@ class IntelManager(Manager):
 
             # Enemy expansions excluding the starting location
             enemy_expansions = self.bot.known_enemy_units(const2.TOWNHALLS).further_than(
-                11, self.bot.enemy_start_location).filter(lambda th: th.is_ready or th.build_progress > 0.9)
+                11, self.bot.enemy_start_location).filter(lambda th: th.is_ready or th.build_progress > 0.92)
 
             if self.bot.enemy_race is sc2.Race.Terran:
                 greedy_enough = len(enemy_expansions) > 0
