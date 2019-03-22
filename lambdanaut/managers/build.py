@@ -121,6 +121,8 @@ class BuildManager(Manager):
         * Map features
         """
 
+        self.add_build(Builds.MID_GAME_TWO_BASE_HYDRA_TIMING)
+
         if len(self.bot.enemy_start_locations) < 3:
 
             rush_distance = len(self.bot.shortest_path_to_enemy_start_location)
@@ -155,23 +157,23 @@ class BuildManager(Manager):
                     pass
 
     def check_build_requirements(self, build: Builds) -> bool:
+        # Don't switch out of early game spore crawlers
         if build in {Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE,
                      Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS,
                      Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE}:
-            # Don't switch out of early game spore crawlers
             if Builds.EARLY_GAME_SPORE_CRAWLERS in self.builds:
                 return False
 
+        # If we are defending strongly, don't start defending cautiously
         if build in {Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS}:
-            # If we are defending strongly, don't start defending cautiously
             if any(build in self.builds for build in {
                     Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE}):
                 return False
 
+        # If we have a focused early game build, don't switch to another focussed build
         if build in {Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS,
                      Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE,
                      Builds.EARLY_GAME_HATCHERY_FIRST_LING_RUSH}:
-            # If we have a focused early game build, don't switch to another focussed build
             if any(build in self.builds for build in {
                     Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE,
                     Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE,
@@ -181,8 +183,8 @@ class BuildManager(Manager):
                     Builds.EARLY_GAME_POOL_SPINE_ALL_IN}):
                 return False
 
-        if build in {Builds.EARLY_GAME_HATCHERY_FIRST_LING_RUSH,}:
-            # If we're committed to a defense, don't switch to a timing
+        # If we're committed to a defense, don't switch to a timing
+        if build in {Builds.EARLY_GAME_HATCHERY_FIRST_LING_RUSH, }:
             if any(build in self.builds for build in {
                     Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE,
                     Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE,
@@ -190,14 +192,35 @@ class BuildManager(Manager):
 
                 return False
 
+        # If we're committed to a timing, don't switch to a macro build
+        if build in {Builds.MID_GAME_LING_BANE_HYDRA,
+                     Builds.MID_GAME_ROACH_HYDRA_LURKER}:
+            if any(build in self.builds for build in {
+                     Builds.MID_GAME_TWO_BASE_HYDRA_TIMING,
+                     Builds.MID_GAME_TWO_BASE_ROACH_QUEEN_NYDUS_TIMING,
+                     Builds.MID_GAME_CORRUPTOR_BROOD_LORD_RUSH}):
+
+                return False
+
+        # If we're committed to a timing, don't switch to a defensive build
+        if build in {Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE,
+                     Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE,
+                     Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS}:
+            if any(build in self.builds for build in {
+                    Builds.MID_GAME_TWO_BASE_HYDRA_TIMING,
+                    Builds.MID_GAME_TWO_BASE_ROACH_QUEEN_NYDUS_TIMING,
+                    Builds.MID_GAME_CORRUPTOR_BROOD_LORD_RUSH}):
+
+                return False
+
         return True
 
-    def add_build(self, build: Builds, force=False):
+    def add_build(self, build: Builds, force=False) -> bool:
         """
         Adds a build to the build queue
         :param build: The build to be added
         :param force: Skip and build requirements and force the build to be added
-        :return:
+        :return: Boolean indicating if build was added
         """
         assert isinstance(build, Builds)
 
@@ -206,13 +229,13 @@ class BuildManager(Manager):
         # Check that the build's requirements are met
         if not force and not self.check_build_requirements(build):
             self.print("Skipping build order. It didn't meet requirements: {}".format(build.name))
-            return
+            return False
 
         self.print("Adding build order: {}".format(build.name))
 
         # If we're switching the midgame that has already been set, set a flag
         if build_stage == BuildStages.MID_GAME and \
-                self.builds[BuildStages.MID_GAME.value] != None:
+                self.builds[BuildStages.MID_GAME.value] is not None:
             self.has_switched_midgame = True
 
         # Publish a message about the newly added build
@@ -220,12 +243,15 @@ class BuildManager(Manager):
 
         self.builds[build_stage.value] = build
 
+        return True
+
     def add_next_default_build(self, build: builds.Builds=None):
         """
         Adds the next default build to our builds list(self.builds)
         If `builds` is given, then add the next default build for that build
         Otherwise just add the next default build for our latest build
         """
+
         if build is None:
             build = self.get_latest_build()
         else:
@@ -233,7 +259,15 @@ class BuildManager(Manager):
 
         next_default_build = DEFAULT_NEXT_BUILDS[build]
         if next_default_build is not None:
-            self.add_build(next_default_build, force=True)
+            if build in builds.FORCE_DEFAULT_NEXT_BUILDS:
+                force = True
+            else:
+                force = False
+
+            self.print('Adding next default build for build `{}`'.format(build.name))
+
+            self.add_build(next_default_build, force=force)
+
 
     def get_latest_build(self) -> builds.Builds:
         """Returns the latest build order added"""
@@ -344,9 +378,8 @@ class BuildManager(Manager):
                 self.ack(message)
 
                 if self.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
-                    if Builds.EARLY_GAME_SPORE_CRAWLERS not in self.builds:
-                        # Switch to a defensive build
-                        self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
+                    # Switch to a defensive build
+                    self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
                 else:
                     # If we're not in early game, stop building drones/townhalls for a bit
                     self._stop_nonarmy_production.add(
@@ -360,7 +393,7 @@ class BuildManager(Manager):
                 if Builds.RAVAGER_ALL_IN in self.builds:
                     # Switch out of ravager rush if the enemy gets air tech
                     self.add_build(Builds.OPENER_DEFAULT)
-                    self.add_build(Builds.MID_GAME_LING_BANE_HYDRA)
+                    self.add_build(Builds.MID_GAME_TWO_BASE_HYDRA_TIMING)
 
                     # Defend air aggressively. MUCHO spore crawler!!
                     self.build_flags.add(BuildManagerFlags.AGGRESSIVE_AIR_DEFENSE)
@@ -375,15 +408,15 @@ class BuildManager(Manager):
             if message in roach_hydra_mid_game:
                 self.ack(message)
                 # Don't change the build if we're rushing to brood lords
-                if self.build_stage != BuildStages.LATE_GAME and \
-                        Builds.MID_GAME_CORRUPTOR_BROOD_LORD_RUSH not in self.builds:
+                if self.build_stage != BuildStages.LATE_GAME:
 
-                    # Cancel spawning baneling nests
-                    baneling_nests = self.bot.units(const.UnitTypeId.BANELINGNEST)
-                    for baneling_nest in baneling_nests.not_ready:
-                        self.bot.actions.append(baneling_nest(const.AbilityId.CANCEL))
+                    success = self.add_build(Builds.MID_GAME_ROACH_HYDRA_LURKER)
 
-                    self.add_build(Builds.MID_GAME_ROACH_HYDRA_LURKER)
+                    if success:
+                        # Cancel spawning baneling nests
+                        baneling_nests = self.bot.units(const.UnitTypeId.BANELINGNEST)
+                        for baneling_nest in baneling_nests.not_ready:
+                            self.bot.actions.append(baneling_nest(const.AbilityId.CANCEL))
 
             # Messages indicating we need to rush up to brood lords in midgame asap
             broodlord_rush_mid_game = {

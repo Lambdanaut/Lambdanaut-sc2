@@ -47,7 +47,12 @@
 
 ## HIGH PRIORITY
 
+  * Better Priority Spaces. This needs a lot of extra finesse <3 :D <3 ;3 Luv u bby
+
   * Stop zergling surrounds from surrounding enemy larva
+  
+  * Re-implement OVERLORD_SCOUT_FOUND_ENEMY_DEFENSIVE_STRUCTURES with IntelManager so we can switch to roaches if 
+    we scout defensive structures
 
   * Update unit_cache so that we cache the last time we forced a priority retarget on that unit, so that we can 
     retarget less-often
