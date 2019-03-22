@@ -31,9 +31,9 @@ MAPS = [
 
 MAP_NAME = "CeruleanFallLE"
 MICRO_MAP_NAME = "kairo_training"
-VS_HUMAN = False
+VS_HUMAN = True
 VS_BOT = False
-REALTIME = False
+REALTIME = True
 
 BUILD = None
 # BUILD = sc2.AIBuild.RandomBuild
