@@ -181,7 +181,7 @@ class DefenseManager(StatefulManager):
                     queen_tag = self.bot.townhall_queens.get(th.tag)
                     if queen_tag is not None:
                         queen = self.bot.units.find_by_tag(queen_tag)
-                        if queen is not None and len(enemies_nearby) < 3:
+                        if queen is not None:
                             # Only send the closest queen if the enemy is only a couple units
                             target = self.bot.closest_and_most_damaged(enemies_nearby, queen)
 
