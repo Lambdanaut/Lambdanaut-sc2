@@ -411,8 +411,8 @@ class Lambdanaut(sc2.BotAI):
                 static_defense_count = sum(1 for u in cluster if u.type_id in const2.DEFENSIVE_STRUCTURES) + 1
 
                 # Distance from their start location. Further == better
-                # Divide by 100 so it's not such a powerful weight
-                distance_from_them = max(1, cluster.position.distance_to(self.enemy_start_location)) / 50
+                # Divide by 20 so it's not such a powerful weight
+                distance_from_them = max(1, cluster.position.distance_to(self.enemy_start_location) / 20)
 
                 # Determine the cluster's score
                 score = (

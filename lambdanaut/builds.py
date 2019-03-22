@@ -427,6 +427,7 @@ EARLY_GAME_POOL_FIRST_DEFENSIVE = [
     QUEEN,
     IfHasThenDontBuild(ROACHWARREN, BANELING, 4),
     IfHasThenDontBuild(ROACHWARREN, ZERGLING, 24),
+    IfHasThenDontBuild(ROACHWARREN, BANELING, 2),
 ]
 
 
@@ -519,13 +520,12 @@ EARLY_GAME_SPORE_CRAWLERS = [
     ZERGLING, ZERGLING,
     # One Spore Crawler for each Hatchery we own
     OneForEach(SPORECRAWLER, HATCHERY),
+    IfHasThenDontBuild(ROACHWARREN, ZERGLING, ),
     # One more Spore Crawler for each Hatchery we own if we're defending aggressively. Also two extra.
     IfFlagIsSet(BuildManagerFlags.AGGRESSIVE_AIR_DEFENSE, OneForEach(SPORECRAWLER, HATCHERY)),
     IfFlagIsSet(BuildManagerFlags.AGGRESSIVE_AIR_DEFENSE, SPORECRAWLER, n=2),
     HATCHERY,  # 2 (First expand)
     QUEEN,  # 2
-    QUEEN,  # 3
-    QUEEN,  # 4
 ]
 
 
@@ -788,8 +788,9 @@ MID_GAME_TWO_BASE_ROACH_QUEEN_NYDUS_TIMING = [
 MID_GAME_TWO_BASE_HYDRA_TIMING = [
     # Put workers on vespene gas. Gas heavy work coming
     PublishMessage(Messages.CLEAR_PULLING_WORKERS_OFF_VESPENE),
-    DRONE, DRONE, DRONE, DRONE, DRONE,
+    ZERGLING, ZERGLING, ZERGLING, ZERGLING,
     AtLeast(3, QUEEN),
+    DRONE, DRONE, DRONE, DRONE, DRONE,
     AtLeast(2, EXTRACTOR),
     DRONE, DRONE, DRONE, DRONE,
     LAIR,
@@ -806,7 +807,6 @@ MID_GAME_TWO_BASE_HYDRA_TIMING = [
     UpgradeId.EVOLVEMUSCULARAUGMENTS,
     HYDRALISK, HYDRALISK, HYDRALISK, HYDRALISK, HYDRALISK,
 ]
-
 
 
 # #################################### LATE GAME #####################################

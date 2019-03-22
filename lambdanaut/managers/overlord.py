@@ -197,7 +197,8 @@ class OverlordManager(StatefulManager):
                 away_from_enemy = overlord.position.towards(nearby_enemy_unit, -3)
                 self.bot.actions.append(overlord.move(away_from_enemy))
 
-            elif overlord.is_moving and isinstance(overlord.order_target, Point2):
+            elif overlord.is_moving and isinstance(overlord.order_target, Point2) \
+                    and overlord.tag not in self.scouting_overlord_tags:
                 # Check if any enemies are between the overlord and its current trajectory
                 # Halt movement if that is the case
 
