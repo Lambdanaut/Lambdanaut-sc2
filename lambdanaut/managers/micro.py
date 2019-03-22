@@ -982,7 +982,7 @@ class MicroManager(Manager):
                             #         self.bot.actions.append(unit.snapshot.move(away_from_enemy))
 
                             # Move towards priority space if our cluster is stronger
-                            elif army_strength > 3 \
+                            elif army_strength > 2 \
                                     and unit_is_combatant \
                                     and unit.distance_to(highest_priority_space) > 5 \
                                     and not self.bot.is_melee(unit) \

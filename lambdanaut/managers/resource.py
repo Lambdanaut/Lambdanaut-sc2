@@ -40,8 +40,9 @@ class ResourceManager(Manager):
         self.subscribe(Messages.CLEAR_PULLING_WORKERS_OFF_VESPENE)
         self.subscribe(Messages.DONT_RETURN_DISTANT_WORKERS_TO_TOWNHALLS)
 
-        # If this flag is set, pull off gas when zergling speed is researched
         self.allow_return_distant_workers_to_townhalls = True
+
+        # If this flag is set, pull off gas when zergling speed is researched
         self.pull_off_gas_early = True
 
     async def init(self):

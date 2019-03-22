@@ -415,18 +415,17 @@ EARLY_GAME_POOL_FIRST_DEFENSIVE = [
     CanAfford(SPINECRAWLER),
     IfHasThenDontBuild(ROACHWARREN, BANELING, 4),  # Build 4 banelings until we get a roach warren
     ZERGLING, ZERGLING,
-    HATCHERY,
-    DRONE, DRONE,
-    QUEEN,
     IfHasThenDontBuild(ROACHWARREN, ZERGLING, 6),  # Build 4 zerglings until we get a roach warren
-    IfHasThenDontBuild(ROACHWARREN, BANELING, 4),  # Build 4 banelings until we get a roach warren
     DRONE, DRONE,
-    QUEEN,
-    CanAfford(SPINECRAWLER),
-    CanAfford(ZERGLINGMOVEMENTSPEED),
-    IfHasThenDontBuild(ROACHWARREN, BANELING, 4),
     EXTRACTOR,
-    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 18),
+    DRONE, DRONE,
+    CanAfford(ZERGLINGMOVEMENTSPEED),
+    CanAfford(SPINECRAWLER),
+    IfHasThenDontBuild(ROACHWARREN, BANELING, 2),
+    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 8),
+    HATCHERY,
+    QUEEN,
+    IfHasThenDontBuild(ROACHWARREN, ZERGLING, 8),
 ]
 
 

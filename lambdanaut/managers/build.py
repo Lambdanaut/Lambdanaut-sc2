@@ -121,8 +121,6 @@ class BuildManager(Manager):
         * Map features
         """
 
-        self.add_build(Builds.MID_GAME_TWO_BASE_HYDRA_TIMING)
-
         if len(self.bot.enemy_start_locations) < 3:
 
             rush_distance = len(self.bot.shortest_path_to_enemy_start_location)
