@@ -509,7 +509,6 @@ EARLY_GAME_HATCHERY_FIRST_LING_RUSH += [ZERGLING] * 25
 
 # Seen enemy air units / air tech (Banshees, Mutas, Liberators, Oracle...)
 EARLY_GAME_SPORE_CRAWLERS = [
-    HATCHERY,  # 2 (First expand)
     DRONE,  # 18
     EXTRACTOR,  # 1
     AtLeast(1, SPAWNINGPOOL),
@@ -518,8 +517,12 @@ EARLY_GAME_SPORE_CRAWLERS = [
     QUEEN,  # 1
     ZERGLINGMOVEMENTSPEED,
     ZERGLING, ZERGLING,
-    OneForEach(SPORECRAWLER, HATCHERY),  # One Spore Crawler for each Hatchery we own
-    SPORECRAWLER,  # One more because who needs drones anyways
+    # One Spore Crawler for each Hatchery we own
+    OneForEach(SPORECRAWLER, HATCHERY),
+    # One more Spore Crawler for each Hatchery we own if we're defending aggressively. Also two extra.
+    IfFlagIsSet(BuildManagerFlags.AGGRESSIVE_AIR_DEFENSE, OneForEach(SPORECRAWLER, HATCHERY)),
+    IfFlagIsSet(BuildManagerFlags.AGGRESSIVE_AIR_DEFENSE, SPORECRAWLER, n=2),
+    HATCHERY,  # 2 (First expand)
     QUEEN,  # 2
     QUEEN,  # 3
     QUEEN,  # 4

@@ -243,6 +243,7 @@ class BuildManagerCommands(enum.Enum):
 # Build Manager flag names that can be set
 class BuildManagerFlags(enum.Enum):
     ALLOW_NEURAL_PARASITE_UPGRADE = 0  # Flag to allow researching infestor neural parasite ability
+    AGGRESSIVE_AIR_DEFENSE = 1  # Flag to build more air defense than usual
 
 
 # Force Manager Commands

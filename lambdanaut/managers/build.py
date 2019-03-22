@@ -356,6 +356,15 @@ class BuildManager(Manager):
             spore_crawlers_early_game = {Messages.ENEMY_AIR_TECH_SCOUTED}
             if message in spore_crawlers_early_game:
                 self.ack(message)
+
+                if Builds.RAVAGER_ALL_IN in self.builds:
+                    # Switch out of ravager rush if the enemy gets air tech
+                    self.add_build(Builds.OPENER_DEFAULT)
+                    self.add_build(Builds.MID_GAME_LING_BANE_HYDRA)
+
+                    # Defend air aggressively. MUCHO spore crawler!!
+                    self.build_flags.add(BuildManagerFlags.AGGRESSIVE_AIR_DEFENSE)
+
                 self.add_build(Builds.EARLY_GAME_SPORE_CRAWLERS)
 
             # Messages indicating roach_hydra mid game is ideal

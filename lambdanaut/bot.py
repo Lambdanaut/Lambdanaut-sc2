@@ -409,25 +409,23 @@ class Lambdanaut(sc2.BotAI):
                 # Get counts of cluster units.
                 # Add `1` so we don't multiple or divide by zero
                 worker_count = sum(1 for u in cluster if u.type_id in const2.WORKERS) + 1
-                structure_count = sum(1 for u in cluster if u.is_structure) + 1
                 static_defense_count = sum(1 for u in cluster if u.type_id in const2.DEFENSIVE_STRUCTURES) + 1
 
                 # Distance from their start location. Further == better
                 # Divide by 100 so it's not such a powerful weight
-                distance_from_them = max(1, cluster.position.distance_to(self.enemy_start_location)) / 100
+                distance_from_them = max(1, cluster.position.distance_to(self.enemy_start_location)) / 50
 
                 # Determine the cluster's score
                 score = (
                     worker_count
-                    * structure_count
                     * distance_from_them)\
                     / static_defense_count
 
                 spaces.append((score, cluster.position))
 
         # Add enemy start location to priority spaces as an edge-case
-        # Safely assume 16 workers, and 3 structures total
-        start_location_score = 16 * 3
+        # Safely assume 15 workers
+        start_location_score = 15
         spaces.append((start_location_score, self.enemy_start_location))
 
         # Sort spaces based on score
