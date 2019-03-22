@@ -354,7 +354,7 @@ class MicroManager(Manager):
                 enemies_in_range = self.bot.known_enemy_units(
                     attack_priorities).closer_than(2.2, baneling)
 
-                if len(enemies_in_range) > 9:
+                if len(enemies_in_range) > 8:
                     self.bot.actions.append(baneling(const.AbilityId.EXPLODE_EXPLODE))
 
             # Splash action to perform on enemies

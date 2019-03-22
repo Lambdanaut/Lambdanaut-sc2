@@ -393,6 +393,7 @@ EARLY_GAME_POOL_FIRST_CAUTIOUS = [
     CanAfford(ZERGLINGMOVEMENTSPEED),
     ZERGLING, ZERGLING, ZERGLING, ZERGLING,
     QUEEN,  # 2
+    IfHasThenBuild(BANELINGNEST, ZERGLING, 6),  # Build 8 extra zerglings if we have a baneling nest
     IfHasThenBuild(BANELINGNEST, BANELING, 6),  # Build 6 banelings if we have a baneling nest
     DRONE, DRONE, DRONE, DRONE,
 ]
@@ -518,6 +519,7 @@ EARLY_GAME_SPORE_CRAWLERS = [
     QUEEN,  # 1
     ZERGLINGMOVEMENTSPEED,
     ZERGLING, ZERGLING,
+    QUEEN,  # 2
     # One Spore Crawler for each Hatchery we own
     OneForEach(SPORECRAWLER, HATCHERY),
     IfHasThenDontBuild(ROACHWARREN, ZERGLING, ),
@@ -525,7 +527,7 @@ EARLY_GAME_SPORE_CRAWLERS = [
     IfFlagIsSet(BuildManagerFlags.AGGRESSIVE_AIR_DEFENSE, OneForEach(SPORECRAWLER, HATCHERY)),
     IfFlagIsSet(BuildManagerFlags.AGGRESSIVE_AIR_DEFENSE, SPORECRAWLER, n=2),
     HATCHERY,  # 2 (First expand)
-    QUEEN,  # 2
+    QUEEN,  # 3
 ]
 
 
