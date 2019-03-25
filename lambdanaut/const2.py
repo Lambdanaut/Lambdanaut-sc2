@@ -139,6 +139,9 @@ DEFENSIVE_STRUCTURES = {const.BUNKER, const.MISSILETURRET, const.PLANETARYFORTRE
 
 VESPENE_REFINERIES = {const.EXTRACTOR, const.REFINERY, const.ASSIMILATOR}
 
+# Units to ignore when comparing relative army strengths
+RELATIVE_ARMY_STRENGTH_TO_IGNORE = {const.ADEPTPHASESHIFT}
+
 # Value of army units
 # Used when determing whether to attack or not
 ZERG_ARMY_VALUE = \
@@ -161,6 +164,7 @@ DEFAULT_DPS_MAP = {
     const.BUNKER: 30,
     const.SIEGETANKSIEGED: 40,
     const.RAVEN: 25,
+    const.SHIELDBATTERY: 20,
     const.HIGHTEMPLAR: 30,
     const.DISRUPTOR: 30,
     const.BANELING: 30,

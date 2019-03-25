@@ -118,6 +118,10 @@ class Lambdanaut(sc2.BotAI):
         self.iteration = iteration
 
         if iteration == 0:
+            await self._client.debug_create_unit([[const.ADEPT, 2, self.start_location + Point2((4, 0)), 2]])
+            await self._client.debug_create_unit([[const.UnitTypeId.ADEPTPHASESHIFT, 2, self.start_location + Point2((4, 0)), 2]])
+            await self._client.debug_create_unit([[const.ZERGLING, 2, self.start_location + Point2((4, 0)), 2]])
+
             # Our army clusters
             self.army_clusters = clustering.get_fresh_clusters(
                 [], k=8, center_around=self.game_info.map_center)
@@ -982,11 +986,13 @@ class Lambdanaut(sc2.BotAI):
         u1 = [u for u in units_1
               if (not u.is_structure or u.can_attack_ground or u.can_attack_air)
               and (not ignore_defensive_structures or u not in const2.DEFENSIVE_STRUCTURES)
-              and (ignore_workers or u.type_id not in const2.WORKERS)]
+              and (ignore_workers or u.type_id not in const2.WORKERS)
+              and u not in const2.RELATIVE_ARMY_STRENGTH_TO_IGNORE]
         u2 = [u for u in units_2
               if (not u.is_structure or u.can_attack_ground or u.can_attack_air)
               and (not ignore_defensive_structures or u not in const2.DEFENSIVE_STRUCTURES)
-              and (ignore_workers or u.type_id not in const2.WORKERS)]
+              and (ignore_workers or u.type_id not in const2.WORKERS)
+              and u not in const2.RELATIVE_ARMY_STRENGTH_TO_IGNORE]
 
         u1_melee = []
         u1_ranged = []

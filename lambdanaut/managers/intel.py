@@ -161,7 +161,7 @@ class IntelManager(Manager):
                 self.bot.unit_cache.values(), self.bot.enemy_cache.values(),
                 ignore_workers=True)
 
-            if relative_army_strength < -2:
+            if relative_army_strength < -4:
                 self.has_scouted_enemy_greater_force.add(
                     True, self.bot.state.game_loop, expiry=30)
                 return True
