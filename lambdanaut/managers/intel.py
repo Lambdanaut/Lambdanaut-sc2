@@ -161,7 +161,7 @@ class IntelManager(Manager):
                 self.bot.unit_cache.values(), self.bot.enemy_cache.values(),
                 ignore_workers=True)
 
-            if relative_army_strength < -4:
+            if relative_army_strength < -2:
                 self.has_scouted_enemy_greater_force.add(
                     True, self.bot.state.game_loop, expiry=30)
                 return True
@@ -372,8 +372,6 @@ class IntelManager(Manager):
             self.publish(Messages.ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD)
         if self.greater_enemy_force_scouted():
             self.publish(Messages.FOUND_ENEMY_GREATER_FORCE)
-            if self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
-                self.publish(Messages.FOUND_ENEMY_RUSH)
         if self.enemy_moving_out_scouted():
             self.publish(Messages.ENEMY_MOVING_OUT_SCOUTED)
         if self.enemy_rush_scouted():
