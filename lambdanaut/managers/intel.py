@@ -372,8 +372,8 @@ class IntelManager(Manager):
             self.publish(Messages.ENEMY_COUNTER_WITH_RUSH_TO_MIDGAME_BROODLORD)
         if self.greater_enemy_force_scouted():
             self.publish(Messages.FOUND_ENEMY_GREATER_FORCE)
-            if len(self.bot.townhalls.ready) < 3:
-                self.publish(Messages.FOUND_ENEMY_EARLY_AGGRESSION)
+            if self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
+                self.publish(Messages.FOUND_ENEMY_RUSH)
         if self.enemy_moving_out_scouted():
             self.publish(Messages.ENEMY_MOVING_OUT_SCOUTED)
         if self.enemy_rush_scouted():
