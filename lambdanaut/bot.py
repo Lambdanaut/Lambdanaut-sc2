@@ -99,6 +99,10 @@ class Lambdanaut(sc2.BotAI):
         # Copy of self.game_info.pathing_grid except the starting structures are removed
         self.pathing_grid: PixelMap = None
 
+        # Copy of self.pathing_grid, but updated to include new structures we see
+        # TODO: Update this to include new structures we see
+        self.mobility_grid: PixelMap = None
+
         # Sorted list of points that designate high-priority attack points. Sorted from high->low.
         # High priority usually means lots of workers to kill.
         self.priority_spaces: List[Point2] = []
@@ -313,10 +317,10 @@ class Lambdanaut(sc2.BotAI):
             g = 0
             b = 0
 
-        class Blue:
-            r = 0
-            g = 0
-            b = 255
+        class Yellow:
+            r = 255
+            g = 255
+            b = 0
 
         # Draw clusters
         for cluster in self.army_clusters:
@@ -341,7 +345,7 @@ class Lambdanaut(sc2.BotAI):
         for priority_space in self.priority_spaces:
             position = priority_space + Point3((0, 3, 0))
             self._client.debug_text_world(str('Priority index: {}'.format(priority_index)),
-                                          position, color=Blue(), size=18)
+                                          position, color=Yellow(), size=18)
             priority_index += 1
 
         await self._client.send_debug()
@@ -377,10 +381,10 @@ class Lambdanaut(sc2.BotAI):
                 cached_unit = cache.get(unit.tag)
                 if cached_unit:
                     # Update cached unit health and shield
-                    cached_unit.update(unit, self.state.effects)
+                    cached_unit.update(unit)
 
                 else:
-                    new_cached_unit = unit_cache.UnitCached(unit)
+                    new_cached_unit = unit_cache.UnitCached(self, unit)
                     cache[unit.tag] = new_cached_unit
 
         # Forget enemy cached units that have moved to a new location
@@ -405,9 +409,16 @@ class Lambdanaut(sc2.BotAI):
 
             if cluster:
 
-                # Get counts of cluster units.
-                # Add `1` so we don't multiple or divide by zero
+                # Get counts of cluster workers.
                 worker_count = sum(1 for u in cluster if u.type_id in const2.WORKERS) + 1
+                townhalls = [u for u in cluster if u.type_id in const2.TOWNHALLS]
+                if townhalls \
+                        and self.game_loop_to_seconds(self.state.game_loop - townhalls[0].last_seen) > 30 \
+                        and worker_count < 10:
+                    # If we haven't seen the townhall in a while, assume additional workers
+                    worker_count += 8
+
+                # Get static defense count
                 static_defense_count = sum(1 for u in cluster if u.type_id in const2.DEFENSIVE_STRUCTURES) + 1
 
                 # Distance from their start location. Further == better
@@ -423,8 +434,8 @@ class Lambdanaut(sc2.BotAI):
                 spaces.append((score, cluster.position))
 
         # Add enemy start location to priority spaces as an edge-case
-        # Safely assume 14 workers
-        start_location_score = 14
+        # Safely assume 10 workers
+        start_location_score = 10
         spaces.append((start_location_score, self.enemy_start_location))
 
         # Sort spaces based on score
@@ -457,12 +468,8 @@ class Lambdanaut(sc2.BotAI):
         """Unsubscribes a manager to a type of message"""
         self._message_subscriptions[message_type].remove(manager)
 
-    def can_attack(self, unit, target):
-        can = (unit.can_attack_ground and not target.is_flying) or \
-              (unit.can_attack_air and target.is_flying) or \
-              (unit.type_id == const.BANELING and not target.is_flying) or \
-              (unit.type_id == const.LURKERMP and not target.is_flying)
-        return can
+    def game_loop_to_seconds(self, game_loop: float):
+        return game_loop / const2.FPS
 
     def get_expansion_positions(self) -> List[sc2.position.Point2]:
         """Returns our expansion positions in order from nearest to furthest"""
@@ -517,6 +524,9 @@ class Lambdanaut(sc2.BotAI):
                 pathing_grid[p] = [0]
 
         self.pathing_grid = pathing_grid
+
+        # Update Mobility Grid
+        self.mobility_grid = copy.deepcopy(self.game_info.pathing_grid)
 
     def update_shortest_path_to_enemy_start_location(self):
         """
@@ -732,14 +742,22 @@ class Lambdanaut(sc2.BotAI):
             return townhall.position
 
     def has_midgame_tech(self) -> bool:
-        midgame_tech = {const.UnitTypeId.ROACHWARREN, const.UnitTypeId.ROACHWARREN}
+        midgame_tech = bool(self.units({const.UnitTypeId.ROACHWARREN, const.UnitTypeId.LAIR}))
+        sufficient_townhalls = len(self.townhalls) >= 4
 
-        return bool(self.units(midgame_tech))
+        return midgame_tech or sufficient_townhalls
 
     def cooldown_speed_movement_distance(self, unit: Unit) -> float:
         max_weapon_cooldown = const2.UNIT_WEAPON_COOLDOWNS.get(unit.type_id) or 1.0
 
         return unit.movement_speed * max_weapon_cooldown
+
+    def can_attack(self, unit, target):
+        can = (unit.can_attack_ground and not target.is_flying) or \
+              (unit.can_attack_air and target.is_flying) or \
+              (unit.type_id == const.BANELING and not target.is_flying) or \
+              (unit.type_id == const.LURKERMP and not target.is_flying)
+        return can
 
     def unit_is_engaged(self, unit: Unit) -> bool:
         """

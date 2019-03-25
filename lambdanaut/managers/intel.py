@@ -1,4 +1,5 @@
 from collections import Counter
+import pdb
 
 import lib.sc2 as sc2
 import lib.sc2.constants as const
@@ -36,6 +37,7 @@ class IntelManager(Manager):
         self.has_published_research_neural_parasite = False
         self.has_scouted_enemy_greater_force = ExpiringList()  # Will contain True or nothing
 
+        self.subscribe(Messages.DEBUG_PDB)
         self.subscribe(Messages.OVERLORD_SCOUT_WRONG_ENEMY_START_LOCATION)
         self.subscribe(Messages.ARMY_COULDNT_FIND_ENEMY_BASE)
         self.subscribe(Messages.OVERLORD_SCOUT_FOUND_ENEMY_BASE)
@@ -43,6 +45,15 @@ class IntelManager(Manager):
 
     async def read_messages(self):
         for message, val in self.messages.items():
+
+            # Debug PDB
+            debug_msgs = {
+                Messages.DEBUG_PDB}
+            if message in debug_msgs:
+                self.ack(message)
+
+                self.print("Entering PDB with debug message: \"{}\"".format(val))
+                pdb.set_trace()
 
             # Enemy location not where it was expected
             lost_enemy_location_msgs = {
@@ -189,7 +200,8 @@ class IntelManager(Manager):
         Checks to see if we're being rushed
         """
 
-        if not self.has_scouted_enemy_rush and not self.bot.has_midgame_tech():
+        if not self.has_scouted_enemy_rush \
+                and self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
 
             enemy = self.bot.enemy_cache.values()
 
@@ -210,14 +222,14 @@ class IntelManager(Manager):
 
             # Count any and all enemy units
             if (
-                    enemy_counter[const.ZERGLING] >= 8
-                    or enemy_counter[const.RAVAGER] >= 2
-                    or enemy_counter[const.MARINE] >= 7
-                    or enemy_counter[const.REAPER] >= 4
-                    or enemy_counter[const.MARAUDER] >= 5
-                    or enemy_counter[const.ZEALOT] >= 5
-                    or enemy_counter[const.ADEPT] >= 4
-                    or enemy_counter[const.STALKER] >= 4):
+                    enemy_counter[const.ZERGLING] >= 5
+                    or enemy_counter[const.RAVAGER] >= 1
+                    or enemy_counter[const.MARINE] >= 4
+                    or enemy_counter[const.REAPER] >= 2
+                    or enemy_counter[const.MARAUDER] >= 2
+                    or enemy_counter[const.ZEALOT] >= 4
+                    or enemy_counter[const.ADEPT] >= 3
+                    or enemy_counter[const.STALKER] >= 2):
                 self.has_scouted_enemy_rush = True
                 return True
 
@@ -308,12 +320,13 @@ class IntelManager(Manager):
         return False
 
     def scouted_greedy_early_opponent(self):
+        return False
         if not self.has_published_scouted_greedy_early_opponent \
                 and self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
 
             # Enemy expansions excluding the starting location
             enemy_expansions = self.bot.known_enemy_units(const2.TOWNHALLS).further_than(
-                11, self.bot.enemy_start_location).filter(lambda th: th.is_ready or th.build_progress > 0.92)
+                11, self.bot.enemy_start_location).filter(lambda th: th.is_ready or th.build_progress > 0.93)
 
             if self.bot.enemy_race is sc2.Race.Terran:
                 greedy_enough = len(enemy_expansions) > 0

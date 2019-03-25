@@ -25,18 +25,18 @@ class ExpiringList(object):
 
     """
 
-    def __init__(self, divide_by_fps=True):
+    def __init__(self, multiply_by_fps=True):
         """
 
-        :param divide_by_fps: Decides whether to multiple the passed-in expiry
-               by the fps used in faster sc2 matches (22.5 fps)
+        :param multiply_by_fps: Decides whether to multiple the passed-in expiry
+               by the fps used in faster sc2 matches (22.4 fps)
         """
         self.l = []
-        self.divide_by_fps = divide_by_fps
+        self.multiply_by_fps = multiply_by_fps
 
     def add(self, item, iteration, expiry):
         """Adds an item to the list with the given expiration"""
-        expiry = round(expiry * FPS) if self.divide_by_fps else expiry
+        expiry = round(expiry * FPS) if self.multiply_by_fps else expiry
 
         to_append = (item, iteration, round(expiry))
         self.l.append(to_append)

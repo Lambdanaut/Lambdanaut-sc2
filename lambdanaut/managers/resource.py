@@ -103,7 +103,7 @@ class ResourceManager(Manager):
         # Unsaturated Townhalls include townhalls that are almost complete
         unsaturated_townhalls = self.bot.townhalls.filter(
             lambda th: th.assigned_harvesters < th.ideal_harvesters or
-                       (not th.is_ready and th.build_progress > 0.90))
+                       (not th.is_ready and th.build_progress > 0.88))
 
         if not unsaturated_townhalls:
             return
@@ -361,7 +361,7 @@ class ResourceManager(Manager):
                     if self.pull_off_gas_early:
                         self._recent_commands.add(
                             ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
-                            self.bot.state.game_loop, expiry=85)
+                            self.bot.state.game_loop, expiry=75)
 
             new_build = {Messages.NEW_BUILD}
             if message in new_build:

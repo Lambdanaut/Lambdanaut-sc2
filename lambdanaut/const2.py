@@ -9,7 +9,7 @@ import lib.sc2.constants as const
 from s2clientprotocol import data_pb2
 
 # About number of frames per second on faster speed
-FPS = 22
+FPS = 22.4
 
 # Set of zerg structures built from drones
 ZERG_STRUCTURES_FROM_DRONES = \
@@ -164,6 +164,7 @@ DEFAULT_DPS_MAP = {
     const.HIGHTEMPLAR: 30,
     const.DISRUPTOR: 30,
     const.BANELING: 30,
+    const.HELLION: 15,
     const.INFESTOR: 30,
     const.VIPER: 30,
     const.LURKERMP: 30,
@@ -232,6 +233,9 @@ class Messages(enum.Enum):
     BUILD_OFFENSIVE_SPINES = 42  # Builds spines in enemy base rather than at home. Turns off uprooting.
     DONT_RETURN_DISTANT_WORKERS_TO_TOWNHALLS = 43  # Turn off returning distant workers to townhalls
     ALLOW_NEURAL_PARASITE_UPGRADE = 44
+
+    # # SYSTEM MESSAGES
+    DEBUG_PDB = 45  # Triggered for debugging purposes
 
 
 # Build Manager Commands

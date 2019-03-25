@@ -54,9 +54,6 @@
   * Re-implement OVERLORD_SCOUT_FOUND_ENEMY_DEFENSIVE_STRUCTURES with IntelManager so we can switch to roaches if 
     we scout defensive structures
 
-  * Update unit_cache so that we cache the last time we forced a priority retarget on that unit, so that we can 
-    retarget less-often
-
   * A* move proxy scouting overlord around enemy natural expand to behind natural expand's mineral line to watch worker
     saturation
     * Pathfind around the natural expand by a distance of 11 until we get to 
@@ -76,6 +73,9 @@
     * If we still haven't scouted an enemy natural expand, switch to a 2-base aggressive/defensive build like nydus.
 
 ## MEDIUM PRIORITY
+
+  * Remember and avoid burrowed widow mines. They change to unit type `WidowMineBurrowed` for a moment before they 
+    disappear.
 
   * Optimize overlord fleeing from points in a line.
     * Right now we generate a list of points in a line to check if enemies are nearby them
@@ -353,4 +353,7 @@
     * Ranged units should be weighted
 
   * Zergling surround micro
+
+  * Update unit_cache so that we cache the last time we forced a priority retarget on that unit, so that we can 
+    retarget less-often
 

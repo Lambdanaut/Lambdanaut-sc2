@@ -15,11 +15,16 @@ class UnitCached(object):
     # Maximum length of self.last_positions deque list
     last_positions_maxlen = 10
 
-    def __init__(self, unit: sc2.unit.Unit):
+    def __init__(self, bot, unit: sc2.unit.Unit):
+        self.bot = bot
+
         self.snapshot: Unit = unit
         self.tag: int = unit.tag
 
         self.is_taking_damage = False
+
+        # Game loop last seen
+        self.last_seen: float = 0
 
         # The last game loop we performed a priority retarget for this unit
         self.last_priority_retarget: int = 0
@@ -30,9 +35,12 @@ class UnitCached(object):
         # If we're currently avoiding an effect(like a bile)
         self.avoiding_effect: Point2 = None
 
-    def update(self, unit: Unit, effects: List[EffectData]):
+    def update(self, unit: Unit):
         # Update last positions
         self.last_positions.append(unit.position)
+
+        # Update last time we saw this unit
+        self.last_seen = self.bot.state.game_loop
 
         # Compare its health/shield since last step, to find out if it has taken any damage
         if unit.health_percentage < self.snapshot.health_percentage or \
@@ -42,7 +50,7 @@ class UnitCached(object):
             self.is_taking_damage = False
 
         # Update the position of any effects we should be avoiding
-        self.avoiding_effect = self.get_avoiding_effect_position(unit, effects)
+        self.avoiding_effect = self.get_avoiding_effect_position(unit, self.bot.state.effects)
 
         # Update snapshot
         self.snapshot = unit

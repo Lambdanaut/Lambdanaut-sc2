@@ -151,7 +151,6 @@ class MicroManager(Manager):
 
     async def manage_zerglings(self):
         zerglings = self.bot.units(const.ZERGLING)
-        banelings = self.bot.units(const.BANELING)
 
         # Micro zerglings
         for zergling in zerglings:
@@ -174,8 +173,6 @@ class MicroManager(Manager):
 
                 closest_enemy_unit = nearby_enemy_units.closest_to(zergling)
 
-                nearby_friendly_banelings = banelings.closer_than(3, zergling)
-
                 if closest_enemy_unit.type_id == const.BANELING:
                     # Micro away from banelings
                     nearby_friendly_units = self.bot.units.closer_than(3, closest_enemy_unit)
@@ -187,14 +184,6 @@ class MicroManager(Manager):
                                 and closest_friendly_unit_to_enemy.tag != zergling.tag:
                             away_from_enemy = zergling.position.towards(closest_enemy_unit, -1)
                             self.bot.actions.append(zergling.move(away_from_enemy))
-
-                elif nearby_friendly_banelings \
-                        and closest_enemy_unit.type_id is const.ZERGLING \
-                        and nearby_friendly_banelings.closest_to(zergling).distance_to(closest_enemy_unit) > \
-                        zergling.distance_to(closest_enemy_unit):
-
-                    away_from_enemy = zergling.position.towards(closest_enemy_unit, -1.5)
-                    self.bot.actions.append(zergling.move(away_from_enemy))
 
                 elif const.UpgradeId.ZERGLINGMOVEMENTSPEED in self.bot.state.upgrades:
                     # Perform surround micro
@@ -354,7 +343,7 @@ class MicroManager(Manager):
                 enemies_in_range = self.bot.known_enemy_units(
                     attack_priorities).closer_than(2.2, baneling)
 
-                if len(enemies_in_range) > 8:
+                if len(enemies_in_range) > 9:
                     self.bot.actions.append(baneling(const.AbilityId.EXPLODE_EXPLODE))
 
             # Splash action to perform on enemies

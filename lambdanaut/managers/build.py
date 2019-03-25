@@ -151,7 +151,7 @@ class BuildManager(Manager):
             elif self.bot.enemy_race is sc2.Race.Zerg:
                 if rush_distance < 145:
                     # Play cautiously against zerg on maps with low rush distance
-                    # self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
+                    # self.add_build(Builds.EARLY_GAME_POOL_FIRST)
                     pass
 
     def check_build_requirements(self, build: Builds) -> bool:
