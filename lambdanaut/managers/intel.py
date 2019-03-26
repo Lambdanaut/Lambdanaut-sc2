@@ -228,8 +228,8 @@ class IntelManager(Manager):
                     or enemy_counter[const.REAPER] >= 2
                     or enemy_counter[const.MARAUDER] >= 2
                     or enemy_counter[const.ZEALOT] >= 4
-                    or enemy_counter[const.ADEPT] >= 3
-                    or enemy_counter[const.STALKER] >= 2):
+                    or enemy_counter[const.ADEPT] >= 5
+                    or enemy_counter[const.STALKER] >= 3):
                 self.has_scouted_enemy_rush = True
                 return True
 
@@ -237,14 +237,14 @@ class IntelManager(Manager):
             elif (
                     nearby_enemy_counter[const.DRONE] >= 5
                     or nearby_enemy_counter[const.ZERGLING] >= 4
-                    or enemy_counter[const.RAVAGER] >= 1
+                    or nearby_enemy_counter[const.RAVAGER] >= 1
                     or nearby_enemy_counter[const.SCV] >= 5
                     or nearby_enemy_counter[const.MARINE] >= 2
                     or nearby_enemy_counter[const.REAPER] >= 2
                     or nearby_enemy_counter[const.MARAUDER] >= 1
                     or nearby_enemy_counter[const.PROBE] >= 5
                     or nearby_enemy_counter[const.ZEALOT] >= 1
-                    or nearby_enemy_counter[const.ADEPT] >= 3
+                    or nearby_enemy_counter[const.ADEPT] >= 5
                     or nearby_enemy_counter[const.STALKER] >= 2):
                 self.has_scouted_enemy_rush = True
                 return True
@@ -320,7 +320,6 @@ class IntelManager(Manager):
         return False
 
     def scouted_greedy_early_opponent(self):
-        return False
         if not self.has_published_scouted_greedy_early_opponent \
                 and self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
 
