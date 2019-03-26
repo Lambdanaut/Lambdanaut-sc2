@@ -980,14 +980,14 @@ class MicroManager(Manager):
                             # Move towards priority space if our cluster is stronger
                             elif army_strength > 2 \
                                     and unit_is_combatant \
-                                    and unit.distance_to(highest_priority_space) > 5 \
                                     and not self.bot.is_melee(unit) \
                                     and unit.weapon_cooldown \
+                                    and 5 < unit.distance_to(highest_priority_space) < 40 \
                                     and townhalls \
                                     and unit.snapshot.distance_to(townhalls.closest_to(unit.snapshot)) > 30 \
                                     and not unit.is_moving:
 
-                                distance_to_move = self.bot.cooldown_speed_movement_distance(unit)
+                                distance_to_move = self.bot.cooldown_speed_movement_distance(unit) * 0.95
 
                                 towards_priority_target = unit.position.towards(
                                     highest_priority_space, distance_to_move)

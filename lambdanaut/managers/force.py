@@ -632,7 +632,7 @@ class ForceManager(StatefulManager):
                     relative_army_strength = self.bot.relative_army_strength(
                         army, self.bot.enemy_cache.values(), ignore_workers=True)
 
-                    if (relative_army_strength < -3) \
+                    if (relative_army_strength < -2) \
                             and self.bot.supply_used < 170:
                         return await self.change_state(ForcesStates.RETREATING)
 

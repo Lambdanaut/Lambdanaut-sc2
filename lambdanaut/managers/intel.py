@@ -228,7 +228,7 @@ class IntelManager(Manager):
                     or enemy_counter[const.REAPER] >= 2
                     or enemy_counter[const.MARAUDER] >= 2
                     or enemy_counter[const.ZEALOT] >= 4
-                    or enemy_counter[const.ADEPT] >= 5
+                    or enemy_counter[const.ADEPT] >= 5  # Adept is higher because of miscounting bug
                     or enemy_counter[const.STALKER] >= 3):
                 self.has_scouted_enemy_rush = True
                 return True
@@ -244,7 +244,7 @@ class IntelManager(Manager):
                     or nearby_enemy_counter[const.MARAUDER] >= 1
                     or nearby_enemy_counter[const.PROBE] >= 5
                     or nearby_enemy_counter[const.ZEALOT] >= 1
-                    or nearby_enemy_counter[const.ADEPT] >= 5
+                    or nearby_enemy_counter[const.ADEPT] >= 5  # Adept is higher because of miscounting bug
                     or nearby_enemy_counter[const.STALKER] >= 2):
                 self.has_scouted_enemy_rush = True
                 return True
