@@ -64,7 +64,13 @@ class Manager(object):
         pass
 
     def print(self, msg):
-        print('{}: {}'.format(self.name, msg))
+        # Log message
+        message = '{}: {}'.format(self.name, msg)
+
+        with open(self.bot.log_filepath, 'a') as log_f:
+            log_f.write(message + '\n')
+
+        print(message)
 
     async def run(self):
         pass

@@ -120,6 +120,7 @@ class BuildManager(Manager):
         * By-air distance to enemy location
         * Map features
         """
+        self.add_build(Builds.EARLY_GAME_HATCHERY_FIRST_LING_RUSH)
 
         if len(self.bot.enemy_start_locations) < 3:
 
@@ -308,11 +309,15 @@ class BuildManager(Manager):
             if message in rush_detected:
                 self.ack(message)
 
-                # Return to mining vespene if we need to defend a rush
-                # For banelings
-                self.publish(Messages.CLEAR_PULLING_WORKERS_OFF_VESPENE)
+                success = self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
 
-                self.add_build(Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE)
+                if success:
+                    # Return to mining vespene if we need to defend a rush
+                    # For banelings
+                    self.publish(Messages.CLEAR_PULLING_WORKERS_OFF_VESPENE)
+
+                    # Go Ling Bane midgame to make use of baneling nest
+                    self.add_build(Builds.MID_GAME_LING_BANE_HYDRA)
 
             worker_rush_detected = {Messages.FOUND_ENEMY_WORKER_RUSH}
             if message in worker_rush_detected:

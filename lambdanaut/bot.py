@@ -2,6 +2,7 @@ from collections import defaultdict
 import copy
 import itertools
 import math
+import os
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 import lib.sc2 as sc2
@@ -45,6 +46,9 @@ class Lambdanaut(sc2.BotAI):
         self.debug = DEBUG
 
         self.kwargs = kwargs
+
+        # Log file for writing
+        self.log_filepath = os.path.join('data', 'log.txt')
 
         self.intel_manager: IntelManager = None
         self.build_manager: BuildManager = None

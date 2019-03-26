@@ -611,7 +611,7 @@ class ForceManager(StatefulManager):
                 # If we're allowed to stop attacking
                 if not self.dont_stop_attacking:
                     # Switch back to housekeeping if our army is weaker and we're not max supply
-                    if relative_army_strength < -5 and self.bot.supply_used < 180:
+                    if relative_army_strength < -2 and self.bot.supply_used < 180:
                         return await self.change_state(ForcesStates.HOUSEKEEPING)
 
                 # Start attacking when army has amassed
