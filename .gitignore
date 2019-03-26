@@ -63,3 +63,4 @@ target/
 # PROJECT SPECIFIC FILES
 lib/sc2-old
 lib/sc2old
+data/log.txt
