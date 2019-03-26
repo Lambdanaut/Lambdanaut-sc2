@@ -151,7 +151,7 @@ class ResourceManager(Manager):
 
             self._recent_commands.add(
                 ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
-                self.bot.state.game_loop, expiry=30)
+                self.bot.state.game_loop, expiry=25)
 
         saturated_extractors = self.bot.units(const.EXTRACTOR).filter(
             lambda extr: extr.assigned_harvesters > (self._ideal_vespene_worker_count or extr.ideal_harvesters)).ready

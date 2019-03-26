@@ -79,7 +79,7 @@ class MicroManager(Manager):
             lambda u:
             not u.is_flying
             and not u.is_structure
-            and u.distance_to(closest_enemy_unit) < 4.5)
+            and u.distance_to(closest_enemy_unit) < 3)
 
         if not closest_enemy_neighbors:
             return False

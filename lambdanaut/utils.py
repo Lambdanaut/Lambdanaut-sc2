@@ -41,7 +41,7 @@ def blank_out_pixel_map(pixel_map: PixelMap, value=0x0):
     """
     for y in range(pixel_map.height):
         for x in range(pixel_map.width):
-            pixel_map[(x, y)] = [value]
+            pixel_map[(x, y)] = value
 
 
 def flood_fill_(pixel_map: PixelMap, start_point: Point2, pred: Callable[[int], bool]) -> Set[Point2]:
@@ -87,10 +87,10 @@ def draw_circle(pixel_map: PixelMap, center: Point2, radius: int, val=0xFF):
 
     try:
         # Set top, left, bottom, and right-most pixels
-        pixel_map[(x0, y0 + radius)] = [val]
-        pixel_map[(x0, y0 - radius)] = [val]
-        pixel_map[(x0 + radius, y0)] = [val]
-        pixel_map[(x0 - radius, y0)] = [val]
+        pixel_map[(x0, y0 + radius)] = val
+        pixel_map[(x0, y0 - radius)] = val
+        pixel_map[(x0 + radius, y0)] = val
+        pixel_map[(x0 - radius, y0)] = val
 
         while x < y:
             if f >= 0:
@@ -102,14 +102,14 @@ def draw_circle(pixel_map: PixelMap, center: Point2, radius: int, val=0xFF):
             f += ddf_x
 
             # Set pixels
-            pixel_map[(x0 + x, y0 + y)] = [val]
-            pixel_map[(x0 - x, y0 + y)] = [val]
-            pixel_map[(x0 + x, y0 - y)] = [val]
-            pixel_map[(x0 - x, y0 - y)] = [val]
-            pixel_map[(x0 + y, y0 + x)] = [val]
-            pixel_map[(x0 - y, y0 + x)] = [val]
-            pixel_map[(x0 + y, y0 - x)] = [val]
-            pixel_map[(x0 - y, y0 - x)] = [val]
+            pixel_map[(x0 + x, y0 + y)] = val
+            pixel_map[(x0 - x, y0 + y)] = val
+            pixel_map[(x0 + x, y0 - y)] = val
+            pixel_map[(x0 - x, y0 - y)] = val
+            pixel_map[(x0 + y, y0 + x)] = val
+            pixel_map[(x0 - y, y0 + x)] = val
+            pixel_map[(x0 + y, y0 - x)] = val
+            pixel_map[(x0 - y, y0 - x)] = val
 
     except:
         # If the range goes outside the pixelmap, just return with no change
@@ -117,7 +117,7 @@ def draw_circle(pixel_map: PixelMap, center: Point2, radius: int, val=0xFF):
         print("Flood filled to the edge of a pixelmap. Returning with no change. ")
 
     for p in flood_fill_(pixel_map, center, lambda v: v != val):
-        pixel_map[p] = [val]
+        pixel_map[p] = val
 
 
 def draw_unit_ranges(pixel_map, units):

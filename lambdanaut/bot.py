@@ -118,10 +118,6 @@ class Lambdanaut(sc2.BotAI):
         self.iteration = iteration
 
         if iteration == 0:
-            await self._client.debug_create_unit([[const.ADEPT, 2, self.start_location + Point2((4, 0)), 2]])
-            await self._client.debug_create_unit([[const.UnitTypeId.ADEPTPHASESHIFT, 2, self.start_location + Point2((4, 0)), 2]])
-            await self._client.debug_create_unit([[const.ZERGLING, 2, self.start_location + Point2((4, 0)), 2]])
-
             # Our army clusters
             self.army_clusters = clustering.get_fresh_clusters(
                 [], k=8, center_around=self.game_info.map_center)
@@ -525,7 +521,7 @@ class Lambdanaut(sc2.BotAI):
         # Flood fill the start locations to eliminate the structures pathing block
         for start_location in start_locations:
             for p in pathing_grid.flood_fill(start_location, lambda x: x == 255):
-                pathing_grid[p] = [0]
+                pathing_grid[p] = 0
 
         self.pathing_grid = pathing_grid
 
