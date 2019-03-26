@@ -1,0 +1,22 @@
+Build Manager: Adding build order: EARLY_GAME_HATCHERY_FIRST_GREEDY
+Build Manager: Message published: NEW_BUILD - Builds.EARLY_GAME_HATCHERY_FIRST_GREEDY
+Build Manager: Adding build order: OPENER_DEFAULT
+Build Manager: Message published: NEW_BUILD - Builds.OPENER_DEFAULT
+Resource Manager: Message acked: NEW_BUILD
+Build Manager: Build target: UnitTypeId.OVERLORD
+Build Manager: Build target: UnitTypeId.OVERLORD
+Build Manager: Build target: UnitTypeId.OVERLORD
+Build Manager: Build target: UnitTypeId.OVERLORD
+Build Manager: Build target: UnitTypeId.OVERLORD
+Build Manager: Build target: UnitTypeId.OVERLORD
+Build Manager: Build target: UnitTypeId.OVERLORD
+Build Manager: Build target: UnitTypeId.OVERLORD
+Build Manager: Build target: UnitTypeId.OVERLORD
+Build Manager: Build target: UnitTypeId.OVERLORD
+Build Manager: Build target: UnitTypeId.OVERLORD
+Build Manager: Build target: UnitTypeId.OVERLORD
+Build Manager: Build target: UnitTypeId.OVERLORD
+Build Manager: Build target: UnitTypeId.OVERLORD
+Build Manager: Build target: UnitTypeId.OVERLORD
+Build Manager: Build target: UnitTypeId.OVERLORD
+Build Manager: Build target: UnitTypeId.OVERLORD

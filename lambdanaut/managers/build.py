@@ -120,7 +120,6 @@ class BuildManager(Manager):
         * By-air distance to enemy location
         * Map features
         """
-        self.add_build(Builds.EARLY_GAME_HATCHERY_FIRST_LING_RUSH)
 
         if len(self.bot.enemy_start_locations) < 3:
 

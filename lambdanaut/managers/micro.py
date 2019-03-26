@@ -379,7 +379,7 @@ class MicroManager(Manager):
         for roach in roaches:
             # Burrow damaged roaches
             if const.BURROW in self.bot.state.upgrades:
-                if roach.health_percentage < 0.22:
+                if roach.health_percentage < 0.25:
                     # Move away from the direction we're facing
                     target = utils.towards_direction(roach.position, roach.facing, -20)
 
@@ -964,18 +964,20 @@ class MicroManager(Manager):
                                 pass
 
                             # Back off from enemy if our cluster is much weaker
-                            # elif army_strength < -2 and unit_is_combatant:
-                            #     if self.bot.is_melee(unit) and self.bot.is_melee(nearest_enemy_unit) \
-                            #             and nearest_enemy_unit.type_id not in const2.WORKERS:
-                            #         away_from_enemy = unit.position.towards(
-                            #             nearest_enemy_unit, -2)
-                            #         self.bot.actions.append(unit.snapshot.move(away_from_enemy))
-                            #     elif not self.bot.is_melee(unit) and unit.weapon_cooldown \
-                            #             and unit.ground_range >= nearest_enemy_unit.ground_range:
-                            #         # Ranged units only move back while we're on cooldown
-                            #         away_from_enemy = unit.position.towards(
-                            #             nearest_enemy_unit, -1.5)
-                            #         self.bot.actions.append(unit.snapshot.move(away_from_enemy))
+                            elif army_strength < -2 and unit_is_combatant \
+                                    and not unit.is_moving \
+                                    and townhalls \
+                                    and townhalls.closest_to(unit).distance_to(unit) > 11:
+                                # Attempt to retreat in the direction of a townhall away from the enemy
+                                away_from_enemy = unit.position.towards(nearest_enemy_unit.position, distance=-8)
+                                if townhalls:
+                                    target = townhalls.closest_to(away_from_enemy).position
+                                else:
+                                    target = None
+
+                                if target is not None:
+                                    towards_target = unit.position.towards(target, distance=8)
+                                    self.bot.actions.append(unit.move(towards_target))
 
                             # Move towards priority space if our cluster is stronger
                             elif army_strength > 2 \

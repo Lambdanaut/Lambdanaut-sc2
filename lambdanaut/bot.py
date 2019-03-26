@@ -50,6 +50,10 @@ class Lambdanaut(sc2.BotAI):
         # Log file for writing
         self.log_filepath = os.path.join('data', 'log.txt')
 
+        if not os.path.exists(self.log_filepath):
+            with open(self.log_filepath, 'w') as f:
+                f.write('')
+
         self.intel_manager: IntelManager = None
         self.build_manager: BuildManager = None
         self.resource_manager: ResourceManager = None

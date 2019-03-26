@@ -343,40 +343,41 @@ class ForceManager(StatefulManager):
                                 baneling(const.AbilityId.BURROWDOWN_BANELING, queue=True))
 
         # Do burrow roach harass during attack
-        roaches = self.bot.units(const.ROACH)
-        if roaches and const.BURROW in self.bot.state.upgrades and \
-                const.UpgradeId.TUNNELINGCLAWS in self.bot.state.upgrades:
-            # Get the roaches that aren't harassing mineral lines
-            roaches = roaches.tags_not_in(self.roaches_harassing)
-
-            if len(roaches) >= 4:
-                # Get two roaches
-                roaches = roaches[:2]
-
-                enemy_structures = self.bot.known_enemy_structures
-                if enemy_structures:
-                    # Get expansion locations starting from enemy start location
-                    enemy_townhalls = enemy_structures.of_type(
-                        const2.TOWNHALLS)
-
-                    if enemy_townhalls:
-                        # Get the enemy townhall that we know of that is the furthest away from
-                        # the closest enemy structure we know of. Hopefully this means they attack
-                        # far away from where the main army will be attacking
-                        enemy_townhall = enemy_townhalls.furthest_to(
-                            enemy_structures.closest_to(self.bot.start_location))
-                        enemy_townhall = self.bot.find_nearby_pathable_point(
-                            enemy_townhall.position)
-
-                        for roach in roaches:
-                            # Consider them harassing roaches for the moment
-                            self.roaches_harassing.add(roach.tag)
-
-                            self.bot.actions.append(
-                                roach(const.AbilityId.BURROWDOWN_ROACH))
-                            self.bot.actions.append(roach.move(enemy_townhall, queue=True))
-                            self.bot.actions.append(
-                                roach(const.AbilityId.BURROWUP_ROACH, queue=True))
+        # ## REMOVED FOR NOW BECAUSE IT'S NOT SO GREAT
+        # roaches = self.bot.units(const.ROACH)
+        # if roaches and const.BURROW in self.bot.state.upgrades and \
+        #         const.UpgradeId.TUNNELINGCLAWS in self.bot.state.upgrades:
+        #     # Get the roaches that aren't harassing mineral lines
+        #     roaches = roaches.tags_not_in(self.roaches_harassing)
+        #
+        #     if len(roaches) >= 4:
+        #         # Get two roaches
+        #         roaches = roaches[:2]
+        #
+        #         enemy_structures = self.bot.known_enemy_structures
+        #         if enemy_structures:
+        #             # Get expansion locations starting from enemy start location
+        #             enemy_townhalls = enemy_structures.of_type(
+        #                 const2.TOWNHALLS)
+        #
+        #             if enemy_townhalls:
+        #                 # Get the enemy townhall that we know of that is the furthest away from
+        #                 # the closest enemy structure we know of. Hopefully this means they attack
+        #                 # far away from where the main army will be attacking
+        #                 enemy_townhall = enemy_townhalls.furthest_to(
+        #                     enemy_structures.closest_to(self.bot.start_location))
+        #                 enemy_townhall = self.bot.find_nearby_pathable_point(
+        #                     enemy_townhall.position)
+        #
+        #                 for roach in roaches:
+        #                     # Consider them harassing roaches for the moment
+        #                     self.roaches_harassing.add(roach.tag)
+        #
+        #                     self.bot.actions.append(
+        #                         roach(const.AbilityId.BURROWDOWN_ROACH))
+        #                     self.bot.actions.append(roach.move(enemy_townhall, queue=True))
+        #                     self.bot.actions.append(
+        #                         roach(const.AbilityId.BURROWUP_ROACH, queue=True))
 
         # Do Mutalisk harass during attack
         mutalisks = self.bot.units(const.MUTALISK)
