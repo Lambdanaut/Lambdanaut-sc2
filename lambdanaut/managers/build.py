@@ -155,6 +155,10 @@ class BuildManager(Manager):
                     pass
 
     def check_build_requirements(self, build: Builds) -> bool:
+        if build in self.builds:
+            # Skip build
+            self.print('Build `{}` is already in self.builds'.format(build.name))
+
         # Don't switch out of early game spore crawlers
         if build in {Builds.EARLY_GAME_POOL_FIRST_DEFENSIVE,
                      Builds.EARLY_GAME_POOL_FIRST_CAUTIOUS,
@@ -373,8 +377,8 @@ class BuildManager(Manager):
 
                 self.add_build(Builds.EARLY_GAME_HATCHERY_FIRST_LING_RUSH)
 
-            # Switch to Defensive build if early game
             # Stop townhall and worker production for a short duration
+            # Switch to Defensive build if early game
             stop_non_army_production = {
                 Messages.ENEMY_MOVING_OUT_SCOUTED}
             if message in stop_non_army_production:
@@ -779,17 +783,22 @@ class BuildManager(Manager):
         existing_unit_counts -= empty_extractors  # Subtract empty extractors
         existing_unit_counts += existing_and_pending_upgrades
 
-        # Set the number of hatcheries to be the number of town halls with minerals left
+        # Set the number of hatcheries to be the number of town halls with minerals left and no depleted vespene
         # (We want to count Lairs and Hives as hatcheries too. They're all expansions)
         townhalls = self.bot.townhalls
         if townhalls:
             townhall_count = 0
             for townhall in townhalls:
                 minerals = self.bot.state.mineral_field
-                if minerals.exists:
+                if minerals:
                     nearby_minerals = minerals.closer_than(10, townhall)
-                    if nearby_minerals.exists:
-                        townhall_count += 1
+                    if nearby_minerals:
+                        vespene_refineries = self.bot.units(const2.VESPENE_REFINERIES)
+                        nearby_vespene = vespene_refineries.closer_than(8, townhall)
+                        empty_vespene = any(refinery.vespene_contents <= 0
+                                            for refinery in nearby_vespene)
+                        if not empty_vespene:
+                            townhall_count += 1
 
             existing_unit_counts[const.HATCHERY] = townhall_count
 
@@ -822,6 +831,8 @@ class BuildManager(Manager):
                     if result is not None:
                         unit = result
                 else:
+                    if isinstance(unit, list):
+                        import pdb; pdb.set_trace()
                     build_order_counts[unit] += 1
 
                 # Check if we have enough of this unit built already

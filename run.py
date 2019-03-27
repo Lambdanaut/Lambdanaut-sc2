@@ -37,14 +37,14 @@ REALTIME = False
 
 BUILD = None
 # BUILD = sc2.AIBuild.RandomBuild
-# BUILD = sc2.AIBuild.Rush
+BUILD = sc2.AIBuild.Rush
 # BUILD = sc2.AIBuild.Timing
 # BUILD = sc2.AIBuild.Power
-BUILD = sc2.AIBuild.Macro
+# BUILD = sc2.AIBuild.Macro
 # BUILD = sc2.AIBuild.Air
 
-# DIFFICULTY = sc2.Difficulty.CheatInsane
-DIFFICULTY = sc2.Difficulty.CheatMoney
+DIFFICULTY = sc2.Difficulty.CheatInsane
+# DIFFICULTY = sc2.Difficulty.CheatMoney
 # DIFFICULTY = sc2.Difficulty.CheatVision
 # DIFFICULTY = sc2.Difficulty.VeryHard
 # DIFFICULTY = sc2.Difficulty.Hard

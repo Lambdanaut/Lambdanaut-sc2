@@ -575,7 +575,7 @@ class ForceManager(StatefulManager):
 
                 if self.allow_attacking \
                         and ((relative_army_strength > 6 and len(army) > 6)
-                             or (relative_army_strength > -4
+                             or (relative_army_strength > -2
                                  and army_value > self.army_value_to_attack)) \
                              or self.bot.supply_used > 195:
                     return await self.change_state(ForcesStates.MOVING_TO_ATTACK)

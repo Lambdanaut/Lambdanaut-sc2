@@ -247,9 +247,9 @@ class MicroManager(Manager):
         # Scout slightly later vs Terran/Protoss
         # Reapers/Adepts are bitches
         if self.bot.enemy_race is sc2.Race.Terran:
-            required_zergling_count = 10
+            required_zergling_count = 9
         elif self.bot.enemy_race is sc2.Race.Protoss:
-            required_zergling_count = 10
+            required_zergling_count = 9
 
         if len(zerglings) >= required_zergling_count:
             if self.scouting_zergling_tags:
@@ -927,7 +927,7 @@ class MicroManager(Manager):
             enemy_army_center = nearest_enemy_cluster.position
 
             nearby_army = [u for u in army_cluster if u.type_id not in types_not_to_micro]
-            if army_center.distance_to(enemy_army_center) < 17:
+            if army_center.distance_to(enemy_army_center) < 20:
                 # Micro against enemy clusters
                 if nearby_army and nearest_enemy_cluster:
                     army_strength = self.bot.relative_army_strength(
@@ -964,10 +964,10 @@ class MicroManager(Manager):
                                 pass
 
                             # Back off from enemy if our cluster is much weaker
-                            elif army_strength < -2 and unit_is_combatant \
+                            elif army_strength < -3 and unit_is_combatant \
                                     and not unit.is_moving \
                                     and townhalls \
-                                    and townhalls.closest_to(unit).distance_to(unit) > 11:
+                                    and townhalls.closest_to(unit.position).distance_to(unit.position) > 13:
                                 # Attempt to retreat in the direction of a townhall away from the enemy
                                 away_from_enemy = unit.position.towards(nearest_enemy_unit.position, distance=-8)
                                 if townhalls:
