@@ -831,8 +831,6 @@ class BuildManager(Manager):
                     if result is not None:
                         unit = result
                 else:
-                    if isinstance(unit, list):
-                        import pdb; pdb.set_trace()
                     build_order_counts[unit] += 1
 
                 # Check if we have enough of this unit built already
