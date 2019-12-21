@@ -1072,7 +1072,7 @@ class MicroManager(Manager):
                             #     elif enemy_townhalls:
                             #         # Else if enemy townhalls, move towards it
                             #         closest_townhall = self.bot.enemy_start_location.closest(enemy_townhalls)
-                            #         nearby_minerals = self.bot.state.mineral_field.closer_than(9, closest_townhall)
+                            #         nearby_minerals = self.bot.mineral_field.closer_than(9, closest_townhall)
                             #         if nearby_minerals:
                             #             target = nearby_minerals.center
                             #         else:

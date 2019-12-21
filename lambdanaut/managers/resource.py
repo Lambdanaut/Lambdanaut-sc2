@@ -50,7 +50,7 @@ class ResourceManager(Manager):
         self.initialize_workers()
 
     def initialize_workers(self):
-        minerals = self.bot.state.mineral_field
+        minerals = self.bot.mineral_field
         for worker in self.bot.workers:
             mineral = minerals.closest_to(worker)
             self.bot.actions.append(worker.gather(mineral))
@@ -74,7 +74,7 @@ class ResourceManager(Manager):
         if untargeted_minerals:
             return untargeted_minerals
         else:
-            return self.bot.state.mineral_field
+            return self.bot.mineral_field
 
     def return_distant_workers_to_townhalls(self):
         if self.allow_return_distant_workers_to_townhalls:
@@ -83,9 +83,9 @@ class ResourceManager(Manager):
                 for worker in self.bot.workers:
                     closest_townhall = townhalls.closest_to(worker)
                     if closest_townhall.distance_to(worker) > 50:
-                        minerals = self.bot.state.mineral_field
+                        minerals = self.bot.mineral_field
                         if minerals:
-                            mineral = self.bot.state.mineral_field.closest_to(closest_townhall)
+                            mineral = self.bot.mineral_field.closest_to(closest_townhall)
                             self.bot.actions.append(worker.gather(mineral))
 
     async def manage_mineral_saturation(self):
@@ -116,7 +116,7 @@ class ResourceManager(Manager):
                 worker = mineral_workers.closest_to(saturated_townhall)
                 unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)
                 minerals = self.get_untargeted_minerals(
-                    self.bot.state.mineral_field.closer_than(9, unsaturated_townhall))
+                    self.bot.mineral_field.closer_than(9, unsaturated_townhall))
                 mineral = minerals.closest_to(unsaturated_townhall)
 
                 self.bot.actions.append(worker.return_resource(unsaturated_townhall))
@@ -132,7 +132,7 @@ class ResourceManager(Manager):
             if townhalls:
                 townhall = townhalls.closest_to(worker)
                 minerals = self.get_untargeted_minerals(
-                    self.bot.state.mineral_field.closer_than(9, townhall))
+                    self.bot.mineral_field.closer_than(9, townhall))
                 mineral = minerals.closest_to(townhall)
 
                 if worker.is_carrying_minerals or worker.is_carrying_vespene:
@@ -172,7 +172,7 @@ class ResourceManager(Manager):
 
                 if unsaturated_townhalls.exists:
                     unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)
-                    mineral = self.bot.state.mineral_field.closest_to(unsaturated_townhall)
+                    mineral = self.bot.mineral_field.closest_to(unsaturated_townhall)
 
                     self.bot.actions.append(worker.return_resource(unsaturated_townhall))
                     self.bot.actions.append(worker.gather(mineral, queue=True))
@@ -194,7 +194,7 @@ class ResourceManager(Manager):
 
                 if unsaturated_townhalls.exists:
                     unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)
-                    mineral = self.bot.state.mineral_field.closest_to(unsaturated_townhall)
+                    mineral = self.bot.mineral_field.closest_to(unsaturated_townhall)
 
                     self.bot.actions.append(worker.return_resource(unsaturated_townhall))
                     self.bot.actions.append(worker.gather(mineral, queue=True))

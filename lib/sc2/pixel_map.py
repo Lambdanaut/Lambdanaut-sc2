@@ -6,13 +6,26 @@ from .position import Point2
 
 
 class PixelMap:
-    def __init__(self, proto):
+    def __init__(self, proto, in_bits: bool = False, mirrored: bool = False):
+        """
+        :param proto:
+        :param in_bits:
+        :param mirrored:
+        """
         self._proto = proto
-        assert self.bits_per_pixel % 8 == 0, "Unsupported pixel density"
-        assert self.width * self.height * self.bits_per_pixel / 8 == len(self._proto.data)
-        self.data_numpy = np.array(np.frombuffer(proto.data, dtype=np.uint8)).reshape(proto.size.y, proto.size.x)[
-            ::-1, :
-        ]
+        # Used for copying pixelmaps
+        self._in_bits: bool = in_bits
+        self._mirrored: bool = mirrored
+
+        assert self.width * self.height == (8 if in_bits else 1) * len(
+            self._proto.data
+        ), f"{self.width * self.height} {(8 if in_bits else 1)*len(self._proto.data)}"
+        buffer_data = np.frombuffer(self._proto.data, dtype=np.uint8)
+        if in_bits:
+            buffer_data = np.unpackbits(buffer_data)
+        self.data_numpy = buffer_data.reshape(self._proto.size.y, self._proto.size.x)
+        if mirrored:
+            self.data_numpy = np.flipud(self.data_numpy)
 
     @property
     def width(self):
@@ -31,18 +44,18 @@ class PixelMap:
         return self._proto.bits_per_pixel // 8
 
     def __getitem__(self, pos):
-        """ Example usage: is_pathable = self._game_info.pathing_grid[Point2((20, 20))] == 0 """
+        """ Example usage: is_pathable = self._game_info.pathing_grid[Point2((20, 20))] != 0 """
         assert 0 <= pos[0] < self.width, f"x is {pos[0]}, self.width is {self.width}"
         assert 0 <= pos[1] < self.height, f"y is {pos[1]}, self.height is {self.height}"
-        return int(self.data_numpy[pos[1] - 1, pos[0]])
+        return int(self.data_numpy[pos[1], pos[0]])
 
     def __setitem__(self, pos, value):
         """ Example usage: self._game_info.pathing_grid[Point2((20, 20))] = 255 """
         assert 0 <= pos[0] < self.width, f"x is {pos[0]}, self.width is {self.width}"
         assert 0 <= pos[1] < self.height, f"y is {pos[1]}, self.height is {self.height}"
-        assert 0 <= value < 256, f"value is {value}, it should be between 0 and 255"
+        assert 0 <= value <= 254 * self._in_bits + 1, f"value is {value}, it should be between 0 and {254 * self._in_bits + 1}"
         assert isinstance(value, int), f"value is of type {type(value)}, it should be an integer"
-        self.data_numpy[pos[1] - 1, pos[0]] = value
+        self.data_numpy[pos[1], pos[0]] = value
 
     def is_set(self, p):
         return self[p] != 0
@@ -50,8 +63,8 @@ class PixelMap:
     def is_empty(self, p):
         return not self.is_set(p)
 
-    def invert(self):
-        raise NotImplementedError
+    def copy(self):
+        return PixelMap(self._proto, in_bits=self._in_bits, mirrored=self._mirrored)
 
     def flood_fill(self, start_point: Point2, pred: Callable[[int], bool]) -> Set[Point2]:
         nodes: Set[Point2] = set()
@@ -97,3 +110,9 @@ class PixelMap:
         im = Image.new("RGB", (self.width, self.height))
         im.putdata(data)
         im.save(filename)
+
+    def plot(self):
+        import matplotlib.pyplot as plt
+
+        plt.imshow(self.data_numpy, origin="lower")
+        plt.show()

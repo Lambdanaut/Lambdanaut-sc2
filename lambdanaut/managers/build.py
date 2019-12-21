@@ -130,14 +130,12 @@ class BuildManager(Manager):
                 # Use rush distance to determine build
                 # Average rush distance is around 155. Longer rush distances are over 160.
 
-                # if rush_distance < 160:
-                #     # Do ravager harass into macro on small to medium rush distance maps
-                #     self.starting_build = Builds.RAVAGER_ALL_IN
-                # elif rush_distance > 165:
-                #     # Rush distance is long. Play more greedily.
-                #     self.add_build(Builds.EARLY_GAME_HATCHERY_FIRST_GREEDY)
-
-                self.starting_build = Builds.RAVAGER_ALL_IN
+                if rush_distance < 160:
+                    # Do ravager harass into macro on small to medium rush distance maps
+                    self.starting_build = Builds.RAVAGER_ALL_IN
+                elif rush_distance > 165:
+                    # Rush distance is long. Play more greedily.
+                    self.add_build(Builds.EARLY_GAME_HATCHERY_FIRST_GREEDY)
 
             elif self.bot.enemy_race is sc2.Race.Protoss:
                 # Use rush distance to determine build
@@ -789,7 +787,7 @@ class BuildManager(Manager):
         if townhalls:
             townhall_count = 0
             for townhall in townhalls:
-                minerals = self.bot.state.mineral_field
+                minerals = self.bot.mineral_field
                 if minerals:
                     nearby_minerals = minerals.closer_than(10, townhall)
                     if nearby_minerals:
@@ -1120,7 +1118,7 @@ class BuildManager(Manager):
                     location = townhall.position
 
                     # Attempt to build the structure away from the nearest minerals
-                    nearest_minerals = self.bot.state.mineral_field.closer_than(8, townhall)
+                    nearest_minerals = self.bot.mineral_field.closer_than(8, townhall)
                     nearest_gas = self.bot.state.vespene_geyser.closer_than(8, townhall)
                     nearest_resources = nearest_minerals | nearest_gas
                     if nearest_resources.exists:

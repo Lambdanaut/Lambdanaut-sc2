@@ -1,18 +1,22 @@
-from typing import Any, Dict, List, Optional, Set, Tuple, Union  # mypy type checking
+from __future__ import annotations
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, TYPE_CHECKING
 
-from .constants import geyser_ids, mineral_ids
+from .constants import FakeEffectID, FakeEffectRadii
 from .data import Alliance, DisplayType
 from .ids.effect_id import EffectId
+from .ids.unit_typeid import UnitTypeId
 from .ids.upgrade_id import UpgradeId
 from .pixel_map import PixelMap
 from .position import Point2, Point3
 from .power_source import PsionicMatrix
 from .score import ScoreDetails
-from .units import Units
 
 
 class Blip:
     def __init__(self, proto):
+        """
+        :param proto:
+        """
         self._proto = proto
 
     @property
@@ -43,7 +47,7 @@ class Blip:
     @property
     def position(self) -> Point2:
         """2d position of the blip."""
-        return self.position3d.to2
+        return Point2.from_proto(self._proto.pos)
 
     @property
     def position3d(self) -> Point3:
@@ -75,16 +79,28 @@ class Common:
 
 
 class EffectData:
-    def __init__(self, proto):
+    def __init__(self, proto, fake=False):
+        """
+        :param proto:
+        :param fake:
+        """
         self._proto = proto
+        self.fake = fake
 
     @property
-    def id(self) -> EffectId:
-        return EffectId(self._proto.effect_id)
+    def id(self) -> Union[EffectId, str]:
+        if self.fake:
+            # Returns the string from constants.py, e.g. "KD8CHARGE"
+            return FakeEffectID[self._proto.unit_type]
+        else:
+            return EffectId(self._proto.effect_id)
 
     @property
     def positions(self) -> Set[Point2]:
-        return {Point2.from_proto(p) for p in self._proto.pos}
+        if self.fake:
+            return {Point2.from_proto(self._proto.pos)}
+        else:
+            return {Point2.from_proto(p) for p in self._proto.pos}
 
     @property
     def alliance(self) -> Alliance:
@@ -96,7 +112,10 @@ class EffectData:
 
     @property
     def radius(self) -> float:
-        return self._proto.radius
+        if self.fake:
+            return FakeEffectRadii[self._proto.unit_type]
+        else:
+            return self._proto.radius
 
     def __repr__(self) -> str:
         return f"{self.id} with radius {self.radius} at {self.positions}"
@@ -104,13 +123,16 @@ class EffectData:
 
 class GameState:
     def __init__(self, response_observation):
+        """
+        :param response_observation:
+        """
+        self.response_observation = response_observation
         self.actions = response_observation.actions  # successful actions since last loop
         self.action_errors = response_observation.action_errors  # error actions since last loop
 
         # https://github.com/Blizzard/s2client-proto/blob/51662231c0965eba47d5183ed0a6336d5ae6b640/s2clientprotocol/sc2api.proto#L575
         self.observation = response_observation.observation
         self.observation_raw = self.observation.raw_data
-        self.dead_units: Set[int] = self.observation_raw.event.dead_units  # returns set of tags of units that died
         self.alerts = self.observation.alerts
         self.player_result = response_observation.player_result
         self.chat = response_observation.chat
@@ -123,45 +145,14 @@ class GameState:
         # https://github.com/Blizzard/s2client-proto/blob/33f0ecf615aa06ca845ffe4739ef3133f37265a9/s2clientprotocol/score.proto#L31
         self.score: ScoreDetails = ScoreDetails(self.observation.score)
         self.abilities = self.observation.abilities  # abilities of selected units
-
-        # Fix for enemy units detected by my sensor tower, as blips have less unit information than normal visible units
-        visibleUnits, blipUnits, minerals, geysers, destructables, enemy, own = ([] for _ in range(7))
-
-        for unit in self.observation_raw.units:
-            if unit.is_blip:
-                blipUnits.append(unit)
-            else:
-                visibleUnits.append(unit)
-                if unit.alliance == Alliance.Neutral.value:
-                    # all destructable rocks except the one below the main base ramps
-                    if unit.radius > 1.5:
-                        destructables.append(unit)
-                    # mineral field enums
-                    elif unit.unit_type in mineral_ids:
-                        minerals.append(unit)
-                    # geyser enums
-                    elif unit.unit_type in geyser_ids:
-                        geysers.append(unit)
-                elif unit.alliance == Alliance.Self.value:
-                    own.append(unit)
-                elif unit.alliance == Alliance.Enemy.value:
-                    enemy.append(unit)
-
-        self.own_units: Units = Units.from_proto(own)
-        self.enemy_units: Units = Units.from_proto(enemy)
-        self.mineral_field: Units = Units.from_proto(minerals)
-        self.vespene_geyser: Units = Units.from_proto(geysers)
-        self.resources: Units = Units.from_proto(minerals + geysers)
-        self.destructables: Units = Units.from_proto(destructables)
-        self.units: Units = Units.from_proto(visibleUnits)
         self.upgrades: Set[UpgradeId] = {UpgradeId(upgrade) for upgrade in self.observation_raw.player.upgrade_ids}
 
         # Set of unit tags that died this step
         self.dead_units: Set[int] = {dead_unit_tag for dead_unit_tag in self.observation_raw.event.dead_units}
-
-        self.blips: Set[Blip] = {Blip(unit) for unit in blipUnits}
-        self.visibility: PixelMap = PixelMap(self.observation_raw.map_state.visibility)
-        self.creep: PixelMap = PixelMap(self.observation_raw.map_state.creep)
+        # self.visibility[point]: 0=Hidden, 1=Fogged, 2=Visible
+        self.visibility: PixelMap = PixelMap(self.observation_raw.map_state.visibility, mirrored=False)
+        # self.creep[point]: 0=No creep, 1=creep
+        self.creep: PixelMap = PixelMap(self.observation_raw.map_state.creep, in_bits=True, mirrored=False)
 
         # Effects like ravager bile shot, lurker attack, everything in effect_id.py
         self.effects: Set[EffectData] = {EffectData(effect) for effect in self.observation_raw.effects}

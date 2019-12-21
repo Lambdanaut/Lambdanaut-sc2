@@ -7,6 +7,8 @@ import subprocess
 import sys
 import tempfile
 import time
+import json
+import re
 from typing import Any, List, Optional
 
 import aiohttp
@@ -14,6 +16,9 @@ import portpicker
 
 from .controller import Controller
 from .paths import Paths
+from . import paths
+
+from .versions import VERSIONS
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +37,17 @@ class kill_switch:
         for p in cls._to_kill:
             p._clean()
 
+
 class SC2Process:
     def __init__(
-        self, host: str = "127.0.0.1", port: Optional[int] = None, fullscreen: bool = False, render: bool = False
+        self,
+        host: str = "127.0.0.1",
+        port: Optional[int] = None,
+        fullscreen: bool = False,
+        render: bool = False,
+        sc2_version: str = None,
+        base_build: str = None,
+        data_hash: str = None,
     ) -> None:
         assert isinstance(host, str)
         assert isinstance(port, int) or port is None
@@ -50,6 +63,9 @@ class SC2Process:
         self._process = None
         self._session = None
         self._ws = None
+        self._sc2_version = sc2_version
+        self._base_build = base_build
+        self._data_hash = data_hash
 
     async def __aenter__(self):
         kill_switch.add(self)
@@ -79,9 +95,26 @@ class SC2Process:
     def ws_url(self):
         return f"ws://{self._host}:{self._port}/sc2api"
 
+    @property
+    def versions(self):
+        """ Opens the versions.json file which origins from
+        https://github.com/Blizzard/s2client-proto/blob/master/buildinfo/versions.json """
+        return VERSIONS
+
+    def find_data_hash(self, target_sc2_version: str):
+        """ Returns the data hash from the matching version string. """
+        version: dict
+        for version in self.versions:
+            if version["label"] == target_sc2_version:
+                return version["data-hash"]
+
     def _launch(self):
-        args = [
-            str(Paths.EXECUTABLE),
+        if self._base_build:
+            executable = str(paths.latest_executeble(Paths.BASE / "Versions", self._base_build))
+        else:
+            executable = str(Paths.EXECUTABLE)
+        args = paths.get_runner_args(Paths.CWD) + [
+            executable,
             "-listen",
             self._host,
             "-port",
@@ -93,6 +126,30 @@ class SC2Process:
             "-tempDir",
             self._tmp_dir,
         ]
+        if self._sc2_version:
+
+            def special_match(strg: str):
+                """ Tests if the specified version is in the versions.py dict. """
+                for version in self.versions:
+                    if version["label"] == strg:
+                        return True
+                return False
+
+            valid_version_string = special_match(self._sc2_version)
+            if valid_version_string:
+                self._data_hash = self.find_data_hash(self._sc2_version)
+                assert (
+                    self._data_hash is not None
+                ), f"StarCraft 2 Client version ({self._sc2_version}) was not found inside sc2/versions.py file. Please check your spelling or check the versions.py file."
+
+            else:
+                logger.warning(
+                    f'The submitted version string in sc2.rungame() function call (sc2_version="{self._sc2_version}") was not found in versions.py. Running latest version instead.'
+                )
+
+        if self._data_hash:
+            args.extend(["-dataVersion", self._data_hash])
+
         if self._render:
             args.extend(["-eglpath", "libEGL.so"])
 
@@ -116,6 +173,10 @@ class SC2Process:
             try:
                 self._session = aiohttp.ClientSession()
                 ws = await self._session.ws_connect(self.ws_url, timeout=120)
+                # FIXME fix deprecation warning in for future aiohttp version
+                # ws = await self._session.ws_connect(
+                #     self.ws_url, timeout=aiohttp.client_ws.ClientWSTimeout(ws_close=120)
+                # )
                 logger.debug("Websocket connection ready")
                 return ws
             except aiohttp.client_exceptions.ClientConnectorError:
@@ -143,7 +204,7 @@ class SC2Process:
                 for _ in range(3):
                     self._process.terminate()
                     time.sleep(0.5)
-                    if self._process.poll() is not None:
+                    if not self._process or self._process.poll() is not None:
                         break
                 else:
                     self._process.kill()

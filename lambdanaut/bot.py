@@ -120,10 +120,10 @@ class Lambdanaut(sc2.BotAI):
 
         # Sets enemy_race.
         # This is a hack to fix a bug on our test maps.
-        try:
-            self.enemy_race = super(Lambdanaut, self).enemy_race
-        except AttributeError:
-            self.enemy_race = sc2.data.Race.Zerg
+        # try:
+        #     self.enemy_race = super(Lambdanaut, self).enemy_race
+        # except AttributeError:
+        #     self.enemy_race = sc2.data.Race.Zerg
 
     async def on_step(self, iteration):
         self.iteration = iteration
