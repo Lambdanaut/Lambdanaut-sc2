@@ -1009,7 +1009,7 @@ class BuildManager(Manager):
                 townhalls = self.bot.townhalls.ready
                 for townhall in townhalls:
                     extractors = self.bot.units(const2.VESPENE_REFINERIES)
-                    geysers = self.bot.state.vespene_geyser.filter(lambda g: extractors.closer_than(0.5, g).empty)
+                    geysers = self.bot.vespene_geyser.filter(lambda g: extractors.closer_than(0.5, g).empty)
                     geyser = geysers.closest_to(townhall)
 
                     if geyser.distance_to(townhall) > 9:
@@ -1119,7 +1119,7 @@ class BuildManager(Manager):
 
                     # Attempt to build the structure away from the nearest minerals
                     nearest_minerals = self.bot.mineral_field.closer_than(8, townhall)
-                    nearest_gas = self.bot.state.vespene_geyser.closer_than(8, townhall)
+                    nearest_gas = self.bot.vespene_geyser.closer_than(8, townhall)
                     nearest_resources = nearest_minerals | nearest_gas
                     if nearest_resources.exists:
 
