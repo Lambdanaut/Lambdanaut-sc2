@@ -531,8 +531,8 @@ class Lambdanaut(sc2.BotAI):
 
         # Flood fill the start locations to eliminate the structures pathing block
         for start_location in start_locations:
-            for p in pathing_grid.flood_fill(start_location, lambda x: x == 255):
-                pathing_grid[p] = 0
+            for p in pathing_grid.flood_fill(start_location, lambda x: x == 0):
+                pathing_grid[p] = 1
 
         self.pathing_grid = pathing_grid
 
