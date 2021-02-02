@@ -37,6 +37,9 @@ BUILD = Builds.OPENER_DEFAULT
 
 
 class Lambdanaut(sc2.BotAI):
+
+    distance_calculation_method = 0
+
     def __init__(self, **kwargs):
         """
         :param kwargs: Optional flags to alter bot behavior
@@ -236,6 +239,10 @@ class Lambdanaut(sc2.BotAI):
         self.publish(None, Messages.STRUCTURE_COMPLETE, unit)
 
     @property
+    def _units(self):
+        return self.units | self.structures
+
+    @property
     def start_location(self) -> Point2:
         """Set start location to map center if there is not one"""
         return self.game_info.player_start_location or self.game_info.map_center
@@ -251,19 +258,19 @@ class Lambdanaut(sc2.BotAI):
 
     async def create_debug_units(self):
         # Create units on condition
-        # zerglings = self.units(const.ZERGLING)
+        # zerglings = self._units(const.ZERGLING)
         # if len(zerglings) > 10:
         #     await self._client.debug_create_unit([[const.ZERGLING, 15, zerglings.random.position, 2]])
         #
         # if self.iteration == 25:
-        #       drones = self.units(const2.WORKERS)
+        #       drones = self._units(const2.WORKERS)
         #       await self._client.debug_create_unit([[const.ZERGLING, 11, drones.random.position, 1]])
         #       await self._client.debug_create_unit([[const.ZERGLING, 15, drones.random.position, 2]])
 
         # Create Units every 15 iterations
         if self.iteration % 15 == 0:
 
-            hatch = self.units(const.HATCHERY)
+            hatch = self._units(const.HATCHERY)
             # await self._client.debug_create_unit([[const.INFESTOR, 1, self.start_location - Point2((4, 0)), 1]])
             # await self._client.debug_create_unit([[const.BANELING, 2, hatch.random.position + Point2((6, 0)), 2]])
             # await self._client.debug_create_unit([[const.ZERGLING, 7, hatch.random.position + Point2((6, 0)), 2]])
@@ -274,7 +281,7 @@ class Lambdanaut(sc2.BotAI):
         # For testing micro maps
         #
         import random
-        friendly = self.units
+        friendly = self._units
         enemy = self.enemy_units
         if not friendly or not enemy:
             print("FRIENDLY COUNT: {}".format(len(friendly)))
@@ -376,7 +383,7 @@ class Lambdanaut(sc2.BotAI):
         """
 
         # Update cached values and create new cached units
-        for units, cache in zip((self.units, self.enemy_units),
+        for units, cache in zip((self._units, self.enemy_units),
                                 (self.unit_cache, self.enemy_cache)):
             for unit in units:
                 # If we already remember this unit
@@ -734,8 +741,8 @@ class Lambdanaut(sc2.BotAI):
         return adjacents
 
     def point_between_townhall_and_resources(self, townhall: Unit):
-        nearest_minerals = self.state.mineral_field.closer_than(8, townhall.position)
-        nearest_gas = self.state.vespene_geyser.closer_than(8, townhall.position)
+        nearest_minerals = self.mineral_field.closer_than(8, townhall.position)
+        nearest_gas = self.vespene_geyser.closer_than(8, townhall.position)
         nearest_resources = nearest_minerals | nearest_gas
 
         if nearest_resources:
@@ -744,7 +751,7 @@ class Lambdanaut(sc2.BotAI):
             return townhall.position
 
     def has_midgame_tech(self) -> bool:
-        midgame_tech = bool(self.units({const.UnitTypeId.ROACHWARREN, const.UnitTypeId.LAIR}))
+        midgame_tech = bool(self._units({const.UnitTypeId.ROACHWARREN, const.UnitTypeId.LAIR}))
         sufficient_townhalls = len(self.townhalls) >= 4
 
         return midgame_tech or sufficient_townhalls

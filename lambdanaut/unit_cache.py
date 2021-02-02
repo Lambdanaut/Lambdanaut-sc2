@@ -7,8 +7,6 @@ from lib.sc2.game_state import EffectData
 from lib.sc2.position import Point2
 from lib.sc2.unit import Unit
 
-import lambdanaut.const2 as const2
-
 
 class UnitCached(object):
 
@@ -87,8 +85,11 @@ class UnitCached(object):
 
     def __getattr__(self, item):
         """Passes calls down to the snapshot"""
-
         try:
             return self.__getattribute__(item)
         except AttributeError:
             return getattr(self.snapshot, item)
+
+    def __getitem__(self, item):
+        """Passes calls down to the snapshot"""
+        return self.snapshot.position_tuple[item]

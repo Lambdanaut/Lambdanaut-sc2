@@ -176,11 +176,11 @@ class ForceManager(StatefulManager):
     async def do_housekeeping(self):
         zerg_army_units = const2.ZERG_ARMY_UNITS | {const.ROACHBURROWED, const.INFESTORBURROWED}
 
-        army = self.bot.units(zerg_army_units).tags_not_in(self.bot.occupied_units)
+        army = self.bot._units(zerg_army_units).tags_not_in(self.bot.occupied_units)
 
         # Army includes queens that aren't busy
         busy_queen_tags = self.bot.townhall_queens.values()
-        queens = self.bot.units(const.QUEEN).filter(
+        queens = self.bot._units(const.QUEEN).filter(
             lambda q: q.tag not in busy_queen_tags)
         army |= queens
 
@@ -229,10 +229,10 @@ class ForceManager(StatefulManager):
             if self.escorting_workers.length(self.bot.state.game_loop):
                 # Get first escorting worker in list
                 escorting_worker_tag = self.escorting_workers.get_item(0, self.bot.state.game_loop)
-                escorting_worker = self.bot.units.of_type(const2.WORKERS).find_by_tag(escorting_worker_tag)
+                escorting_worker = self.bot._units.of_type(const2.WORKERS).find_by_tag(escorting_worker_tag)
 
                 if escorting_worker:
-                    army = self.bot.units(const2.ZERG_ARMY_UNITS). \
+                    army = self.bot._units(const2.ZERG_ARMY_UNITS). \
                         tags_not_in(self.bot.occupied_units)
                     expansion_location = await self.bot.get_next_expansion()
 
@@ -251,7 +251,7 @@ class ForceManager(StatefulManager):
     async def do_moving_to_attack(self):
         army_units = const2.ZERG_ARMY_UNITS
 
-        army = self.bot.units(army_units). \
+        army = self.bot._units(army_units). \
             tags_not_in(self.bot.occupied_units)
 
         if not army:
@@ -275,7 +275,7 @@ class ForceManager(StatefulManager):
         self._recent_commands.add(ForceManagerCommands.START_ATTACKING, self.bot.state.game_loop, expiry=4)
 
         # Do Baneling harass during attack
-        banelings = self.bot.units(const.BANELING) \
+        banelings = self.bot._units(const.BANELING) \
             .tags_not_in(self.bot.occupied_units)
         if banelings:
 
@@ -310,7 +310,7 @@ class ForceManager(StatefulManager):
             #                 self.banelings_harassing.add(baneling.tag)
 
             # Burrow banelings
-            burrowed_banelings = self.bot.units(const.BANELINGBURROWED)
+            burrowed_banelings = self.bot._units(const.BANELINGBURROWED)
             # Only burrow up to six banelings at a time
             if const.BURROW in self.bot.state.upgrades and \
                     (not burrowed_banelings or len(burrowed_banelings) < 4):
@@ -323,7 +323,7 @@ class ForceManager(StatefulManager):
                     # Get two banelings
                     banelings = banelings[:2]
 
-                    army = self.bot.units(const2.ZERG_ARMY_UNITS)
+                    army = self.bot._units(const2.ZERG_ARMY_UNITS)
                     if army:
                         for baneling in banelings:
                             # Consider them harassing banelings for the moment
@@ -344,7 +344,7 @@ class ForceManager(StatefulManager):
 
         # Do burrow roach harass during attack
         # ## REMOVED FOR NOW BECAUSE IT'S NOT SO GREAT
-        # roaches = self.bot.units(const.ROACH)
+        # roaches = self.bot._units(const.ROACH)
         # if roaches and const.BURROW in self.bot.state.upgrades and \
         #         const.UpgradeId.TUNNELINGCLAWS in self.bot.state.upgrades:
         #     # Get the roaches that aren't harassing mineral lines
@@ -380,7 +380,7 @@ class ForceManager(StatefulManager):
         #                         roach(const.AbilityId.BURROWUP_ROACH, queue=True))
 
         # Do Mutalisk harass during attack
-        mutalisks = self.bot.units(const.MUTALISK)
+        mutalisks = self.bot._units(const.MUTALISK)
         if mutalisks:
             dangerous_enemy_units = {const.PHOTONCANNON, const.SPORECRAWLER, const.MISSILETURRET}
 
@@ -411,7 +411,7 @@ class ForceManager(StatefulManager):
         frontline_army_units = {const.BANELING, const.BROODLORD}
 
         # Unburrow idle harassing roaches
-        roaches = self.bot.units(const.ROACHBURROWED)
+        roaches = self.bot._units(const.ROACHBURROWED)
         if roaches:
             roaches = roaches.tags_in(self.roaches_harassing).idle
             for roach in roaches:
@@ -419,12 +419,12 @@ class ForceManager(StatefulManager):
                     roach(const.AbilityId.BURROWUP_ROACH))
 
         # Do main force attacking
-        army = self.bot.units(const2.ZERG_ARMY_UNITS). \
+        army = self.bot._units(const2.ZERG_ARMY_UNITS). \
             exclude_type(no_attackmove_units). \
             tags_not_in(self.bot.occupied_units)
 
         # Exclude the banelings that are currently harassing
-        army -= self.bot.units.tags_in(self.banelings_harassing)
+        army -= self.bot._units.tags_in(self.banelings_harassing)
 
         backline_army = army.exclude_type(frontline_army_units)
         frontline_army = army.of_type(frontline_army_units)
@@ -462,7 +462,7 @@ class ForceManager(StatefulManager):
         self.banelings_harassing.clear()
 
         # Cleanup roaches that were harassing
-        roaches = self.bot.units(const.ROACHBURROWED)
+        roaches = self.bot._units(const.ROACHBURROWED)
         if roaches:
             roaches = roaches.tags_in(self.roaches_harassing)
             for roach in roaches:
@@ -483,7 +483,7 @@ class ForceManager(StatefulManager):
                                   self.bot.state.game_loop, expiry=20)
 
     async def do_retreating(self):
-        army = self.bot.units(const2.ZERG_ARMY_UNITS). \
+        army = self.bot._units(const2.ZERG_ARMY_UNITS). \
             tags_not_in(self.bot.occupied_units)
 
         for unit in army:
@@ -495,7 +495,7 @@ class ForceManager(StatefulManager):
                         self.bot.do(unit.move(nearest_townhall.position))
 
     async def do_searching(self):
-        army = self.bot.units(const2.ZERG_ARMY_UNITS).\
+        army = self.bot._units(const2.ZERG_ARMY_UNITS).\
             tags_not_in(self.bot.occupied_units).idle
 
         if not army:
@@ -564,7 +564,7 @@ class ForceManager(StatefulManager):
         # HOUSEKEEPING
         if self.state == ForcesStates.HOUSEKEEPING:
 
-            army = self.bot.units(const2.ZERG_ARMY_UNITS)
+            army = self.bot._units(const2.ZERG_ARMY_UNITS)
 
             if army:
                 # Value of the army
@@ -586,13 +586,13 @@ class ForceManager(StatefulManager):
                 # We've guarded the worker for long enough, change state
                 return await self.change_state(ForcesStates.HOUSEKEEPING)
 
-            elif not self.bot.units.of_type(const2.WORKERS).find_by_tag(
+            elif not self.bot._units.of_type(const2.WORKERS).find_by_tag(
                     self.escorting_workers.get_item(0, self.bot.state.game_loop)):
                 # The worker no longer exists. Change state
                 return await self.change_state(ForcesStates.HOUSEKEEPING)
 
             escorting_worker_tag = self.escorting_workers.get_item(0, self.bot.state.game_loop)
-            escorting_worker = self.bot.units.of_type(const2.WORKERS).find_by_tag(escorting_worker_tag)
+            escorting_worker = self.bot._units.of_type(const2.WORKERS).find_by_tag(escorting_worker_tag)
 
             if escorting_worker:
                 expansion_location = await self.bot.get_next_expansion()
@@ -603,7 +603,7 @@ class ForceManager(StatefulManager):
 
         # MOVING_TO_ATTACK
         elif self.state == ForcesStates.MOVING_TO_ATTACK:
-            army = self.bot.units(const2.ZERG_ARMY_UNITS)
+            army = self.bot._units(const2.ZERG_ARMY_UNITS)
 
             if army:
                 relative_army_strength = self.bot.relative_army_strength(
@@ -623,7 +623,7 @@ class ForceManager(StatefulManager):
 
         # ATTACKING
         elif self.state == ForcesStates.ATTACKING:
-            army = self.bot.units(const2.ZERG_ARMY_UNITS)
+            army = self.bot._units(const2.ZERG_ARMY_UNITS)
 
             if army:
 
@@ -659,7 +659,7 @@ class ForceManager(StatefulManager):
                 self.publish(Messages.ARMY_FOUND_ENEMY_BASE, value=enemy_structures.first.position)
                 return await self.change_state(ForcesStates.HOUSEKEEPING)
 
-            units_at_enemy_location = self.bot.units.closer_than(
+            units_at_enemy_location = self.bot._units.closer_than(
                 6, self.bot.enemy_start_location)
 
             if units_at_enemy_location:

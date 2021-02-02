@@ -314,7 +314,7 @@ class BuildManager(Manager):
                 self.ack(message)
 
                 # Cancel in-progress structures
-                for structure in self.bot.units.filter(
+                for structure in self.bot._units.filter(
                         lambda u: u.is_structure and u.build_progress < 0.96):
                     self.bot.do(structure(const.AbilityId.CANCEL_BUILDINPROGRESS))
 
@@ -336,11 +336,11 @@ class BuildManager(Manager):
 
                 # Switch to a defensive roach ravager build if we haven't
                 # finished a baneling nest yet
-                baneling_nests = self.bot.units(const.UnitTypeId.BANELINGNEST)
+                baneling_nests = self.bot._units(const.UnitTypeId.BANELINGNEST)
                 if not baneling_nests.ready:
 
                     # Cancel spawning hatcheries
-                    in_prod_hatcheries = self.bot.units(const.UnitTypeId.HATCHERY).not_ready
+                    in_prod_hatcheries = self.bot._units(const.UnitTypeId.HATCHERY).not_ready
                     for hatchery in in_prod_hatcheries:
                         self.bot.do(hatchery(const.AbilityId.CANCEL))
 
@@ -408,7 +408,7 @@ class BuildManager(Manager):
 
                     if success:
                         # Cancel spawning baneling nests
-                        baneling_nests = self.bot.units(const.UnitTypeId.BANELINGNEST)
+                        baneling_nests = self.bot._units(const.UnitTypeId.BANELINGNEST)
                         for baneling_nest in baneling_nests.not_ready:
                             self.bot.do(baneling_nest(const.AbilityId.CANCEL))
 
@@ -533,7 +533,7 @@ class BuildManager(Manager):
 
             assert isinstance(for_each_unit_type, const.UnitTypeId)
 
-            existing_for_each_units = len(self.bot.units(for_each_unit_type).ready)
+            existing_for_each_units = len(self.bot._units(for_each_unit_type).ready)
 
             if existing_for_each_units:
                 if isinstance(unit, builds.SpecialBuildTarget):
@@ -650,7 +650,7 @@ class BuildManager(Manager):
         # Only build overlords if we haven't yet reached max supply
         if self.bot.supply_cap < 200:
             # Subtract supply from damaged overlords. Assume we'll lose them.
-            overlords = self.bot.units(
+            overlords = self.bot._units(
                 {const.OVERLORD, const.UnitTypeId.OVERLORDTRANSPORT, const.UnitTypeId.OVERSEER})
             damaged_overlord_supply = 0
             if overlords:
@@ -663,7 +663,7 @@ class BuildManager(Manager):
             overlord_egg_supply = overlord_egg_count * 8  # Overlords provide 8 supply
 
             # Calculate the supply coming from nearly-done hatcheries
-            hatcheries_in_progress_count = len(self.bot.units(const.HATCHERY).filter(
+            hatcheries_in_progress_count = len(self.bot._units(const.HATCHERY).filter(
                 lambda u: not u.is_ready and u.build_progress > 0.65))
             hatcheries_in_progress_supply = hatcheries_in_progress_count * 6  # Hatcheries provide 6 supply
 
@@ -707,7 +707,7 @@ class BuildManager(Manager):
             return [unit]
 
         # Count of existing units {unit.type_id: count}
-        existing_unit_counts = Counter(map(lambda unit: unit.type_id, self.bot.units))
+        existing_unit_counts = Counter(map(lambda unit: unit.type_id, self.bot._units))
 
         # Count of units being trained or built
         pending_units = Counter({u: self.bot.already_pending(u) for u in const2.ZERG_UNITS})
@@ -717,40 +717,40 @@ class BuildManager(Manager):
         zergling_eggs = Counter({
             const.ZERGLING: sum(
                 [egg.orders[0].ability == zergling_creation_ability
-                 for egg in self.bot.units(const.UnitTypeId.EGG)]
+                 for egg in self.bot._units(const.UnitTypeId.EGG)]
             )
         })
 
         # Burrowed Zerglings count as zerglings
-        burrowed_zergling = Counter({const.ZERGLING: len(self.bot.units(const.ZERGLINGBURROWED))})
+        burrowed_zergling = Counter({const.ZERGLING: len(self.bot._units(const.ZERGLINGBURROWED))})
 
         # Burrowed Banelings count as banelings
-        burrowed_banelings = Counter({const.BANELING: len(self.bot.units(const.BANELINGBURROWED))})
+        burrowed_banelings = Counter({const.BANELING: len(self.bot._units(const.BANELINGBURROWED))})
 
         # Burrowed Roaches count as roaches
-        burrowed_roaches = Counter({const.ROACH: len(self.bot.units(const.ROACHBURROWED))})
+        burrowed_roaches = Counter({const.ROACH: len(self.bot._units(const.ROACHBURROWED))})
 
         # Burrowed Lurkers count as lurkers
-        burrowed_lurkers = Counter({const.LURKERMP: len(self.bot.units(const.LURKERMPBURROWED))})
+        burrowed_lurkers = Counter({const.LURKERMP: len(self.bot._units(const.LURKERMPBURROWED))})
 
         # Burrowed Infestors count as infestors
-        burrowed_infestors = Counter({const.INFESTOR: len(self.bot.units(const.INFESTORBURROWED))})
+        burrowed_infestors = Counter({const.INFESTOR: len(self.bot._units(const.INFESTORBURROWED))})
 
         # Hives count as Lairs. This is a weird one that doesn't make a lot of sense
         # Reasoning is that when we get a Hive, we don't want the AI to act like we don't have a Lair
-        hives_as_lairs = Counter({const.LAIR: len(self.bot.units(const.HIVE))})
+        hives_as_lairs = Counter({const.LAIR: len(self.bot._units(const.HIVE))})
 
         # Uprooted spine crawlers count as spine crawlers
         spine_crawlers_uprooted = Counter({const.SPINECRAWLER: len(
-            self.bot.units(const.UnitTypeId.SPINECRAWLERUPROOTED))})
+            self.bot._units(const.UnitTypeId.SPINECRAWLERUPROOTED))})
 
         # Uprooted spore crawlers count as spine crawlers
         spore_crawlers_uprooted = Counter({const.SPORECRAWLER: len(
-            self.bot.units(const.UnitTypeId.SPORECRAWLERUPROOTED))})
+            self.bot._units(const.UnitTypeId.SPORECRAWLERUPROOTED))})
 
         # Extractors without vespene left
         empty_extractors = Counter({const.EXTRACTOR: len(
-            self.bot.units(const.EXTRACTOR).filter(lambda extr: extr.vespene_contents == 0))
+            self.bot._units(const.EXTRACTOR).filter(lambda extr: extr.vespene_contents == 0))
         })
 
         # Count of pending upgrades
@@ -780,7 +780,7 @@ class BuildManager(Manager):
                 if minerals:
                     nearby_minerals = minerals.closer_than(10, townhall)
                     if nearby_minerals:
-                        vespene_refineries = self.bot.units(const2.VESPENE_REFINERIES)
+                        vespene_refineries = self.bot._units(const2.VESPENE_REFINERIES)
                         nearby_vespene = vespene_refineries.closer_than(8, townhall)
                         empty_vespene = any(refinery.vespene_contents <= 0
                                             for refinery in nearby_vespene)
@@ -833,24 +833,24 @@ class BuildManager(Manager):
                     elif isinstance(unit, const.UpgradeId):
                         # Check for upgrade tech requirements
                         tech_requirement = const2.ZERG_UPGRADES_TO_TECH_REQUIREMENT[unit]
-                        idle_building_structure = self.bot.units(const2.ZERG_UPGRADES_TO_STRUCTURE[unit]).ready.idle
+                        idle_building_structure = self.bot._units(const2.ZERG_UPGRADES_TO_STRUCTURE[unit]).ready.idle
 
                     # Skip worker and townhall build targets if these flags are set
                     if (self.stop_townhall_production or
                         self._stop_nonarmy_production.contains(True, self.bot.state.game_loop)) and \
                             unit in const2.UNUPGRADED_TOWNHALLS:
                         first_tier_production_structures = {const.SPAWNINGPOOL, const.GATEWAY, const.BARRACKS}
-                        if self.bot.units(first_tier_production_structures):
+                        if self.bot._units(first_tier_production_structures):
                             continue
                     elif (self.stop_worker_production or
                           self._stop_nonarmy_production.contains(True, self.bot.state.game_loop)) and \
                             unit in const2.WORKERS:
                         first_tier_production_structures = {const.SPAWNINGPOOL, const.GATEWAY, const.BARRACKS}
-                        if self.bot.units(first_tier_production_structures):
+                        if self.bot._units(first_tier_production_structures):
                             continue
 
                     # Skip banelings if we don't have any idle zerglings
-                    if unit is const.BANELING and not self.bot.units(const.ZERGLING).idle:
+                    if unit is const.BANELING and not self.bot._units(const.ZERGLING).idle:
                         continue
 
                     if (tech_requirement is None or existing_unit_counts[tech_requirement]) > 0 and \
@@ -937,14 +937,14 @@ class BuildManager(Manager):
                 return False
 
             # Get drones that aren't carrying minerals or gas
-            drones = self.bot.units(const.DRONE).filter(
+            drones = self.bot._units(const.DRONE).filter(
                 lambda d: not d.is_carrying_minerals and not d.is_carrying_vespene)
 
             if self.bot.can_afford(build_target):
                 if drones:
                     drone = drones.closest_to(expansion_location)
 
-                    err = await self.bot.do(drone.build(build_target, expansion_location))
+                    err = self.bot.do(drone.build(build_target, expansion_location))
 
                     if err:
                         # Try the next expansion location
@@ -957,7 +957,7 @@ class BuildManager(Manager):
                         return True
 
             # Move drone to expansion location before construction
-            elif self.bot.state.common.minerals > 200 and \
+            elif self.bot.minerals > 200 and \
                     not self._recent_commands.contains(
                         BuildManagerCommands.EXPAND_MOVE, self.bot.state.game_loop):
                 if expansion_location:
@@ -976,7 +976,7 @@ class BuildManager(Manager):
 
         elif build_target is const.LAIR:
             # Get a hatchery
-            hatcheries = self.bot.units(const.HATCHERY).idle
+            hatcheries = self.bot._units(const.HATCHERY).idle
 
             # Train the unit
             if self.bot.can_afford(build_target) and hatcheries:
@@ -986,7 +986,7 @@ class BuildManager(Manager):
 
         elif build_target is const.HIVE:
             # Get a lair
-            lairs = self.bot.units(const.LAIR).idle
+            lairs = self.bot._units(const.LAIR).idle
 
             # Train the unit
             if self.bot.can_afford(build_target) and lairs:
@@ -997,7 +997,7 @@ class BuildManager(Manager):
             if self.bot.can_afford(build_target):
                 townhalls = self.bot.townhalls.ready
                 for townhall in townhalls:
-                    extractors = self.bot.units(const2.VESPENE_REFINERIES)
+                    extractors = self.bot._units(const2.VESPENE_REFINERIES)
                     geysers = self.bot.vespene_geyser.filter(lambda g: extractors.closer_than(0.5, g).empty)
                     geyser = geysers.closest_to(townhall)
 
@@ -1012,7 +1012,7 @@ class BuildManager(Manager):
 
         elif build_target is const.GREATERSPIRE:
             # Get a spire
-            spire = self.bot.units(const.SPIRE).idle
+            spire = self.bot._units(const.SPIRE).idle
 
             # Train the unit
             if spire.exists and self.bot.can_afford(build_target):
@@ -1060,7 +1060,7 @@ class BuildManager(Manager):
 
             if townhalls:
                 if self.bot.can_afford(build_target):
-                    spore_crawlers = self.bot.units(const.SPORECRAWLER)
+                    spore_crawlers = self.bot._units(const.SPORECRAWLER)
 
                     target = None
                     if spore_crawlers:
@@ -1141,7 +1141,7 @@ class BuildManager(Manager):
 
         elif build_target in const2.ZERG_UNITS_FROM_LARVAE:
             # Get larva
-            larvas = self.bot.units(const.LARVA)
+            larvas = self.bot._units(const.LARVA)
 
             # Train the unit
             if self.bot.can_afford(build_target) and larvas:
@@ -1173,7 +1173,7 @@ class BuildManager(Manager):
 
         elif build_target is const.BANELING:
             # Get zerglings
-            zerglings = self.bot.units(const.ZERGLING).idle
+            zerglings = self.bot._units(const.ZERGLING).idle
 
             # Train the unit
             if self.bot.can_afford(build_target) and zerglings:
@@ -1184,7 +1184,7 @@ class BuildManager(Manager):
 
         elif build_target is const.RAVAGER:
             # Get roaches
-            roaches = self.bot.units(const.ROACH).filter(
+            roaches = self.bot._units(const.ROACH).filter(
                 lambda r: not self.bot.unit_is_engaged(r))
 
             # Train the unit
@@ -1200,7 +1200,7 @@ class BuildManager(Manager):
 
         elif build_target is const.LURKERMP:
             # Get hydras
-            hydralisks = self.bot.units(const.HYDRALISK).filter(
+            hydralisks = self.bot._units(const.HYDRALISK).filter(
                 lambda r: not self.bot.unit_is_engaged(r))
 
             # Train the unit
@@ -1216,7 +1216,7 @@ class BuildManager(Manager):
 
         elif build_target is const.BROODLORD:
             # Get a Corruptor
-            corruptors = self.bot.units(const.CORRUPTOR)
+            corruptors = self.bot._units(const.CORRUPTOR)
 
             # Train the unit
             if self.bot.can_afford(build_target) and corruptors:
@@ -1231,7 +1231,7 @@ class BuildManager(Manager):
 
         elif build_target is const.OVERSEER:
             # Get an overlord
-            overlords = self.bot.units(const.OVERLORD)
+            overlords = self.bot._units(const.OVERLORD)
 
             # Train the unit
             if self.bot.can_afford(build_target) and overlords.exists:
@@ -1242,7 +1242,7 @@ class BuildManager(Manager):
         # Upgrades below
         elif isinstance(build_target, const.UpgradeId):
             upgrade_structure_type = const2.ZERG_UPGRADES_TO_STRUCTURE[build_target]
-            upgrade_structures = self.bot.units(upgrade_structure_type).ready
+            upgrade_structures = self.bot._units(upgrade_structure_type).ready
             if self.bot.can_afford(build_target) and upgrade_structures:
 
                 # Require idle upgrade structures

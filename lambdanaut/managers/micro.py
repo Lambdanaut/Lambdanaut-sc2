@@ -114,8 +114,8 @@ class MicroManager(Manager):
         return False
 
     async def manage_drones(self):
-        drones = self.bot.units(const.UnitTypeId.DRONE)
-        drones_burrowed = self.bot.units(const.UnitTypeId.DRONEBURROWED)
+        drones = self.bot._units(const.UnitTypeId.DRONE)
+        drones_burrowed = self.bot._units(const.UnitTypeId.DRONEBURROWED)
 
         for drone in drones:
             # Burrow damaged workers if enemies are nearby
@@ -150,7 +150,7 @@ class MicroManager(Manager):
                 self.bot.do(drone(const.AbilityId.BURROWUP_DRONE))
 
     async def manage_zerglings(self):
-        zerglings = self.bot.units(const.ZERGLING)
+        zerglings = self.bot._units(const.ZERGLING)
 
         # Micro zerglings
         for zergling in zerglings:
@@ -175,7 +175,7 @@ class MicroManager(Manager):
 
                 if closest_enemy_unit.type_id == const.BANELING:
                     # Micro away from banelings
-                    nearby_friendly_units = self.bot.units.closer_than(3, closest_enemy_unit)
+                    nearby_friendly_units = self.bot._units.closer_than(3, closest_enemy_unit)
                     distance_to_enemy = zergling.distance_to(closest_enemy_unit)
                     if nearby_friendly_units:
                         closest_friendly_unit_to_enemy = nearby_friendly_units.closest_to(closest_enemy_unit)
@@ -234,14 +234,14 @@ class MicroManager(Manager):
         #                             (nearby_enemy_priorities.exists and nearby_enemy_priorities.amount < 2):
         #
         #                         # Never burrow more than 5 zerglings at a time
-        #                         if self.bot.units(const.UnitTypeId.ZERGLINGBURROWED).amount < 5:
+        #                         if self.bot._units(const.UnitTypeId.ZERGLINGBURROWED).amount < 5:
         #                             self.bot.do(zergling(const.BURROWDOWN_ZERGLING))
 
     async def manage_zergling_scouting(self):
         """
         Scout enemy units with zerglings
         """
-        zerglings = self.bot.units(const.ZERGLING)
+        zerglings = self.bot._units(const.ZERGLING)
 
         required_zergling_count = 2
         # Scout slightly later vs Terran/Protoss
@@ -299,7 +299,7 @@ class MicroManager(Manager):
                             if closest_enemy is not None \
                                     and closest_enemy.distance_to(zergling) < max(
                                         4, closest_enemy.ground_range * self.scouting_zergling_proximity) \
-                                    and len(self.bot.units.closer_than(7, zergling)) < 5:
+                                    and len(self.bot._units.closer_than(7, zergling)) < 5:
                                 # Retreat
                                 target = zergling.position.towards(self.bot.start_location, 20)
                                 self.bot.do(zergling.move(target))
@@ -328,8 +328,8 @@ class MicroManager(Manager):
                     self.bot.occupied_units.add(zergling.tag)
 
     async def manage_banelings(self):
-        banelings = self.bot.units(const.BANELING)
-        burrowed_banelings = self.bot.units(const.UnitTypeId.BANELINGBURROWED)
+        banelings = self.bot._units(const.BANELING)
+        burrowed_banelings = self.bot._units(const.UnitTypeId.BANELINGBURROWED)
 
         if banelings:
             attack_priorities = const2.WORKERS | {
@@ -374,7 +374,7 @@ class MicroManager(Manager):
                 self.bot.do(baneling(const.BURROWUP_BANELING))
 
     async def manage_roaches(self):
-        roaches = self.bot.units(const.ROACH)
+        roaches = self.bot._units(const.ROACH)
 
         for roach in roaches:
             # Burrow damaged roaches
@@ -392,7 +392,7 @@ class MicroManager(Manager):
         # Unburrow healed roaches
         to_remove_from_healing = set()
         for roach_tag in self.healing_roaches_tags:
-            roach = self.bot.units.find_by_tag(roach_tag)
+            roach = self.bot._units.find_by_tag(roach_tag)
             if roach:
                 if roach.health_percentage > 0.96:
                     nearby_enemy_units = self.bot.enemy_units.closer_than(10, roach).not_structure
@@ -410,7 +410,7 @@ class MicroManager(Manager):
             self.healing_roaches_tags.remove(roach_tag)
 
     async def manage_ravagers(self):
-        ravagers = self.bot.units(const.RAVAGER)
+        ravagers = self.bot._units(const.RAVAGER)
 
         # Bile priorities
         # Bunkers and pylons are intentionally not included in the priorities list.
@@ -429,7 +429,7 @@ class MicroManager(Manager):
                 # Perform bile attacks
                 # Bile range is 9
                 nearby_enemy_priorities = [u for u in nearby_enemy_units if u.type_id in bile_priorities]
-                nearby_enemy_priorities += self.bot.state.units(bile_priorities_neutral)
+                nearby_enemy_priorities += self.bot._units(bile_priorities_neutral)
 
                 # Prefer targeting our bile_priorities
                 nearby_enemy_priorities = nearby_enemy_priorities \
@@ -451,7 +451,7 @@ class MicroManager(Manager):
                             # Bile slightly behind the enemy unit so they are forced forwards
                             target = enemy_unit.position.towards(ravager.position, -enemy_unit.radius * 0.8)
 
-                        our_closest_unit_to_enemy = self.bot.units.closest_to(target)
+                        our_closest_unit_to_enemy = self.bot._units.closest_to(target)
                         if our_closest_unit_to_enemy.distance_to(enemy_unit.position) > 0.5:
 
                             # Only bile a forcefield at most once
@@ -477,7 +477,7 @@ class MicroManager(Manager):
                         closest_enemy = ravager.position.closest(nearby_enemy_units)
 
                         # Get the count of nearby friendly units
-                        nearby_friendly_units = self.bot.units.closer_than(15, ravager)
+                        nearby_friendly_units = self.bot._units.closer_than(15, ravager)
 
                         if closest_enemy_to_avoid is not None and len(nearby_friendly_units) < 12:
                             # Keep out of range of dangerous enemy structures if our ravager army is small
@@ -501,8 +501,8 @@ class MicroManager(Manager):
                                     self.bot.do(ravager.hold_position(queue=True))
 
     async def manage_infestors(self):
-        infestors = self.bot.units(const.INFESTOR)
-        burrowed_infestors = self.bot.units(const.UnitTypeId.INFESTORBURROWED)
+        infestors = self.bot._units(const.INFESTOR)
+        burrowed_infestors = self.bot._units(const.UnitTypeId.INFESTORBURROWED)
 
         if infestors or burrowed_infestors:
 
@@ -602,7 +602,7 @@ class MicroManager(Manager):
         # Unburrow healed infestors
         to_remove_from_healing = set()
         for infestor_tag in self.healing_infestors_tags:
-            infestor = self.bot.units.find_by_tag(infestor_tag)
+            infestor = self.bot._units.find_by_tag(infestor_tag)
             if infestor:
                 if infestor.health_percentage > 0.96:
                     nearby_enemy_units = self.bot.enemy_units.closer_than(10, infestor).not_structure
@@ -616,8 +616,8 @@ class MicroManager(Manager):
                 to_remove_from_healing.add(infestor_tag)
 
     async def manage_lurkers(self):
-        lurkers = self.bot.units(const.LURKERMP)
-        burrowed_lurkers = self.bot.units(const.UnitTypeId.LURKERMPBURROWED)
+        lurkers = self.bot._units(const.LURKERMP)
+        burrowed_lurkers = self.bot._units(const.UnitTypeId.LURKERMPBURROWED)
 
         if lurkers or burrowed_lurkers:
 
@@ -673,7 +673,7 @@ class MicroManager(Manager):
         * Queue up path to priority and follow it
         *
         """
-        mutalisks = self.bot.units(const.MUTALISK)
+        mutalisks = self.bot._units(const.MUTALISK)
 
         if mutalisks:
             attack_priorities = const2.WORKERS | {
@@ -729,9 +729,9 @@ class MicroManager(Manager):
                         self.bot.do(mutalisk.attack(nearest_priority, queue=True))
 
     async def manage_corruptors(self):
-        corruptors = self.bot.units(const.CORRUPTOR)
+        corruptors = self.bot._units(const.CORRUPTOR)
         if corruptors:
-            army = self.bot.units(const2.ZERG_ARMY_UNITS)
+            army = self.bot._units(const2.ZERG_ARMY_UNITS)
             if army:
                 for corruptor in corruptors:
                     # Keep corruptor slightly ahead center of army
@@ -740,8 +740,8 @@ class MicroManager(Manager):
                         self.bot.do(corruptor.move(position))
 
     async def manage_overseers(self):
-        overseers = self.bot.units(const.OVERSEER)
-        army = self.bot.units(const2.ZERG_ARMY_UNITS)
+        overseers = self.bot._units(const.OVERSEER)
+        army = self.bot._units(const2.ZERG_ARMY_UNITS)
         for overseer in overseers:
             if overseer.energy > 50:
                 abilities = await self.bot.get_available_abilities(overseer)
@@ -761,7 +761,7 @@ class MicroManager(Manager):
         changeling_types = {
             const.CHANGELING, const.CHANGELINGMARINE, const.CHANGELINGMARINESHIELD, const.CHANGELINGZEALOT,
             const.CHANGELINGZERGLING, const.CHANGELINGZERGLINGWINGS}
-        changelings = self.bot.units(changeling_types).idle
+        changelings = self.bot._units(changeling_types).idle
 
         for c in changelings:
             # Get enemy's 5 first expansions including starting location
@@ -773,8 +773,8 @@ class MicroManager(Manager):
                 self.bot.do(c.move(expansion_location, queue=True))
 
     async def manage_spine_crawlers(self):
-        rooted_spine_crawlers = self.bot.units(const.SPINECRAWLER).ready
-        uprooted_spine_crawlers = self.bot.units(const.SPINECRAWLERUPROOTED).ready
+        rooted_spine_crawlers = self.bot._units(const.SPINECRAWLER).ready
+        uprooted_spine_crawlers = self.bot._units(const.SPINECRAWLERUPROOTED).ready
         spine_crawlers = rooted_spine_crawlers | uprooted_spine_crawlers
         townhalls = self.bot.townhalls.ready
 
@@ -850,7 +850,7 @@ class MicroManager(Manager):
                     sc(const.AbilityId.SPINECRAWLERROOT_SPINECRAWLERROOT, position))
 
     async def manage_structures(self):
-        structures = self.bot.units.structure
+        structures = self.bot._units.structure
 
         # Cancel damaged not-ready structures
         for structure in structures.not_ready:
@@ -862,7 +862,7 @@ class MicroManager(Manager):
         # egg_types = {const.BROODLORDCOCOON, const.RAVAGERCOCOON, const.BANELINGCOCOON,
         #              const.LURKERMPEGG, const.UnitTypeId.EGG}
         egg_types = {const.UnitTypeId.EGG}
-        eggs = self.bot.units(egg_types)
+        eggs = self.bot._units(egg_types)
 
         # Cancel damaged not-ready structures
         for egg in eggs:
@@ -1107,7 +1107,7 @@ class MicroManager(Manager):
             if message is Messages.UNROOT_ALL_SPINECRAWLERS:
                 self.ack(message)
 
-                rooted_spine_crawlers = self.bot.units(const.SPINECRAWLER).ready
+                rooted_spine_crawlers = self.bot._units(const.SPINECRAWLER).ready
                 for sc in rooted_spine_crawlers.idle:
                     self.bot.do(sc(
                         const.AbilityId.SPINECRAWLERUPROOT_SPINECRAWLERUPROOT))

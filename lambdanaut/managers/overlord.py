@@ -37,7 +37,7 @@ class OverlordManager(StatefulManager):
 
         # Overlords used for scouting
         # These must be added to the set in scouting_overlord_tags()
-        overlords = self.bot.units(const.OVERLORD)
+        overlords = self.bot._units(const.OVERLORD)
         self.scouting_overlord_tag = overlords.first.tag if overlords else None
         self.proxy_scouting_overlord_tag = None
         self.baneling_drop_overlord_tag = None
@@ -73,7 +73,7 @@ class OverlordManager(StatefulManager):
 
                 self.move_overlord_scout_2_to_enemy_ramp = True
                 if self.proxy_scouting_overlord_tag is not None:
-                    overlords = self.bot.units(const.OVERLORD)
+                    overlords = self.bot._units(const.OVERLORD)
                     if overlords:
                         overlord = overlords.find_by_tag(self.proxy_scouting_overlord_tag)
                         if overlord:
@@ -105,8 +105,8 @@ class OverlordManager(StatefulManager):
 
     def turn_on_generate_creep(self):
         # Spread creep on last scouted expansion location like a fucking dick head
-        if self.bot.units({const.LAIR, const.HIVE}):
-            overlords = self.bot.units(const.OVERLORD)
+        if self.bot._units({const.LAIR, const.HIVE}):
+            overlords = self.bot._units(const.OVERLORD)
             if overlords:
                 for overlord in overlords.filter(
                         lambda o: o.tag not in self.overlord_tags_with_creep_turned_on):
@@ -118,7 +118,7 @@ class OverlordManager(StatefulManager):
         """
         Disperse Overlords to different expansions
         """
-        overlords = self.bot.units(const.OVERLORD).filter(
+        overlords = self.bot._units(const.OVERLORD).filter(
             lambda o: o.tag not in self.scouting_overlord_tags).idle
 
         if overlords:
@@ -176,7 +176,7 @@ class OverlordManager(StatefulManager):
 
         dont_flee_tags = {self.baneling_drop_overlord_tag}
 
-        overlords = self.bot.units(const.OVERLORD).tags_not_in(dont_flee_tags)
+        overlords = self.bot._units(const.OVERLORD).tags_not_in(dont_flee_tags)
 
 
         enemy_units = [u.snapshot for u in self.bot.enemy_cache.values()
@@ -219,7 +219,7 @@ class OverlordManager(StatefulManager):
                             break
 
     def proxy_scout_with_second_overlord(self):
-        overlords = self.bot.units(const.OVERLORD)
+        overlords = self.bot._units(const.OVERLORD)
 
         if self.proxy_scouting_overlord_tag is None and len(overlords) == 2:
             overlord = overlords.filter(lambda ov: ov.tag not in self.scouting_overlord_tags).first
@@ -269,11 +269,11 @@ class OverlordManager(StatefulManager):
 
         # Ensure we have Ventrical Sacks upgraded
         if const.OVERLORDSPEED in self.bot.state.upgrades \
-                and self.bot.units(const.BANELINGNEST):
+                and self.bot._units(const.BANELINGNEST):
             # Get overlords
-            overlords = self.bot.units(const.UnitTypeId.OVERLORD).ready. \
+            overlords = self.bot._units(const.UnitTypeId.OVERLORD).ready. \
                 tags_not_in(self.scouting_overlord_tags)
-            overlord_transports = self.bot.units(const.UnitTypeId.OVERLORDTRANSPORT).ready. \
+            overlord_transports = self.bot._units(const.UnitTypeId.OVERLORDTRANSPORT).ready. \
                 tags_not_in(self.scouting_overlord_tags - {self.baneling_drop_overlord_tag})
 
             if self.baneling_drop_overlord_tag is None:
@@ -297,7 +297,7 @@ class OverlordManager(StatefulManager):
                     self.baneling_drop_overlord_tag = None
                 elif overlord.cargo_used < overlord.cargo_max:
                     # Load banelings
-                    banelings = self.bot.units(const.BANELING)
+                    banelings = self.bot._units(const.BANELING)
                     if len(banelings) > 3:
                         self.print("Loading banelings for baneling drop")
                         baneling = banelings.closest_to(overlord)
@@ -387,7 +387,7 @@ class OverlordManager(StatefulManager):
 
         enemy_natural_expansion = self.bot.get_enemy_natural_expansion()
 
-        overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
+        overlord = self.bot._units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
         if overlord and overlord.is_idle:
             # Move towards natural expansion
 
@@ -401,7 +401,7 @@ class OverlordManager(StatefulManager):
             self.bot.do(overlord.move(enemy_natural_expansion, queue=True))
 
     async def start_initial_backout(self):
-        overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
+        overlord = self.bot._units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
         if overlord:
             self.bot.do(overlord.stop())
 
@@ -412,20 +412,20 @@ class OverlordManager(StatefulManager):
         """
         enemy_natural_expansion = self.bot.get_enemy_natural_expansion()
 
-        overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
+        overlord = self.bot._units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
         if overlord and overlord.is_idle:
             away_from_enemy_natural_expansion = \
                 enemy_natural_expansion.position.towards(self.bot.start_location, +28)
             self.bot.do(overlord.move(away_from_enemy_natural_expansion))
 
     async def do_suicide_dive(self):
-        overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
+        overlord = self.bot._units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
         if overlord and overlord.is_idle:
             self.bot.do(
                 overlord.move(self.bot.enemy_start_location, queue=True))
 
     async def start_initial_dive(self):
-        overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
+        overlord = self.bot._units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
         if overlord:
             self.bot.do(
                 overlord.move(self.bot.enemy_start_location.position))
@@ -438,7 +438,7 @@ class OverlordManager(StatefulManager):
             enemy_structures = self.bot.enemy_structures
             enemy_natural_expansion = self.bot.get_enemy_natural_expansion()
 
-            overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
+            overlord = self.bot._units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
             if overlord:
                 distance_to_expansion = overlord.distance_to(enemy_natural_expansion)
 
@@ -478,7 +478,7 @@ class OverlordManager(StatefulManager):
 
         elif self.state == OverlordStates.INITIAL_DIVE:
             enemy_structures = self.bot.enemy_structures
-            overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
+            overlord = self.bot._units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
             if overlord:
                 distance_to_enemy_start_location = overlord.distance_to(self.bot.enemy_start_location)
                 if distance_to_enemy_start_location < 25:

@@ -153,10 +153,10 @@ class ResourceManager(Manager):
                 ResourceManagerCommands.PULL_WORKERS_OFF_VESPENE,
                 self.bot.state.game_loop, expiry=25)
 
-        saturated_extractors = self.bot.units(const.EXTRACTOR).filter(
+        saturated_extractors = self.bot._units(const.EXTRACTOR).filter(
             lambda extr: extr.assigned_harvesters > (self._ideal_vespene_worker_count or extr.ideal_harvesters)).ready
 
-        unsaturated_extractors = self.bot.units(const.EXTRACTOR).filter(
+        unsaturated_extractors = self.bot._units(const.EXTRACTOR).filter(
             lambda extr: extr.assigned_harvesters < (self._ideal_vespene_worker_count or extr.ideal_harvesters)).ready
 
         if self._recent_commands.contains(
@@ -220,11 +220,11 @@ class ResourceManager(Manager):
         await self.manage_vespene()
 
     async def do_transfuse(self):
-        queens = self.bot.units(const.QUEEN)
+        queens = self.bot._units(const.QUEEN)
 
         for queen in queens:
             if queen.energy >= 50:
-                nearby_units = self.bot.units.closer_than(15, queen)
+                nearby_units = self.bot._units.closer_than(15, queen)
                 if nearby_units.exists:
                     nearby_units = nearby_units.sorted(lambda u: u.health_percentage)
 
@@ -250,7 +250,7 @@ class ResourceManager(Manager):
 
         townhalls = []
         for townhall_tag, queen_tag in self.bot.townhall_queens.items():
-            townhall = self.bot.units.find_by_tag(townhall_tag)
+            townhall = self.bot._units.find_by_tag(townhall_tag)
             if townhall:
                 townhalls.append(townhall)
 
@@ -262,8 +262,8 @@ class ResourceManager(Manager):
             queen1_tag = self.bot.townhall_queens[th1.tag]
             queen2_tag = self.bot.townhall_queens[th2.tag]
 
-            queen1 = self.bot.units.find_by_tag(queen1_tag)
-            queen2 = self.bot.units.find_by_tag(queen2_tag)
+            queen1 = self.bot._units.find_by_tag(queen1_tag)
+            queen2 = self.bot._units.find_by_tag(queen2_tag)
             if queen1 and queen2:
                 ramp_center = (ramp.bottom_center + ramp.top_center) / 2
                 for queen, point_offset in zip((queen1, queen2), (Point2((+1, 0)), (Point2((-1, 0))))):
@@ -271,7 +271,7 @@ class ResourceManager(Manager):
                         self.bot.do(queen.attack(ramp_center + point_offset))
 
     async def manage_queens(self):
-        queens = self.bot.units(const.QUEEN)
+        queens = self.bot._units(const.QUEEN)
 
         # Get townhalls, preferring to assign queens to ready hatcheries
         townhalls = self.bot.townhalls.sorted(lambda th: not th.is_ready)
@@ -308,7 +308,7 @@ class ResourceManager(Manager):
                                     queen.attack(townhall.position))
 
                             if queen.energy >= 25:
-                                creep_tumors = self.bot.units({const.CREEPTUMOR, const.CREEPTUMORBURROWED})
+                                creep_tumors = self.bot._units({const.CREEPTUMOR, const.CREEPTUMORBURROWED})
 
                                 # Get creep tumors nearby the closest townhall
                                 nearby_creep_tumors = creep_tumors.closer_than(17, townhall)
@@ -336,7 +336,7 @@ class ResourceManager(Manager):
                                         self.bot.do(queen(const.EFFECT_INJECTLARVA, townhall))
 
     async def manage_creep_tumors(self):
-        creep_tumors = self.bot.units({const.CREEPTUMORBURROWED})
+        creep_tumors = self.bot._units({const.CREEPTUMORBURROWED})
 
         for tumor in creep_tumors:
             abilities = await self.bot.get_available_abilities(tumor)
