@@ -64,7 +64,7 @@ class DefenseManager(StatefulManager):
         townhalls = self.bot.townhalls
 
         if townhalls:
-            enemies = self.bot.known_enemy_units.exclude_type(const2.NON_COMBATANTS)
+            enemies = self.bot.enemy_units.exclude_type(const2.NON_COMBATANTS)
 
             if enemies:
                 # Get townhall with closest enemy unit by sorting them on their distance
@@ -110,13 +110,13 @@ class DefenseManager(StatefulManager):
                                     if unit.distance_to(target) > 15 and len(enemies_nearby) > 3:
                                         # If we're too far from our defending spot and the enemy army is large,
                                         # Move to defending spot.
-                                        self.bot.actions.append(unit.attack(target))
+                                        self.bot.do(unit.attack(target))
                                     else:
                                         # If we're near our defending spot. Attack enemy unit
                                         enemy_target = self.bot.closest_and_most_damaged(enemies_nearby, unit)
 
                                         if enemy_target and enemy_target.distance_to(target) < 20:
-                                            self.bot.actions.append(unit.attack(enemy_target))
+                                            self.bot.do(unit.attack(enemy_target))
 
             # Do defending for each townhall
             for th in townhalls:
@@ -144,7 +144,7 @@ class DefenseManager(StatefulManager):
                                     target = worker.position.closest(ground_enemies)
 
                                 if target.type_id not in worker_non_targets:
-                                    self.bot.actions.append(worker.attack(target))
+                                    self.bot.do(worker.attack(target))
 
                             else:
                                 # Add workers to defending workers and attack nearby enemy
@@ -169,13 +169,13 @@ class DefenseManager(StatefulManager):
                                     target = self.bot.closest_and_most_damaged(ground_enemies, worker)
                                     if target.type_id not in worker_non_targets:
                                         self.bot.workers_defending.add(worker.tag)
-                                        self.bot.actions.append(worker.attack(target.position))
+                                        self.bot.do(worker.attack(target.position))
                     else:
                         # If they have more than us, stop workers from defending
                         for worker in workers:
                             if worker.tag in self.bot.workers_defending:
                                 self.bot.workers_defending.remove(worker.tag)
-                                self.bot.actions.append(worker.stop())
+                                self.bot.do(worker.stop())
 
                     # Have nearest queen defend
                     queen_tag = self.bot.townhall_queens.get(th.tag)
@@ -188,11 +188,11 @@ class DefenseManager(StatefulManager):
                             if target and queen.distance_to(target) < 18 and queen.distance_to(th) < 18 \
                                     and not queen.weapon_cooldown:
                                 if target.distance_to(queen) < queen.ground_range:
-                                    self.bot.actions.append(queen.attack(target))
+                                    self.bot.do(queen.attack(target))
                                 else:
-                                    self.bot.actions.append(queen.attack(target.position))
+                                    self.bot.do(queen.attack(target.position))
                             else:
-                                self.bot.actions.append(queen.attack(th.position))
+                                self.bot.do(queen.attack(th.position))
 
             # Bring back defending workers that have drifted too far from town halls
             workers_defending_to_remove = set()
@@ -209,12 +209,12 @@ class DefenseManager(StatefulManager):
                             if minerals:
                                 workers_defending_to_remove.add(worker_id)
                                 mineral = minerals.first
-                                self.bot.actions.append(worker.gather(mineral))
+                                self.bot.do(worker.gather(mineral))
 
                         # Return distant workers to working
                         elif worker.distance_to(nearest_townhall.position) > 35:
                             workers_defending_to_remove.add(worker_id)
-                            self.bot.actions.append(worker.move(nearest_townhall.position))
+                            self.bot.do(worker.move(nearest_townhall.position))
                 else:
                     workers_defending_to_remove.add(worker_id)
 
@@ -230,9 +230,9 @@ class DefenseManager(StatefulManager):
 
                 if worker.tag in self.bot.workers_defending or worker.distance_to(nearest_townhall) > 14:
                     if worker.is_carrying_minerals or worker.is_carrying_vespene:
-                        self.bot.actions.append(worker.return_resource(nearest_townhall))
+                        self.bot.do(worker.return_resource(nearest_townhall))
                     else:
-                        self.bot.actions.append(worker.move(nearest_townhall.position))
+                        self.bot.do(worker.move(nearest_townhall.position))
 
         self.bot.workers_defending.clear()  # Remove worker ids from set
 
@@ -260,7 +260,7 @@ class DefenseManager(StatefulManager):
         if self.state == DefenseStates.DEFENDING:
             # Loop through all townhalls. If enemies are near any of them, don't change state.
             for th in self.bot.townhalls:
-                enemies_nearby = self.bot.known_enemy_units.closer_than(
+                enemies_nearby = self.bot.enemy_units.closer_than(
                     30, th.position).exclude_type(const2.ENEMY_NON_ARMY).filter(lambda u: u.is_visible)
 
                 if enemies_nearby:
@@ -272,7 +272,7 @@ class DefenseManager(StatefulManager):
         # Switching to DEFENDING from any other state
         elif self.state != DefenseStates.DEFENDING and self.allow_defending:
             for th in self.bot.townhalls:
-                enemies_nearby = self.bot.known_enemy_units.closer_than(
+                enemies_nearby = self.bot.enemy_units.closer_than(
                     30, th).exclude_type(const2.ENEMY_NON_ARMY).filter(lambda u: u.is_visible)
 
                 if enemies_nearby:

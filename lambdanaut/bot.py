@@ -69,9 +69,6 @@ class Lambdanaut(sc2.BotAI):
 
         self.iteration = 0
 
-        # "Do" actions to run
-        self.actions = []
-
         # Message subscriptions
         self._message_subscriptions: Dict[const2.Messages, List[Manager]] = defaultdict(list)
 
@@ -182,11 +179,11 @@ class Lambdanaut(sc2.BotAI):
 
             # Load bot kwargs(passed into Lambdanaut.__init__)
             for key, value in self.kwargs.items():
-                if key is 'starting_build':
+                if key == 'starting_build':
                     # Alter starting build
                     self.build_manager.starting_build = value
 
-                elif key is 'additional_builds':
+                elif key == 'additional_builds':
                     assert isinstance(value, list)
                     for build in value:
                         self.build_manager.add_build(build, force=True)
@@ -220,19 +217,13 @@ class Lambdanaut(sc2.BotAI):
         # Update high priority spaces we should favor attacking
         self.update_priority_spaces()
 
-        # "Do" actions
-        await self.do_actions(self.actions)
-
-        # Reset actions
-        self.actions = []
-
     async def on_unit_created(self, unit):
         self.publish(None, Messages.UNIT_CREATED, unit)
 
         # Always allow banelings to attack structures
         # Commented out
         # if unit.type_id == const.BANELING:
-        #     self.actions.append(unit(const.BEHAVIOR_BUILDINGATTACKON))
+        #     self.do(unit(const.BEHAVIOR_BUILDINGATTACKON))
 
     async def on_unit_destroyed(self, unit_tag):
         # Remove destroyed units from caches
@@ -284,7 +275,7 @@ class Lambdanaut(sc2.BotAI):
         #
         import random
         friendly = self.units
-        enemy = self.known_enemy_units
+        enemy = self.enemy_units
         if not friendly or not enemy:
             print("FRIENDLY COUNT: {}".format(len(friendly)))
             print("ENEMY COUNT: {}".format(len(enemy)))
@@ -385,7 +376,7 @@ class Lambdanaut(sc2.BotAI):
         """
 
         # Update cached values and create new cached units
-        for units, cache in zip((self.units, self.known_enemy_units),
+        for units, cache in zip((self.units, self.enemy_units),
                                 (self.unit_cache, self.enemy_cache)):
             for unit in units:
                 # If we already remember this unit
@@ -403,7 +394,7 @@ class Lambdanaut(sc2.BotAI):
         for cached_unit in self.enemy_cache.values():
             position = cached_unit.position
             if self.is_visible(position):
-                cached_unit_snapshot = self.known_enemy_units.find_by_tag(cached_unit.tag)
+                cached_unit_snapshot = self.enemy_units.find_by_tag(cached_unit.tag)
                 if not cached_unit_snapshot:
                     cached_enemy_tags_to_delete.add(cached_unit.tag)
         for cached_tag in cached_enemy_tags_to_delete:
@@ -841,7 +832,7 @@ class Lambdanaut(sc2.BotAI):
         nearby_enemy_priority_counts: Dict[int, int] = {}
 
         for unit in units:
-            nearby_enemy_units = self.known_enemy_units.closer_than(search_range, unit)
+            nearby_enemy_units = self.enemy_units.closer_than(search_range, unit)
 
             if priorities is None:
                 nearby_enemy_priorities = nearby_enemy_units

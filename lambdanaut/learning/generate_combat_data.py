@@ -120,7 +120,7 @@ class TrainingBot(sc2.BotAI):
                       format(self.training_loop))
 
         units = self.units()
-        enemy = self.known_enemy_units()
+        enemy = self.enemy_units()
 
         if self.training_loop < len(self.training_set):
             if not units or not enemy:
@@ -321,7 +321,7 @@ class TrainingBot(sc2.BotAI):
 
     def record_result(self):
         units = self.units()
-        enemy = self.known_enemy_units()
+        enemy = self.enemy_units()
         training_set = self.get_training_set()
 
         winner = 0  # Draw condition

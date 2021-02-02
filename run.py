@@ -21,7 +21,7 @@ BUILDS = [
     sc2.AIBuild.Macro,
     sc2.AIBuild.Air, ]
 MAPS = [
-    'AutomatonLE',
+    'DeathauraLE',
     'DarknessSanctuaryLE',
     'KairosJunctionLE',
     'ParaSiteLE',
@@ -29,7 +29,7 @@ MAPS = [
     'BlueshiftLE',
     'PortAleksanderLE', ]
 
-MAP_NAME = "CeruleanFallLE"
+MAP_NAME = "DeathauraLE"
 MICRO_MAP_NAME = "kairo_training"
 VS_HUMAN = False
 VS_BOT = False

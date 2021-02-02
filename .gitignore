@@ -63,6 +63,9 @@ target/
 
 .idea/*
 .idea/
+.idea/lambdanaut-sc2.iml
+.idea/misc.xml
+
 
 # PROJECT SPECIFIC FILES
 lib/sc2-old

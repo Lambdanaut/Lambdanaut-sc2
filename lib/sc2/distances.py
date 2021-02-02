@@ -99,7 +99,7 @@ class DistanceCalculation:
             flat_positions = (coord for unit in self.all_units for coord in unit.position_tuple)
             # Converts to numpy array, then converts the flat array back to shape (n, 2): [[1, 2], [3, 4]]
             positions_array: np.ndarray = np.fromiter(
-                flat_positions, dtype=np.float, count=2 * self._units_count
+                flat_positions, dtype=np.float64, count=2 * self._units_count
             ).reshape((self._units_count, 2))
             assert len(positions_array) == self._units_count
             self._generated_frame2 = self.state.game_loop

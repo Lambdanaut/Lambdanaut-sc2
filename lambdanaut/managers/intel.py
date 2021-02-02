@@ -99,8 +99,8 @@ class IntelManager(Manager):
         """Checks the map to see if there are any visible units we should counter with a broodlord rush"""
         if not self.has_scouted_enemy_counter_midgame_broodlord_rush:
 
-            factory_count = len(self.bot.known_enemy_units.of_type(const.FACTORY))
-            tank_count = len(self.bot.known_enemy_units.of_type(
+            factory_count = len(self.bot.enemy_units.of_type(const.FACTORY))
+            tank_count = len(self.bot.enemy_units.of_type(
                 {const.SIEGETANK, const.SIEGETANKSIEGED}))
 
             if factory_count > 2 or tank_count > 3:
@@ -116,13 +116,13 @@ class IntelManager(Manager):
                 const.ROACH, const.ROACHWARREN,
             }
 
-            enemy_counter_with_roach_units = self.bot.known_enemy_units.of_type(enemy_counter_with_roach_types)
+            enemy_counter_with_roach_units = self.bot.enemy_units.of_type(enemy_counter_with_roach_types)
 
             # Removed countering with roaches vs Terran
 
-            # factory_count = len(self.bot.known_enemy_units.of_type(const.FACTORY))
-            # reaper_count = len(self.bot.known_enemy_units.of_type(const.REAPER))
-            # tank_count = len(self.bot.known_enemy_units.of_type(
+            # factory_count = len(self.bot.enemy_units.of_type(const.FACTORY))
+            # reaper_count = len(self.bot.enemy_units.of_type(const.REAPER))
+            # tank_count = len(self.bot.enemy_units.of_type(
             #     {const.SIEGETANK, const.SIEGETANKSIEGED}))
 
             if enemy_counter_with_roach_units.exists:
@@ -143,9 +143,9 @@ class IntelManager(Manager):
                 const.GHOST, const.MUTALISK, const.LURKERDENMP, const.LURKERMP, const.ROACHBURROWED,
                 const.STARPORTTECHLAB, const.DARKTEMPLAR, const.LURKER, const.LURKERDEN}
 
-            enemy_air_tech_units = self.bot.known_enemy_units.of_type(enemy_air_tech_types)
+            enemy_air_tech_units = self.bot.enemy_units.of_type(enemy_air_tech_types)
 
-            phoenix_count = len(self.bot.known_enemy_units.of_type(const.PHOENIX))
+            phoenix_count = len(self.bot.enemy_units.of_type(const.PHOENIX))
 
             if enemy_air_tech_units or phoenix_count > 2:
                 self.has_scouted_enemy_air_tech = True
@@ -172,7 +172,7 @@ class IntelManager(Manager):
         """
         Checks to see if enemy units are moving out towards us
         """
-        enemy_units = self.bot.known_enemy_units
+        enemy_units = self.bot.enemy_units
         exclude_nonarmy_types = const2.WORKERS | {const.OVERLORD, const.OVERSEER}
         enemy_units = enemy_units.exclude_type(exclude_nonarmy_types).not_structure.\
             closer_than(80, self.bot.enemy_start_location)
@@ -276,7 +276,7 @@ class IntelManager(Manager):
                 and len(self.bot.townhalls.ready) > 2:
 
             non_tech_structures = {const.SUPPLYDEPOT, const.PYLON}
-            enemy_tech_structures = self.bot.known_enemy_structures.exclude_type(non_tech_structures)
+            enemy_tech_structures = self.bot.enemy_structures.exclude_type(non_tech_structures)
 
             if len(enemy_tech_structures) < 3:
                 self.has_published_need_more_enemy_tech_intel = True
@@ -287,10 +287,10 @@ class IntelManager(Manager):
     def scouted_enemy_tech_intel(self):
         if not self.has_published_scouted_enemy_tech_intel \
                 and self.bot.build_manager.build_stage in {BuildStages.MID_GAME, BuildStages.LATE_GAME} \
-                and len(self.bot.known_enemy_structures) > 4:
+                and len(self.bot.enemy_structures) > 4:
 
             non_tech_structures = {const.SUPPLYDEPOT, const.PYLON}
-            enemy_tech_structures = self.bot.known_enemy_structures.exclude_type(non_tech_structures)
+            enemy_tech_structures = self.bot.enemy_structures.exclude_type(non_tech_structures)
 
             if len(enemy_tech_structures) > 2:
                 self.has_published_scouted_enemy_tech_intel = True
@@ -303,13 +303,13 @@ class IntelManager(Manager):
                 and self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
 
             # Enemy hatcheries on our side of the map
-            nearby_enemy_hatcheries = self.bot.known_enemy_structures(const.UnitTypeId.HATCHERY).\
+            nearby_enemy_hatcheries = self.bot.enemy_structures(const.UnitTypeId.HATCHERY).\
                 closer_than(self.bot.start_location_to_enemy_start_location_distance / 2,
                             self.bot.start_location)
 
             # Enemy spine crawlers on our side of the map
             # Assume shenanigans.
-            nearby_enemy_spines = self.bot.known_enemy_structures(const.UnitTypeId.SPINECRAWLER). \
+            nearby_enemy_spines = self.bot.enemy_structures(const.UnitTypeId.SPINECRAWLER). \
                 closer_than(self.bot.start_location_to_enemy_start_location_distance / 2,
                             self.bot.start_location)
 
@@ -324,7 +324,7 @@ class IntelManager(Manager):
                 and self.bot.build_manager.build_stage in {BuildStages.OPENING, BuildStages.EARLY_GAME}:
 
             # Enemy expansions excluding the starting location
-            enemy_expansions = self.bot.known_enemy_units(const2.TOWNHALLS).further_than(
+            enemy_expansions = self.bot.enemy_units(const2.TOWNHALLS).further_than(
                 11, self.bot.enemy_start_location).filter(lambda th: th.is_ready or th.build_progress > 0.93)
 
             if self.bot.enemy_race is sc2.Race.Terran:
@@ -350,7 +350,7 @@ class IntelManager(Manager):
                 const.COLOSSUS, const.CARRIER, const.MOTHERSHIP, const.ROBOTICSBAY,
                 const.BATTLECRUISER,
             }
-            enemy_tech_structures = self.bot.known_enemy_units(neural_parasite_targets)
+            enemy_tech_structures = self.bot.enemy_units(neural_parasite_targets)
 
             if len(enemy_tech_structures):
                 self.has_published_research_neural_parasite = True

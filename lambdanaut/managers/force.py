@@ -122,7 +122,7 @@ class ForceManager(StatefulManager):
 
     def get_target(self):
         """Returns enemy target to move nearby during moving_to_attack"""
-        enemy_structures = self.bot.known_enemy_structures
+        enemy_structures = self.bot.enemy_structures
 
         # Get target to attack towards
         if self.last_enemy_army_position is not None:
@@ -152,7 +152,7 @@ class ForceManager(StatefulManager):
         return nearby_target
 
     async def update_enemy_army_position(self):
-        enemy_units = self.bot.known_enemy_units.not_structure.exclude_type(
+        enemy_units = self.bot.enemy_units.not_structure.exclude_type(
             const2.WORKERS | const2.ENEMY_NON_ARMY)
 
         # Set the last enemy army position if we see it
@@ -192,7 +192,7 @@ class ForceManager(StatefulManager):
                 if not self.bot.unit_is_busy(unit):
                     closest_townhall = townhalls.closest_to(unit)
                     if closest_townhall.distance_to(unit) > 35:
-                        self.bot.actions.append(unit.attack(closest_townhall.position))
+                        self.bot.do(unit.attack(closest_townhall.position))
 
             # Ensure each town hall has some army nearby
             closest_townhall = townhalls.closest_to(self.bot.enemy_start_location)
@@ -221,7 +221,7 @@ class ForceManager(StatefulManager):
                             if nearby_ramp.distance_to(target) < 20:
                                 target = nearby_ramp
 
-                            self.bot.actions.append(unit.attack(target))
+                            self.bot.do(unit.attack(target))
 
     async def do_escorting(self):
         # Do escorting a couple times a second
@@ -246,7 +246,7 @@ class ForceManager(StatefulManager):
 
                     for unit in army:
                         if not self.bot.unit_is_busy(unit):
-                            self.bot.actions.append(unit.attack(position))
+                            self.bot.do(unit.attack(position))
 
     async def do_moving_to_attack(self):
         army_units = const2.ZERG_ARMY_UNITS
@@ -268,7 +268,7 @@ class ForceManager(StatefulManager):
 
         for unit in army:
             if not self.bot.unit_is_busy(unit):
-                self.bot.actions.append(unit.attack(nearby_target))
+                self.bot.do(unit.attack(nearby_target))
 
     async def start_attacking(self):
         # Command for when attacking starts
@@ -290,7 +290,7 @@ class ForceManager(StatefulManager):
             #     # Backwards compatibility with older python-sc2 versions
             #     harass_banelings = []
             # if harass_banelings:
-            #     enemy_structures = self.bot.known_enemy_structures
+            #     enemy_structures = self.bot.enemy_structures
             #
             #     if enemy_structures:
             #         # Get expansion locations starting from enemy start location
@@ -306,7 +306,7 @@ class ForceManager(StatefulManager):
             #
             #             for baneling in harass_banelings:
             #                 target = enemy_townhall
-            #                 self.bot.actions.append(baneling.move(target.position))
+            #                 self.bot.do(baneling.move(target.position))
             #                 self.banelings_harassing.add(baneling.tag)
 
             # Burrow banelings
@@ -338,8 +338,8 @@ class ForceManager(StatefulManager):
                             else:
                                 target = army.center
 
-                            self.bot.actions.append(baneling.move(target))
-                            self.bot.actions.append(
+                            self.bot.do(baneling.move(target))
+                            self.bot.do(
                                 baneling(const.AbilityId.BURROWDOWN_BANELING, queue=True))
 
         # Do burrow roach harass during attack
@@ -354,7 +354,7 @@ class ForceManager(StatefulManager):
         #         # Get two roaches
         #         roaches = roaches[:2]
         #
-        #         enemy_structures = self.bot.known_enemy_structures
+        #         enemy_structures = self.bot.enemy_structures
         #         if enemy_structures:
         #             # Get expansion locations starting from enemy start location
         #             enemy_townhalls = enemy_structures.of_type(
@@ -373,10 +373,10 @@ class ForceManager(StatefulManager):
         #                     # Consider them harassing roaches for the moment
         #                     self.roaches_harassing.add(roach.tag)
         #
-        #                     self.bot.actions.append(
+        #                     self.bot.do(
         #                         roach(const.AbilityId.BURROWDOWN_ROACH))
-        #                     self.bot.actions.append(roach.move(enemy_townhall, queue=True))
-        #                     self.bot.actions.append(
+        #                     self.bot.do(roach.move(enemy_townhall, queue=True))
+        #                     self.bot.do(
         #                         roach(const.AbilityId.BURROWUP_ROACH, queue=True))
 
         # Do Mutalisk harass during attack
@@ -384,7 +384,7 @@ class ForceManager(StatefulManager):
         if mutalisks:
             dangerous_enemy_units = {const.PHOTONCANNON, const.SPORECRAWLER, const.MISSILETURRET}
 
-            enemy_structures = self.bot.known_enemy_structures
+            enemy_structures = self.bot.enemy_structures
 
             if enemy_structures:
                 # Get expansion locations starting from enemy start location
@@ -396,11 +396,11 @@ class ForceManager(StatefulManager):
                 if enemy_townhalls:
                     for mutalisk in mutalisks:
                         enemy_expansion = enemy_townhalls.random
-                        self.bot.actions.append(mutalisk.move(enemy_expansion))
+                        self.bot.do(mutalisk.move(enemy_expansion))
                 else:
                     for mutalisk in mutalisks:
                         target = enemy_structures.random.position
-                        self.bot.actions.append(mutalisk.move(target))
+                        self.bot.do(mutalisk.move(target))
 
     async def do_attacking(self):
         # Don't attackmove into the enemy with these units
@@ -415,7 +415,7 @@ class ForceManager(StatefulManager):
         if roaches:
             roaches = roaches.tags_in(self.roaches_harassing).idle
             for roach in roaches:
-                self.bot.actions.append(
+                self.bot.do(
                     roach(const.AbilityId.BURROWUP_ROACH))
 
         # Do main force attacking
@@ -432,7 +432,7 @@ class ForceManager(StatefulManager):
         if not army:
             return
 
-        enemy_structures = self.bot.known_enemy_structures
+        enemy_structures = self.bot.enemy_structures
 
         # Prefer not flying enemy structures so our ground units aren't confused
         # by flying terran structures
@@ -450,12 +450,12 @@ class ForceManager(StatefulManager):
                 ForceManagerCommands.START_ATTACKING, self.bot.state.game_loop):
             for unit in backline_army:
                 if not self.bot.unit_is_busy(unit):
-                    self.bot.actions.append(unit.attack(target))
+                    self.bot.do(unit.attack(target))
 
         # Send in the frontline army immediatelly
         for unit in frontline_army:
             if not self.bot.unit_is_busy(unit):
-                self.bot.actions.append(unit.attack(target))
+                self.bot.do(unit.attack(target))
 
     async def stop_attacking(self):
         # Cleanup banelings that were harassing
@@ -466,7 +466,7 @@ class ForceManager(StatefulManager):
         if roaches:
             roaches = roaches.tags_in(self.roaches_harassing)
             for roach in roaches:
-                self.bot.actions.append(
+                self.bot.do(
                     roach(const.AbilityId.BURROWUP_ROACH))
 
         self.roaches_harassing.clear()
@@ -492,7 +492,7 @@ class ForceManager(StatefulManager):
                 if townhalls:
                     nearest_townhall = townhalls.closest_to(unit)
                     if nearest_townhall.distance_to(unit) > 20:
-                        self.bot.actions.append(unit.move(nearest_townhall.position))
+                        self.bot.do(unit.move(nearest_townhall.position))
 
     async def do_searching(self):
         army = self.bot.units(const2.ZERG_ARMY_UNITS).\
@@ -507,7 +507,7 @@ class ForceManager(StatefulManager):
         for expansion in enemy_expansion_positions:
             for unit in army:
                 if not self.bot.unit_is_busy(unit):
-                    self.bot.actions.append(unit.attack(expansion, queue=True))
+                    self.bot.do(unit.attack(expansion, queue=True))
 
     async def determine_state_change(self):
         # Reacting to subscribed messages
@@ -640,7 +640,7 @@ class ForceManager(StatefulManager):
                 enemy_start_location = self.bot.enemy_start_location.position
                 # Start searching the map if we're at the enemy's base and can't find them.
                 if army.center.distance_to(enemy_start_location) < 25 and \
-                        not self.bot.known_enemy_structures:
+                        not self.bot.enemy_structures:
 
                     self.publish(Messages.ARMY_COULDNT_FIND_ENEMY_BASE)
 
@@ -654,7 +654,7 @@ class ForceManager(StatefulManager):
 
         # SEARCHING
         elif self.state == ForcesStates.SEARCHING:
-            enemy_structures = self.bot.known_enemy_structures
+            enemy_structures = self.bot.enemy_structures
             if enemy_structures:
                 self.publish(Messages.ARMY_FOUND_ENEMY_BASE, value=enemy_structures.first.position)
                 return await self.change_state(ForcesStates.HOUSEKEEPING)

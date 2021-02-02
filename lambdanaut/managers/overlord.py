@@ -101,7 +101,7 @@ class OverlordManager(StatefulManager):
                 self.bot.start_location, 2).closest(ramps)
 
             target = nearby_ramp.towards(self.bot.start_location, 9.5)
-            self.bot.actions.append(overlord.move(target))
+            self.bot.do(overlord.move(target))
 
     def turn_on_generate_creep(self):
         # Spread creep on last scouted expansion location like a fucking dick head
@@ -111,7 +111,7 @@ class OverlordManager(StatefulManager):
                 for overlord in overlords.filter(
                         lambda o: o.tag not in self.overlord_tags_with_creep_turned_on):
                     self.overlord_tags_with_creep_turned_on.add(overlord.tag)
-                    self.bot.actions.append(
+                    self.bot.do(
                         overlord(const.AbilityId.BEHAVIOR_GENERATECREEPON))
 
     def overlord_dispersal(self):
@@ -148,14 +148,14 @@ class OverlordManager(StatefulManager):
 
                 target = expansion.towards_with_random_angle(
                     self.bot.start_location, 9)
-                self.bot.actions.append(overlord.move(target))
+                self.bot.do(overlord.move(target))
 
             else:
                 # Just disperse randomly at angle around center of map
                 distance = self.bot.start_location_to_enemy_start_location_distance * 0.5
                 target = self.bot.start_location.towards_with_random_angle(
                     self.bot.enemy_start_location, distance, max_difference=(math.pi / 1.0))
-                self.bot.actions.append(overlord.move(target))
+                self.bot.do(overlord.move(target))
 
     def overlord_flee(self):
         """
@@ -195,7 +195,7 @@ class OverlordManager(StatefulManager):
                 # Flee from nearby enemy units
                 nearby_enemy_unit = overlord.position.closest(nearby_enemy_units)
                 away_from_enemy = overlord.position.towards(nearby_enemy_unit, -3)
-                self.bot.actions.append(overlord.move(away_from_enemy))
+                self.bot.do(overlord.move(away_from_enemy))
 
             elif overlord.is_moving and isinstance(overlord.order_target, Point2) \
                     and overlord.tag not in self.scouting_overlord_tags:
@@ -214,7 +214,7 @@ class OverlordManager(StatefulManager):
 
                         if nearby_enemy_units:
                             target = utils.towards_direction(overlord.position, overlord.facing, -4)
-                            self.bot.actions.append(overlord.move(target))
+                            self.bot.do(overlord.move(target))
 
                             break
 
@@ -235,9 +235,9 @@ class OverlordManager(StatefulManager):
                     shortest_path = self.bot.shortest_path_between_points(
                         expansion_locations[1:last_expansion_index_to_check])
                     for expansion_location in shortest_path:
-                        self.bot.actions.append(overlord.move(expansion_location, queue=True))
+                        self.bot.do(overlord.move(expansion_location, queue=True))
 
-                    self.bot.actions.append(overlord.stop(queue=True))
+                    self.bot.do(overlord.stop(queue=True))
 
         if overlords and self.proxy_scouting_overlord_tag is not None:
             scouting_overlord = overlords.find_by_tag(self.proxy_scouting_overlord_tag)
@@ -287,7 +287,7 @@ class OverlordManager(StatefulManager):
                     self.print("Morphing Overlord for baneling drop")
                     overlord = overlords.closest_to(self.bot.start_location)
                     self.baneling_drop_overlord_tag = overlord.tag
-                    self.bot.actions.append(overlord(const.MORPH_OVERLORDTRANSPORT))
+                    self.bot.do(overlord(const.MORPH_OVERLORDTRANSPORT))
             else:
                 # Get our overlord transport by tag
                 overlord = overlord_transports.find_by_tag(self.baneling_drop_overlord_tag)
@@ -305,8 +305,8 @@ class OverlordManager(StatefulManager):
                         # Add baneling to harassing group so it won't attack
                         self.bot.occupied_units.add(baneling.tag)
 
-                        self.bot.actions.append(baneling.move(overlord.position))
-                        self.bot.actions.append(overlord(
+                        self.bot.do(baneling.move(overlord.position))
+                        self.bot.do(overlord(
                             const.AbilityId.LOAD_OVERLORD, baneling, queue=True))
 
                 elif overlord.is_idle:
@@ -325,57 +325,57 @@ class OverlordManager(StatefulManager):
                         # Move straight to enemy and drop
                         towards_enemy = self.bot.enemy_start_location.towards(
                             self.bot.start_location, 3)
-                        self.bot.actions.append(overlord.move(
+                        self.bot.do(overlord.move(
                             towards_enemy, queue=True))
-                        self.bot.actions.append(overlord(
+                        self.bot.do(overlord(
                             const.AbilityId.UNLOADALLAT_OVERLORD, overlord, queue=True))
-                        self.bot.actions.append(overlord.move(
+                        self.bot.do(overlord.move(
                             self.bot.enemy_start_location, queue=True))
-                        self.bot.actions.append(overlord.move(
+                        self.bot.do(overlord.move(
                             self.bot.start_location, queue=True))
                     else:
                         # Move around the corners of the map and drop
                         corner_towards_enemy = closest_adjacent_to_enemy.towards(
                             self.bot.enemy_start_location, 30)
-                        self.bot.actions.append(overlord.move(
+                        self.bot.do(overlord.move(
                             corner_towards_enemy))
                         towards_enemy = self.bot.enemy_start_location.towards(
                             closest_adjacent_to_enemy, 3)
-                        self.bot.actions.append(overlord.move(
+                        self.bot.do(overlord.move(
                             towards_enemy, queue=True))
-                        self.bot.actions.append(overlord(
+                        self.bot.do(overlord(
                             const.AbilityId.UNLOADALLAT_OVERLORD, overlord, queue=True))
-                        self.bot.actions.append(overlord.move(
+                        self.bot.do(overlord.move(
                             self.bot.enemy_start_location, queue=True))
-                        self.bot.actions.append(overlord.move(
+                        self.bot.do(overlord.move(
                             self.bot.start_location, queue=True))
                 else:
                     # Drop banelings if near enemy workers or about to die
                     enemy_priorities = const2.WORKERS | {
                         const.MARINE, const.PHOENIX, const.VIKING, const.MISSILETURRET}
-                    enemy_targets = self.bot.known_enemy_units.of_type(enemy_priorities). \
+                    enemy_targets = self.bot.enemy_units.of_type(enemy_priorities). \
                         closer_than(9, overlord)
                     if len(enemy_targets) > 6:
                         self.print("Unloading banelings on enemy workers")
-                        self.bot.actions.append(overlord(
+                        self.bot.do(overlord(
                             const.AbilityId.UNLOADALLAT_OVERLORD, overlord))
-                        self.bot.actions.append(overlord.move(
+                        self.bot.do(overlord.move(
                             enemy_targets.center))
                         towards_start_location = overlord.position.towards(
                             self.bot.start_location, 40)
-                        self.bot.actions.append(overlord.move(
+                        self.bot.do(overlord.move(
                             towards_start_location, queue=True))
 
                     elif overlord.health_percentage < 0.7:
                         self.print("Unloading banelings from damaged Overlord")
-                        self.bot.actions.append(overlord(
+                        self.bot.do(overlord(
                             const.AbilityId.UNLOADALLAT_OVERLORD, overlord))
                         target = utils.towards_direction(overlord.position, overlord.facing, +4)
-                        self.bot.actions.append(overlord.move(
+                        self.bot.do(overlord.move(
                             target))
                         towards_start_location = overlord.position.towards(
                             self.bot.start_location, 40)
-                        self.bot.actions.append(overlord.move(
+                        self.bot.do(overlord.move(
                             towards_start_location, queue=True))
 
     async def do_initial(self):
@@ -396,14 +396,14 @@ class OverlordManager(StatefulManager):
                 # Move the overlord along the rush path a bit so we're more likely to see rushing zerglings
                 index = round(len(path) * 0.7)
                 point_along_path = path[index]
-                self.bot.actions.append(overlord.move(point_along_path))
+                self.bot.do(overlord.move(point_along_path))
 
-            self.bot.actions.append(overlord.move(enemy_natural_expansion, queue=True))
+            self.bot.do(overlord.move(enemy_natural_expansion, queue=True))
 
     async def start_initial_backout(self):
         overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
         if overlord:
-            self.bot.actions.append(overlord.stop())
+            self.bot.do(overlord.stop())
 
     async def do_initial_backout(self):
         """
@@ -416,18 +416,18 @@ class OverlordManager(StatefulManager):
         if overlord and overlord.is_idle:
             away_from_enemy_natural_expansion = \
                 enemy_natural_expansion.position.towards(self.bot.start_location, +28)
-            self.bot.actions.append(overlord.move(away_from_enemy_natural_expansion))
+            self.bot.do(overlord.move(away_from_enemy_natural_expansion))
 
     async def do_suicide_dive(self):
         overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
         if overlord and overlord.is_idle:
-            self.bot.actions.append(
+            self.bot.do(
                 overlord.move(self.bot.enemy_start_location, queue=True))
 
     async def start_initial_dive(self):
         overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
         if overlord:
-            self.bot.actions.append(
+            self.bot.do(
                 overlord.move(self.bot.enemy_start_location.position))
 
     async def do_initial_dive(self):
@@ -435,7 +435,7 @@ class OverlordManager(StatefulManager):
 
     async def determine_state_change(self):
         if self.state == OverlordStates.INITIAL:
-            enemy_structures = self.bot.known_enemy_structures
+            enemy_structures = self.bot.enemy_structures
             enemy_natural_expansion = self.bot.get_enemy_natural_expansion()
 
             overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
@@ -477,7 +477,7 @@ class OverlordManager(StatefulManager):
             pass
 
         elif self.state == OverlordStates.INITIAL_DIVE:
-            enemy_structures = self.bot.known_enemy_structures
+            enemy_structures = self.bot.enemy_structures
             overlord = self.bot.units(const.OVERLORD).find_by_tag(self.scouting_overlord_tag)
             if overlord:
                 distance_to_enemy_start_location = overlord.distance_to(self.bot.enemy_start_location)
@@ -496,7 +496,7 @@ class OverlordManager(StatefulManager):
                     # Take note of enemy rush structures/units sighted
                     barracks_count = len(enemy_structures.of_type(const.BARRACKS)) > 1
                     gateway_count = len(enemy_structures.of_type(const.GATEWAY)) > 1
-                    zergling_count = len(self.bot.known_enemy_units.of_type(const.ZERGLING)) > 5
+                    zergling_count = len(self.bot.enemy_units.of_type(const.ZERGLING)) > 5
 
                     if barracks_count or gateway_count or zergling_count:
                         self.publish(Messages.FOUND_ENEMY_EARLY_AGGRESSION)

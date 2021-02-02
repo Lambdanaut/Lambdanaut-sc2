@@ -75,7 +75,7 @@ class MicroManager(Manager):
         :param nearby_units_factor: Require this many times of our units than theirs to do a surround
         """
 
-        closest_enemy_neighbors = self.bot.known_enemy_units.filter(
+        closest_enemy_neighbors = self.bot.enemy_units.filter(
             lambda u:
             not u.is_flying
             and not u.is_structure
@@ -99,7 +99,7 @@ class MicroManager(Manager):
                 -closest_enemy_unit.radius * 3 - len(closest_enemy_neighbors) * 0.5)
 
             if not self.bot.game_info.pathing_grid.is_set(target.rounded):
-                self.bot.actions.append(unit.move(target))
+                self.bot.do(unit.move(target))
                 return True
             else:
                 return False
@@ -109,7 +109,7 @@ class MicroManager(Manager):
                 and not unit.weapon_cooldown:
 
             # Attack nearby enemy after a surround
-            self.bot.actions.append(unit.attack(closest_enemy_neighbors_center))
+            self.bot.do(unit.attack(closest_enemy_neighbors_center))
             return True
         return False
 
@@ -121,10 +121,10 @@ class MicroManager(Manager):
             # Burrow damaged workers if enemies are nearby
             if const.BURROW in self.bot.state.upgrades:
                 if drone.health_percentage < 0.6:
-                    nearby_enemy_units = self.bot.known_enemy_units.closer_than(9, drone).filter(
+                    nearby_enemy_units = self.bot.enemy_units.closer_than(9, drone).filter(
                         lambda u: u.can_attack_ground)
                     if nearby_enemy_units:
-                        self.bot.actions.append(drone(const.AbilityId.BURROWDOWN_DRONE))
+                        self.bot.do(drone(const.AbilityId.BURROWDOWN_DRONE))
 
             # Commented out doing drone surround
 
@@ -132,7 +132,7 @@ class MicroManager(Manager):
                 # Perform surround micro
                 nearby_units = drones.filter(
                     lambda u: u.distance_to(drone) < 7 and u.tag in self.bot.workers_defending)
-                nearby_enemy_units = self.bot.known_enemy_units.closer_than(9, drone).filter(
+                nearby_enemy_units = self.bot.enemy_units.closer_than(9, drone).filter(
                     lambda u: self.bot.can_attack(drone, u))
 
                 if nearby_enemy_units:
@@ -144,10 +144,10 @@ class MicroManager(Manager):
                         nearby_units_factor=1.0)
 
         for drone in drones_burrowed:
-            nearby_enemy_units = self.bot.known_enemy_units.closer_than(9, drone).filter(
+            nearby_enemy_units = self.bot.enemy_units.closer_than(9, drone).filter(
                 lambda u: u.can_attack_ground)
             if not nearby_enemy_units:
-                self.bot.actions.append(drone(const.AbilityId.BURROWUP_DRONE))
+                self.bot.do(drone(const.AbilityId.BURROWUP_DRONE))
 
     async def manage_zerglings(self):
         zerglings = self.bot.units(const.ZERGLING)
@@ -158,7 +158,7 @@ class MicroManager(Manager):
             if zergling.tag in self.scouting_zergling_tags:
                 continue
 
-            nearby_enemy_units = self.bot.known_enemy_units.filter(
+            nearby_enemy_units = self.bot.enemy_units.filter(
                 lambda u: u.distance_to(zergling) < 6 and self.bot.can_attack(zergling, u))
             if nearby_enemy_units:
 
@@ -168,7 +168,7 @@ class MicroManager(Manager):
                     if townhalls:
                         nearest_townhall = zergling.position.closest(self.bot.townhalls)
                         if nearest_townhall.distance_to(zergling) < 22:
-                            self.bot.actions.append(zergling.move(self.bot.start_location))
+                            self.bot.do(zergling.move(self.bot.start_location))
                             continue
 
                 closest_enemy_unit = nearby_enemy_units.closest_to(zergling)
@@ -183,7 +183,7 @@ class MicroManager(Manager):
                                 and distance_to_enemy < 5.5 \
                                 and closest_friendly_unit_to_enemy.tag != zergling.tag:
                             away_from_enemy = zergling.position.towards(closest_enemy_unit, -1)
-                            self.bot.actions.append(zergling.move(away_from_enemy))
+                            self.bot.do(zergling.move(away_from_enemy))
 
                 elif const.UpgradeId.ZERGLINGMOVEMENTSPEED in self.bot.state.upgrades:
                     # Perform surround micro
@@ -206,21 +206,21 @@ class MicroManager(Manager):
                     #     target = closest_enemy_neighbors_center.towards(
                     #         zerglings_center,
                     #         -closest_enemy_unit.radius * 3 - len(closest_enemy_neighbors))
-                    #     self.bot.actions.append(zergling.move(target))
+                    #     self.bot.do(zergling.move(target))
                     #
                     # elif center_distances < 0.8 \
                     #         and not self.bot.unit_is_engaged(zergling)\
                     #         and not zergling.weapon_cooldown:
                     #
                     #     # Attack nearby enemy after a surround
-                    #     self.bot.actions.append(zergling.attack(closest_enemy_neighbors_center))
+                    #     self.bot.do(zergling.attack(closest_enemy_neighbors_center))
 
         # # Burrow zerglings near enemy townhall
         # # Decided not to use for now
         # if const.BURROW in self.bot.state.upgrades:
         #     for zergling in zerglings:
-        #         nearby_enemy_units = self.bot.known_enemy_units.closer_than(10, zergling)
-        #         nearby_enemy_structures = self.bot.known_enemy_structures.closer_than(5, zergling)
+        #         nearby_enemy_units = self.bot.enemy_units.closer_than(10, zergling)
+        #         nearby_enemy_structures = self.bot.enemy_structures.closer_than(5, zergling)
         #         if nearby_enemy_structures.exists:
         #             townhalls = nearby_enemy_structures.of_type(const2.TOWNHALLS)
         #             if townhalls.exists:
@@ -235,7 +235,7 @@ class MicroManager(Manager):
         #
         #                         # Never burrow more than 5 zerglings at a time
         #                         if self.bot.units(const.UnitTypeId.ZERGLINGBURROWED).amount < 5:
-        #                             self.bot.actions.append(zergling(const.BURROWDOWN_ZERGLING))
+        #                             self.bot.do(zergling(const.BURROWDOWN_ZERGLING))
 
     async def manage_zergling_scouting(self):
         """
@@ -267,10 +267,10 @@ class MicroManager(Manager):
                             loc2 = self.bot.enemy_start_location + Point2((5, 5))
                             loc3 = self.bot.enemy_start_location + Point2((0, 5))
 
-                            self.bot.actions.append(zergling.move(loc1))
-                            self.bot.actions.append(zergling.move(loc2, queue=True))
-                            self.bot.actions.append(zergling.move(loc3, queue=True))
-                            self.bot.actions.append(zergling.move(self.bot.start_location, queue=True))
+                            self.bot.do(zergling.move(loc1))
+                            self.bot.do(zergling.move(loc2, queue=True))
+                            self.bot.do(zergling.move(loc3, queue=True))
+                            self.bot.do(zergling.move(self.bot.start_location, queue=True))
 
                         else:
                             # Perform zergling cautious scouting
@@ -278,7 +278,7 @@ class MicroManager(Manager):
                                        if u.can_attack_ground
                                        and u.snapshot.type_id not in const2.WORKERS]
 
-                            closest_enemy_workers = self.bot.known_enemy_units(const2.WORKERS).\
+                            closest_enemy_workers = self.bot.enemy_units(const2.WORKERS).\
                                 closer_than(8, zergling)
 
                             expansion_locations = self.bot.get_enemy_expansion_positions()
@@ -302,17 +302,17 @@ class MicroManager(Manager):
                                     and len(self.bot.units.closer_than(7, zergling)) < 5:
                                 # Retreat
                                 target = zergling.position.towards(self.bot.start_location, 20)
-                                self.bot.actions.append(zergling.move(target))
+                                self.bot.do(zergling.move(target))
 
                             elif closest_enemy is None and closest_enemy_workers:
                                 # Attack nearby workers if we're not retreating
                                 closest_enemy_worker = closest_enemy_workers.closest_to(zergling)
-                                self.bot.actions.append(zergling.attack(closest_enemy_worker))
+                                self.bot.do(zergling.attack(closest_enemy_worker))
 
                             elif zergling.distance_to(enemy_target) > 10 \
                                     and not self.bot.unit_is_busy(zergling) \
                                     and not zergling.is_attacking:
-                                self.bot.actions.append(zergling.attack(enemy_target))
+                                self.bot.do(zergling.attack(enemy_target))
 
                     else:
                         # Zergling is dead. Remove its tag.
@@ -340,18 +340,18 @@ class MicroManager(Manager):
                                            const.SPINECRAWLER, const.SPINECRAWLERUPROOTED}
 
             for baneling in banelings:
-                enemies_in_range = self.bot.known_enemy_units(
+                enemies_in_range = self.bot.enemy_units(
                     attack_priorities).closer_than(2.2, baneling)
 
                 if len(enemies_in_range) > 9:
-                    self.bot.actions.append(baneling(const.AbilityId.EXPLODE_EXPLODE))
+                    self.bot.do(baneling(const.AbilityId.EXPLODE_EXPLODE))
 
             # Splash action to perform on enemies
             def splash_action(baneling, enemy):
                 if baneling.distance_to(enemy) < 2:
-                    self.bot.actions.append(baneling.attack(enemy))
+                    self.bot.do(baneling.attack(enemy))
                 else:
-                    self.bot.actions.append(baneling.move(enemy.position))
+                    self.bot.do(baneling.move(enemy.position))
 
             # Micro banelings towards priority targets, calling `splash_action` on them.
             if not self.bot.splash_on_enemies(
@@ -361,17 +361,17 @@ class MicroManager(Manager):
                     priorities=attack_priorities):
 
                 # Attack buildings if we're not utilizing our splash
-                structures_to_attack = self.bot.known_enemy_units(structure_attack_priorities).visible
+                structures_to_attack = self.bot.enemy_units(structure_attack_priorities).visible
                 for baneling in banelings:
                     for structure in structures_to_attack.closer_than(8, baneling):
-                        self.bot.actions.append(baneling.attack(structure))
+                        self.bot.do(baneling.attack(structure))
 
         # Unburrow banelings if enemy nearby
         for baneling in burrowed_banelings:
-            nearby_enemy_units = self.bot.known_enemy_units.closer_than(2, baneling)
+            nearby_enemy_units = self.bot.enemy_units.closer_than(2, baneling)
             if len(nearby_enemy_units) > 4:
                 # Unburrow baneling
-                self.bot.actions.append(baneling(const.BURROWUP_BANELING))
+                self.bot.do(baneling(const.BURROWUP_BANELING))
 
     async def manage_roaches(self):
         roaches = self.bot.units(const.ROACH)
@@ -386,8 +386,8 @@ class MicroManager(Manager):
                     # Tag roach as a healing roach
                     self.healing_roaches_tags.add(roach.tag)
 
-                    self.bot.actions.append(roach(const.BURROWDOWN_ROACH))
-                    self.bot.actions.append(roach.move(target, queue=True))
+                    self.bot.do(roach(const.BURROWDOWN_ROACH))
+                    self.bot.do(roach.move(target, queue=True))
 
         # Unburrow healed roaches
         to_remove_from_healing = set()
@@ -395,13 +395,13 @@ class MicroManager(Manager):
             roach = self.bot.units.find_by_tag(roach_tag)
             if roach:
                 if roach.health_percentage > 0.96:
-                    nearby_enemy_units = self.bot.known_enemy_units.closer_than(10, roach).not_structure
+                    nearby_enemy_units = self.bot.enemy_units.closer_than(10, roach).not_structure
                     if nearby_enemy_units.empty or len(nearby_enemy_units) < 2:
                         # Untag roach as a healing roach
                         to_remove_from_healing.add(roach_tag)
 
                         # Unburrow roach
-                        self.bot.actions.append(roach(const.BURROWUP_ROACH))
+                        self.bot.do(roach(const.BURROWUP_ROACH))
             else:
                 to_remove_from_healing.add(roach_tag)
 
@@ -423,7 +423,7 @@ class MicroManager(Manager):
         bile_priorities_neutral = {const.UnitTypeId.FORCEFIELD, }
 
         for ravager in ravagers:
-            nearby_enemy_units = self.bot.known_enemy_units
+            nearby_enemy_units = self.bot.enemy_units
             nearby_enemy_units = [u for u in nearby_enemy_units if u.distance_to(ravager) < 13 + u.radius]
             if nearby_enemy_units:
                 # Perform bile attacks
@@ -460,7 +460,7 @@ class MicroManager(Manager):
                                     continue
                                 self.biled_forcefields.add(enemy_unit.tag)
 
-                            self.bot.actions.append(ravager(const.EFFECT_CORROSIVEBILE, target))
+                            self.bot.do(ravager(const.EFFECT_CORROSIVEBILE, target))
                             break
                 else:
                     # If we're not using bile, then micro ravagers
@@ -497,8 +497,8 @@ class MicroManager(Manager):
 
                                 if ravager_in_range:
                                     away_from_enemy = ravager.position.towards(closest_enemy_to_avoid, -2)
-                                    self.bot.actions.append(ravager.move(away_from_enemy))
-                                    self.bot.actions.append(ravager.hold_position(queue=True))
+                                    self.bot.do(ravager.move(away_from_enemy))
+                                    self.bot.do(ravager.hold_position(queue=True))
 
     async def manage_infestors(self):
         infestors = self.bot.units(const.INFESTOR)
@@ -528,9 +528,9 @@ class MicroManager(Manager):
                 """Splash action to perform on enemies during fungal growths"""
                 if infestor.distance_to(enemy) >= 12:
                     towards_enemy = infestor.position.towards(enemy, 1)
-                    self.bot.actions.append(infestor.move(towards_enemy))
+                    self.bot.do(infestor.move(towards_enemy))
                 else:
-                    self.bot.actions.append(infestor(
+                    self.bot.do(infestor(
                         const.AbilityId.FUNGALGROWTH_FUNGALGROWTH, enemy.position))
 
                     # Record the fungal we used so we don't fungal again for 1 seconds
@@ -555,7 +555,7 @@ class MicroManager(Manager):
 
             for infestor in infestors | burrowed_infestors:
 
-                nearby_neural_priorities = self.bot.known_enemy_units(
+                nearby_neural_priorities = self.bot.enemy_units(
                     neural_parasite_priorities).closer_than(15, infestor)
 
                 if const.UpgradeId.NEURALPARASITE in self.bot.state.upgrades \
@@ -564,7 +564,7 @@ class MicroManager(Manager):
                     # Cast neural parasite on nearby enemy priorities
 
                     target = nearby_neural_priorities.closest_to(infestor.position)
-                    self.bot.actions.append(infestor(const.AbilityId.NEURALPARASITE_NEURALPARASITE, target))
+                    self.bot.do(infestor(const.AbilityId.NEURALPARASITE_NEURALPARASITE, target))
 
                 elif const.BURROW in self.bot.state.upgrades \
                         and not infestor.is_burrowed \
@@ -577,19 +577,19 @@ class MicroManager(Manager):
                     # Tag infestor as a healing infestor
                     self.healing_infestors_tags.add(infestor.tag)
 
-                    self.bot.actions.append(infestor(const.AbilityId.BURROWDOWN_INFESTOR))
-                    self.bot.actions.append(infestor.move(target, queue=True))
+                    self.bot.do(infestor(const.AbilityId.BURROWDOWN_INFESTOR))
+                    self.bot.do(infestor.move(target, queue=True))
                 else:
                     cluster = infestor.position.closest(self.bot.army_clusters)
                     if cluster:
-                        nearby_enemy_units = self.bot.known_enemy_units.closer_than(10, infestor)
+                        nearby_enemy_units = self.bot.enemy_units.closer_than(10, infestor)
 
                         if nearby_enemy_units:
                             nearby_enemy_priorities = nearby_enemy_units.of_type(infested_terran_priorities)
                             if infestor.energy >= 25 and nearby_enemy_priorities:
                                 # Throw infested terran eggs at infested terran priorities
                                 nearby_enemy_priority = nearby_enemy_priorities.closest_to(infestor)
-                                self.bot.actions.append(infestor(
+                                self.bot.do(infestor(
                                     const.AbilityId.INFESTEDTERRANS_INFESTEDTERRANS,
                                     nearby_enemy_priority.position))
                             elif nearby_enemy_units.closer_than(7, infestor):
@@ -597,7 +597,7 @@ class MicroManager(Manager):
                                 closest_enemy = nearby_enemy_units.closest_to(infestor.position)
                                 target = cluster.position.towards(closest_enemy, -3)
 
-                                self.bot.actions.append(infestor.move(target))
+                                self.bot.do(infestor.move(target))
 
         # Unburrow healed infestors
         to_remove_from_healing = set()
@@ -605,13 +605,13 @@ class MicroManager(Manager):
             infestor = self.bot.units.find_by_tag(infestor_tag)
             if infestor:
                 if infestor.health_percentage > 0.96:
-                    nearby_enemy_units = self.bot.known_enemy_units.closer_than(10, infestor).not_structure
+                    nearby_enemy_units = self.bot.enemy_units.closer_than(10, infestor).not_structure
                     if not nearby_enemy_units or len(nearby_enemy_units) < 2:
                         # Untag infestor as a healing infestor
                         to_remove_from_healing.add(infestor_tag)
 
                         # Unburrow infestor
-                        self.bot.actions.append(infestor(const.AbilityId.BURROWUP_INFESTOR))
+                        self.bot.do(infestor(const.AbilityId.BURROWUP_INFESTOR))
             else:
                 to_remove_from_healing.add(infestor_tag)
 
@@ -629,7 +629,7 @@ class MicroManager(Manager):
 
             def splash_action(lurker, enemy):
                 """Splash action to perform on enemies"""
-                self.bot.actions.append(lurker.attack(enemy))
+                self.bot.do(lurker.attack(enemy))
 
             # Attack greatest splash opportunities
             self.bot.splash_on_enemies(
@@ -647,18 +647,18 @@ class MicroManager(Manager):
 
                 if enemies_in_range:
                     # Burrow lurkers with enemies nearby
-                    self.bot.actions.append(lurker(const.AbilityId.BURROWDOWN_LURKER))
+                    self.bot.do(lurker(const.AbilityId.BURROWDOWN_LURKER))
                 elif enemies_nearby and not self.bot.unit_is_busy(lurker):
                     # Move towards nearby enemies
                     closest_enemy = lurker.position.closest(enemies_nearby)
-                    self.bot.actions.append(lurker.attack(closest_enemy.position))
+                    self.bot.do(lurker.attack(closest_enemy.position))
 
             for lurker in burrowed_lurkers:
                 enemies_nearby = any(True for u in enemy_targets if lurker.distance_to(u) < 10)
 
                 # Unburrow Lurkers
                 if not enemies_nearby:
-                    self.bot.actions.append(lurker(const.AbilityId.BURROWUP_LURKER))
+                    self.bot.do(lurker(const.AbilityId.BURROWUP_LURKER))
 
     async def manage_mutalisks(self):
         """
@@ -724,9 +724,9 @@ class MicroManager(Manager):
 
                         # Issue move commands
                         for p in path[1:-1]:
-                            self.bot.actions.append(mutalisk.move(p, queue=True))
+                            self.bot.do(mutalisk.move(p, queue=True))
 
-                        self.bot.actions.append(mutalisk.attack(nearest_priority, queue=True))
+                        self.bot.do(mutalisk.attack(nearest_priority, queue=True))
 
     async def manage_corruptors(self):
         corruptors = self.bot.units(const.CORRUPTOR)
@@ -737,7 +737,7 @@ class MicroManager(Manager):
                     # Keep corruptor slightly ahead center of army
                     if corruptor.distance_to(army.center) > 6:
                         position = army.center.towards(self.bot.enemy_start_location, 8)
-                        self.bot.actions.append(corruptor.move(position))
+                        self.bot.do(corruptor.move(position))
 
     async def manage_overseers(self):
         overseers = self.bot.units(const.OVERSEER)
@@ -748,14 +748,14 @@ class MicroManager(Manager):
 
                 # Spawn changeling
                 if const.SPAWNCHANGELING_SPAWNCHANGELING in abilities:
-                    self.bot.actions.append(overseer(
+                    self.bot.do(overseer(
                         const.SPAWNCHANGELING_SPAWNCHANGELING))
 
             if army:
                 # Keep overseer slightly ahead center of army
                 if overseer.distance_to(army.center) > 6:
                     position = army.center.towards(self.bot.enemy_start_location, 8)
-                    self.bot.actions.append(overseer.move(position))
+                    self.bot.do(overseer.move(position))
 
     async def manage_changelings(self):
         changeling_types = {
@@ -770,7 +770,7 @@ class MicroManager(Manager):
             expansion_locations.reverse()
 
             for expansion_location in expansion_locations:
-                self.bot.actions.append(c.move(expansion_location, queue=True))
+                self.bot.do(c.move(expansion_location, queue=True))
 
     async def manage_spine_crawlers(self):
         rooted_spine_crawlers = self.bot.units(const.SPINECRAWLER).ready
@@ -792,7 +792,7 @@ class MicroManager(Manager):
                 lambda sc: math.floor(sc.position3d.z) <= math.floor(townhall.position3d.z))
 
             # Get enemies near townhall. We don't want to uproot if enemies are there.
-            enemies_near_townhall = self.bot.known_enemy_units.closer_than(12, townhall)
+            enemies_near_townhall = self.bot.enemy_units.closer_than(12, townhall)
 
             # Get nearby ramp
             nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
@@ -826,7 +826,7 @@ class MicroManager(Manager):
                 far_rooted_spine_crawlers = (sc for sc in rooted_spine_crawlers.idle
                                              if sc not in nearby_spine_crawlers)
                 for sc in far_rooted_spine_crawlers:
-                    self.bot.actions.append(sc(
+                    self.bot.do(sc(
                         const.AbilityId.SPINECRAWLERUPROOT_SPINECRAWLERUPROOT))
 
             # Root unrooted spine crawlers near the front expansions
@@ -846,7 +846,7 @@ class MicroManager(Manager):
                 position = await self.bot.find_placement(
                     const.SPINECRAWLER, target, max_distance=25)
 
-                self.bot.actions.append(
+                self.bot.do(
                     sc(const.AbilityId.SPINECRAWLERROOT_SPINECRAWLERROOT, position))
 
     async def manage_structures(self):
@@ -856,7 +856,7 @@ class MicroManager(Manager):
         for structure in structures.not_ready:
             if structure.health_percentage < 0.08 or \
                     (structure.build_progress > 0.98 and structure.health_percentage < 0.35):
-                self.bot.actions.append(structure(const.CANCEL))
+                self.bot.do(structure(const.CANCEL))
 
     async def manage_eggs(self):
         # egg_types = {const.BROODLORDCOCOON, const.RAVAGERCOCOON, const.BANELINGCOCOON,
@@ -867,7 +867,7 @@ class MicroManager(Manager):
         # Cancel damaged not-ready structures
         for egg in eggs:
             if egg.health_percentage < 0.1 and 0.03 < egg.build_progress < 0.95:
-                self.bot.actions.append(egg(const.CANCEL))
+                self.bot.do(egg(const.CANCEL))
 
     def avoid_effects(self):
         """
@@ -881,7 +881,7 @@ class MicroManager(Manager):
         for unit in units:
             if unit.avoiding_effect is not None:
                 target = unit.avoiding_effect.towards(unit.position, 4)
-                self.bot.actions.append(unit.move(target))
+                self.bot.do(unit.move(target))
 
     async def manage_priority_targeting(
             self,
@@ -895,7 +895,7 @@ class MicroManager(Manager):
 
         unit.last_priority_retarget = self.bot.state.game_loop
 
-        enemy_units = self.bot.known_enemy_units
+        enemy_units = self.bot.enemy_units
         if enemy_units:
             enemy_units = enemy_units.closer_than((unit.ground_range + unit.radius) * 1.1, unit.position)
 
@@ -903,7 +903,7 @@ class MicroManager(Manager):
                 target = self.bot.closest_and_most_damaged(
                     enemy_units, unit, priorities=attack_priorities)
                 if target:
-                    self.bot.actions.append(unit.attack(target))
+                    self.bot.do(unit.attack(target))
                     return True
         return False
 
@@ -954,7 +954,7 @@ class MicroManager(Manager):
                             #     and u.is_ready
                             #     and u.type_id not in const2.WORKERS
                             #     and (not u.is_structure or u.type_id in const2.DEFENSIVE_STRUCTURES))
-                            # enemy_townhalls = self.bot.known_enemy_units(const2.TOWNHALLS).ready
+                            # enemy_townhalls = self.bot.enemy_units(const2.TOWNHALLS).ready
 
                             nearest_enemy_unit = unit.position.closest(nearest_enemy_cluster)
                             unit_distance_to_enemy = unit.distance_to(nearest_enemy_unit)
@@ -977,7 +977,7 @@ class MicroManager(Manager):
 
                                 if target is not None:
                                     towards_target = unit.position.towards(target, distance=8)
-                                    self.bot.actions.append(unit.move(towards_target))
+                                    self.bot.do(unit.move(towards_target))
 
                             # Move towards priority space if our cluster is stronger
                             elif army_strength > 2 \
@@ -1003,7 +1003,7 @@ class MicroManager(Manager):
                                     target = unit.position.towards(
                                         highest_priority_space, 7)
 
-                                self.bot.actions.append(unit.snapshot.move(target))
+                                self.bot.do(unit.snapshot.move(target))
 
                             # Close the distance if our cluster isn't in range
                             elif unit_is_combatant and ranged_units_in_attack_range_ratio < 0.8 \
@@ -1014,7 +1014,7 @@ class MicroManager(Manager):
                                     and not unit.is_moving:
                                 towards_enemy = unit.position.towards(
                                     nearest_enemy_unit, 1)
-                                self.bot.actions.append(unit.snapshot.move(towards_enemy))
+                                self.bot.do(unit.snapshot.move(towards_enemy))
 
                             # Back off from enemy if we out-range them and are close
                             elif unit_is_combatant and unit.weapon_cooldown \
@@ -1042,8 +1042,8 @@ class MicroManager(Manager):
                                         target = None
 
                                 if target is not None:
-                                    self.bot.actions.append(unit.move(target))
-                                    self.bot.actions.append(unit.attack(nearest_enemy_unit.position, queue=True))
+                                    self.bot.do(unit.move(target))
+                                    self.bot.do(unit.attack(nearest_enemy_unit.position, queue=True))
 
                             # Close the distance if our unit's range is lower than the nearest enemy's range
                             elif unit_is_combatant and unit.weapon_cooldown \
@@ -1057,7 +1057,7 @@ class MicroManager(Manager):
 
                                 pathable = not self.bot.game_info.pathing_grid.is_set(towards_enemy.rounded)
                                 if pathable:
-                                    self.bot.actions.append(unit.move(towards_enemy))
+                                    self.bot.do(unit.move(towards_enemy))
 
                             # Attack the closest worker/townhall if there are no attackable nearby units
                             # elif not any_attackable_non_workers \
@@ -1068,7 +1068,7 @@ class MicroManager(Manager):
                             #     if nearby_enemy_workers:
                             #         # If nearby workers, move towards them
                             #         closest_worker = unit.position.closest(nearby_enemy_workers)
-                            #         self.bot.actions.append(unit.snapshot.attack(closest_worker))
+                            #         self.bot.do(unit.snapshot.attack(closest_worker))
                             #     elif enemy_townhalls:
                             #         # Else if enemy townhalls, move towards it
                             #         closest_townhall = self.bot.enemy_start_location.closest(enemy_townhalls)
@@ -1079,7 +1079,7 @@ class MicroManager(Manager):
                             #             target = closest_townhall.position
                             #
                             #         if unit.distance_to(target) > 8:
-                            #             self.bot.actions.append(unit.snapshot.move(target))
+                            #             self.bot.do(unit.snapshot.move(target))
 
                             # Handle combat priority targeting
                             elif not unit.weapon_cooldown:
@@ -1109,7 +1109,7 @@ class MicroManager(Manager):
 
                 rooted_spine_crawlers = self.bot.units(const.SPINECRAWLER).ready
                 for sc in rooted_spine_crawlers.idle:
-                    self.bot.actions.append(sc(
+                    self.bot.do(sc(
                         const.AbilityId.SPINECRAWLERUPROOT_SPINECRAWLERUPROOT))
 
             # Messages indicating that we should build spine crawlers in enemy base and

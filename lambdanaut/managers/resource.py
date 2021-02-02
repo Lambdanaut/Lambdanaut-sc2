@@ -53,7 +53,7 @@ class ResourceManager(Manager):
         minerals = self.bot.mineral_field
         for worker in self.bot.workers:
             mineral = minerals.closest_to(worker)
-            self.bot.actions.append(worker.gather(mineral))
+            self.bot.do(worker.gather(mineral))
 
     def get_untargeted_minerals(self, minerals: Units):
         """
@@ -86,7 +86,7 @@ class ResourceManager(Manager):
                         minerals = self.bot.mineral_field
                         if minerals:
                             mineral = self.bot.mineral_field.closest_to(closest_townhall)
-                            self.bot.actions.append(worker.gather(mineral))
+                            self.bot.do(worker.gather(mineral))
 
     async def manage_mineral_saturation(self):
         """
@@ -119,8 +119,8 @@ class ResourceManager(Manager):
                     self.bot.mineral_field.closer_than(9, unsaturated_townhall))
                 mineral = minerals.closest_to(unsaturated_townhall)
 
-                self.bot.actions.append(worker.return_resource(unsaturated_townhall))
-                self.bot.actions.append(worker.gather(mineral, queue=True))
+                self.bot.do(worker.return_resource(unsaturated_townhall))
+                self.bot.do(worker.gather(mineral, queue=True))
 
     async def manage_minerals(self):
         await self.manage_mineral_saturation()
@@ -136,10 +136,10 @@ class ResourceManager(Manager):
                 mineral = minerals.closest_to(townhall)
 
                 if worker.is_carrying_minerals or worker.is_carrying_vespene:
-                    self.bot.actions.append(worker.return_resource(townhall))
-                    self.bot.actions.append(worker.gather(mineral, queue=True))
+                    self.bot.do(worker.return_resource(townhall))
+                    self.bot.do(worker.gather(mineral, queue=True))
                 else:
-                    self.bot.actions.append(worker.gather(mineral))
+                    self.bot.do(worker.gather(mineral))
 
     async def manage_vespene(self):
         # If we have over 10 times the vespene than we do minerals, hold off on gas
@@ -174,8 +174,8 @@ class ResourceManager(Manager):
                     unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)
                     mineral = self.bot.mineral_field.closest_to(unsaturated_townhall)
 
-                    self.bot.actions.append(worker.return_resource(unsaturated_townhall))
-                    self.bot.actions.append(worker.gather(mineral, queue=True))
+                    self.bot.do(worker.return_resource(unsaturated_townhall))
+                    self.bot.do(worker.gather(mineral, queue=True))
 
         else:
             # Move workers from saturated extractors to minerals
@@ -196,8 +196,8 @@ class ResourceManager(Manager):
                     unsaturated_townhall = unsaturated_townhalls.closest_to(worker.position)
                     mineral = self.bot.mineral_field.closest_to(unsaturated_townhall)
 
-                    self.bot.actions.append(worker.return_resource(unsaturated_townhall))
-                    self.bot.actions.append(worker.gather(mineral, queue=True))
+                    self.bot.do(worker.return_resource(unsaturated_townhall))
+                    self.bot.do(worker.gather(mineral, queue=True))
 
             # Move workers from minerals to unsaturated extractors
             if unsaturated_extractors:
@@ -209,7 +209,7 @@ class ResourceManager(Manager):
                 if mineral_workers.exists:
                     worker = mineral_workers.closest_to(extractor)
 
-                    self.bot.actions.append(worker.gather(extractor, queue=True))
+                    self.bot.do(worker.gather(extractor, queue=True))
 
     async def manage_resources(self):
         """
@@ -235,7 +235,7 @@ class ResourceManager(Manager):
                     nearby_unit = nearby_units[1]
 
                 if nearby_unit.health_percentage < 0.6 and nearby_unit.type_id != const.ZERGLING:
-                    self.bot.actions.append(queen(const.TRANSFUSION_TRANSFUSION, nearby_unit))
+                    self.bot.do(queen(const.TRANSFUSION_TRANSFUSION, nearby_unit))
 
     async def keep_main_queens_on_ramp(self):
         ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
@@ -268,7 +268,7 @@ class ResourceManager(Manager):
                 ramp_center = (ramp.bottom_center + ramp.top_center) / 2
                 for queen, point_offset in zip((queen1, queen2), (Point2((+1, 0)), (Point2((-1, 0))))):
                     if queen.energy < 23 and queen.distance_to(ramp_center) > 3:
-                        self.bot.actions.append(queen.attack(ramp_center + point_offset))
+                        self.bot.do(queen.attack(ramp_center + point_offset))
 
     async def manage_queens(self):
         queens = self.bot.units(const.QUEEN)
@@ -304,7 +304,7 @@ class ResourceManager(Manager):
                         if queen.is_idle:
                             # Move queen to its townhall
                             if queen.distance_to(townhall) > 20:
-                                self.bot.actions.append(
+                                self.bot.do(
                                     queen.attack(townhall.position))
 
                             if queen.energy >= 25:
@@ -328,12 +328,12 @@ class ResourceManager(Manager):
                                         ResourceManagerCommands.QUEEN_SPAWN_TUMOR,
                                         self.bot.state.game_loop, expiry=50)
 
-                                    self.bot.actions.append(queen(const.BUILD_CREEPTUMOR_QUEEN, position))
+                                    self.bot.do(queen(const.BUILD_CREEPTUMOR_QUEEN, position))
 
                                 else:
                                     # Inject larvae
                                     if not townhall.has_buff(const.QUEENSPAWNLARVATIMER):
-                                        self.bot.actions.append(queen(const.EFFECT_INJECTLARVA, townhall))
+                                        self.bot.do(queen(const.EFFECT_INJECTLARVA, townhall))
 
     async def manage_creep_tumors(self):
         creep_tumors = self.bot.units({const.CREEPTUMORBURROWED})
@@ -347,7 +347,7 @@ class ResourceManager(Manager):
 
                 # Spawn creep tumors away from expansion locations
                 if position.distance_to_closest(self.bot.expansion_locations.keys()) > 5:
-                    self.bot.actions.append(tumor(const.BUILD_CREEPTUMOR_TUMOR, position))
+                    self.bot.do(tumor(const.BUILD_CREEPTUMOR_TUMOR, position))
 
     async def read_messages(self):
         for message, val in self.messages.items():

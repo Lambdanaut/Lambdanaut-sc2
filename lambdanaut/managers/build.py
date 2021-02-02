@@ -101,16 +101,6 @@ class BuildManager(Manager):
     def percentage_done_with_build_stage(self):
         return self.build_stage_index / len()
 
-    def can_afford(self, unit):
-        """Returns boolean indicating if the player has enough minerals,
-        vespene, and supply to build the unit"""
-
-        can_afford = self.bot.can_afford(unit)
-        return \
-            can_afford.can_afford_minerals and \
-            can_afford.can_afford_vespene and \
-            can_afford.have_enough_supply
-
     def determine_opening_builds(self):
         """
         Sets the self.starting_build and adds other builds based on factors such as:
@@ -269,7 +259,6 @@ class BuildManager(Manager):
 
             self.add_build(next_default_build, force=force)
 
-
     def get_latest_build(self) -> builds.Builds:
         """Returns the latest build order added"""
         return list(takewhile(lambda build: build is not None, self.builds))[-1]
@@ -327,7 +316,7 @@ class BuildManager(Manager):
                 # Cancel in-progress structures
                 for structure in self.bot.units.filter(
                         lambda u: u.is_structure and u.build_progress < 0.96):
-                    self.bot.actions.append(structure(const.AbilityId.CANCEL_BUILDINPROGRESS))
+                    self.bot.do(structure(const.AbilityId.CANCEL_BUILDINPROGRESS))
 
                 # Stop any rushing low-worker builds if we scout an enemy worker rush
                 self.add_build(Builds.OPENER_DEFAULT)
@@ -353,11 +342,11 @@ class BuildManager(Manager):
                     # Cancel spawning hatcheries
                     in_prod_hatcheries = self.bot.units(const.UnitTypeId.HATCHERY).not_ready
                     for hatchery in in_prod_hatcheries:
-                        self.bot.actions.append(hatchery(const.AbilityId.CANCEL))
+                        self.bot.do(hatchery(const.AbilityId.CANCEL))
 
                     # Cancel spawning baneling nests
                     for baneling_nest in baneling_nests.not_ready:
-                        self.bot.actions.append(baneling_nest(const.AbilityId.CANCEL))
+                        self.bot.do(baneling_nest(const.AbilityId.CANCEL))
 
                     self.add_build(Builds.EARLY_GAME_ROACH_RAVAGER_DEFENSIVE)
                     self.add_build(Builds.MID_GAME_ROACH_HYDRA_LURKER)
@@ -371,7 +360,7 @@ class BuildManager(Manager):
                 # Switch to an offensive 2 base build, cancel hatcheries in construction
                 if len(self.bot.townhalls) > 2:
                     for townhall in self.bot.townhalls.not_ready:
-                        self.bot.actions.append(townhall(const.AbilityId.CANCEL_BUILDINPROGRESS))
+                        self.bot.do(townhall(const.AbilityId.CANCEL_BUILDINPROGRESS))
 
                 self.add_build(Builds.EARLY_GAME_HATCHERY_FIRST_LING_RUSH)
 
@@ -421,7 +410,7 @@ class BuildManager(Manager):
                         # Cancel spawning baneling nests
                         baneling_nests = self.bot.units(const.UnitTypeId.BANELINGNEST)
                         for baneling_nest in baneling_nests.not_ready:
-                            self.bot.actions.append(baneling_nest(const.AbilityId.CANCEL))
+                            self.bot.do(baneling_nest(const.AbilityId.CANCEL))
 
             # Messages indicating we need to rush up to brood lords in midgame asap
             broodlord_rush_mid_game = {
@@ -566,9 +555,9 @@ class BuildManager(Manager):
             if isinstance(unit, builds.SpecialBuildTarget):
                 result = self.parse_special_build_target(
                     unit, existing_unit_counts, build_order_counts, build_targets)
-                if self.can_afford(result):
+                if self.bot.can_afford(result):
                     return result
-            elif self.can_afford(unit):
+            elif self.bot.can_afford(unit):
                 build_order_counts[unit] += 1
                 return unit
             else:
@@ -721,7 +710,7 @@ class BuildManager(Manager):
         existing_unit_counts = Counter(map(lambda unit: unit.type_id, self.bot.units))
 
         # Count of units being trained or built
-        pending_units = Counter({u: self.bot.already_pending(u, all_units=True) for u in const2.ZERG_UNITS})
+        pending_units = Counter({u: self.bot.already_pending(u) for u in const2.ZERG_UNITS})
 
         # Add an extra zergling for each zergling in an egg
         zergling_creation_ability = self.bot._game_data.units[const.ZERGLING.value].creation_ability
@@ -951,7 +940,7 @@ class BuildManager(Manager):
             drones = self.bot.units(const.DRONE).filter(
                 lambda d: not d.is_carrying_minerals and not d.is_carrying_vespene)
 
-            if self.can_afford(build_target):
+            if self.bot.can_afford(build_target):
                 if drones:
                     drone = drones.closest_to(expansion_location)
 
@@ -977,7 +966,7 @@ class BuildManager(Manager):
                         # Only move the drone to the expansion location if it's far away
                         # To keep from constantly issuing move commands
                         if nearest_drone.distance_to(expansion_location) > 9:
-                            self.bot.actions.append(nearest_drone.move(expansion_location))
+                            self.bot.do(nearest_drone.move(expansion_location))
 
                             self.publish(Messages.DRONE_LEAVING_TO_CREATE_HATCHERY, nearest_drone.tag)
 
@@ -990,9 +979,9 @@ class BuildManager(Manager):
             hatcheries = self.bot.units(const.HATCHERY).idle
 
             # Train the unit
-            if self.can_afford(build_target) and hatcheries:
+            if self.bot.can_afford(build_target) and hatcheries:
                 hatchery = hatcheries.closest_to(self.bot.start_location)
-                self.bot.actions.append(hatchery.build(build_target))
+                self.bot.do(hatchery.build(build_target))
                 return True
 
         elif build_target is const.HIVE:
@@ -1000,12 +989,12 @@ class BuildManager(Manager):
             lairs = self.bot.units(const.LAIR).idle
 
             # Train the unit
-            if self.can_afford(build_target) and lairs:
-                self.bot.actions.append(lairs.random.build(build_target))
+            if self.bot.can_afford(build_target) and lairs:
+                self.bot.do(lairs.random.build(build_target))
                 return True
 
         elif build_target is const.EXTRACTOR:
-            if self.can_afford(build_target):
+            if self.bot.can_afford(build_target):
                 townhalls = self.bot.townhalls.ready
                 for townhall in townhalls:
                     extractors = self.bot.units(const2.VESPENE_REFINERIES)
@@ -1017,7 +1006,7 @@ class BuildManager(Manager):
 
                     drone = self.bot.workers.closest_to(geyser)
 
-                    self.bot.actions.append(drone.build(build_target, geyser))
+                    self.bot.do(drone.build(build_target, geyser))
 
                     return True
 
@@ -1026,14 +1015,14 @@ class BuildManager(Manager):
             spire = self.bot.units(const.SPIRE).idle
 
             # Train the unit
-            if spire.exists and self.can_afford(build_target):
-                self.bot.actions.append(spire.random.build(build_target))
+            if spire.exists and self.bot.can_afford(build_target):
+                self.bot.do(spire.random.build(build_target))
 
                 return True
 
         elif build_target is const.SPINECRAWLER:
             if self.build_offensive_spines:
-                if self.can_afford(build_target):
+                if self.bot.can_afford(build_target):
                     # Build offensive spine crawlers
                     target = self.bot.enemy_start_location.towards_with_random_angle(
                         self.bot.start_location, 2)
@@ -1045,7 +1034,7 @@ class BuildManager(Manager):
                 townhalls = self.bot.townhalls.ready
 
                 if townhalls.exists:
-                    if self.can_afford(build_target):
+                    if self.bot.can_afford(build_target):
                         enemy_start_location = self.bot.enemy_start_location
                         townhall = townhalls.random
                         nearby_ramps = [ramp.top_center for ramp in self.bot._game_info.map_ramps]
@@ -1070,7 +1059,7 @@ class BuildManager(Manager):
             townhalls = self.bot.townhalls.ready
 
             if townhalls:
-                if self.can_afford(build_target):
+                if self.bot.can_afford(build_target):
                     spore_crawlers = self.bot.units(const.SPORECRAWLER)
 
                     target = None
@@ -1113,7 +1102,7 @@ class BuildManager(Manager):
             townhalls = self.bot.townhalls.ready
 
             if townhalls.exists:
-                if self.can_afford(build_target):
+                if self.bot.can_afford(build_target):
                     townhall = townhalls.closest_to(self.bot.start_location)
                     location = townhall.position
 
@@ -1144,8 +1133,8 @@ class BuildManager(Manager):
             if preferred_townhalls:
                 townhalls = preferred_townhalls
 
-            if self.can_afford(build_target) and townhalls:
-                self.bot.actions.append(
+            if self.bot.can_afford(build_target) and townhalls:
+                self.bot.do(
                     townhalls.random.train(build_target))
 
                 return True
@@ -1155,7 +1144,7 @@ class BuildManager(Manager):
             larvas = self.bot.units(const.LARVA)
 
             # Train the unit
-            if self.can_afford(build_target) and larvas:
+            if self.bot.can_afford(build_target) and larvas:
 
                 unsaturated_townhalls = self.bot.townhalls.sorted(
                     lambda th: th.assigned_harvesters / th.ideal_harvesters if th.ideal_harvesters else 1)
@@ -1179,7 +1168,7 @@ class BuildManager(Manager):
                     self._recent_commands.add(
                         BuildManagerCommands.BUILD_OVERLORD, self.bot.state.game_loop, expiry=18)
 
-                self.bot.actions.append(larva.train(build_target))
+                self.bot.do(larva.train(build_target))
                 return True
 
         elif build_target is const.BANELING:
@@ -1187,10 +1176,10 @@ class BuildManager(Manager):
             zerglings = self.bot.units(const.ZERGLING).idle
 
             # Train the unit
-            if self.can_afford(build_target) and zerglings:
+            if self.bot.can_afford(build_target) and zerglings:
                 zergling = zerglings.closest_to(self.bot.start_location)
-                self.bot.actions.append(zergling.stop())
-                self.bot.actions.append(zergling.train(build_target, queue=True))
+                self.bot.do(zergling.stop())
+                self.bot.do(zergling.train(build_target, queue=True))
                 return True
 
         elif build_target is const.RAVAGER:
@@ -1199,10 +1188,10 @@ class BuildManager(Manager):
                 lambda r: not self.bot.unit_is_engaged(r))
 
             # Train the unit
-            if self.can_afford(build_target) and roaches:
+            if self.bot.can_afford(build_target) and roaches:
                 roach = roaches.closest_to(self.bot.start_location)
-                self.bot.actions.append(roach.stop())
-                self.bot.actions.append(roach.train(build_target, queue=True))
+                self.bot.do(roach.stop())
+                self.bot.do(roach.train(build_target, queue=True))
                 return True
 
             # Return True regardless.
@@ -1215,10 +1204,10 @@ class BuildManager(Manager):
                 lambda r: not self.bot.unit_is_engaged(r))
 
             # Train the unit
-            if self.can_afford(build_target) and hydralisks:
+            if self.bot.can_afford(build_target) and hydralisks:
                 hydralisk = hydralisks.closest_to(self.bot.start_location)
-                self.bot.actions.append(hydralisk.stop())
-                self.bot.actions.append(hydralisk.train(build_target, queue=True))
+                self.bot.do(hydralisk.stop())
+                self.bot.do(hydralisk.train(build_target, queue=True))
                 return True
 
             # Return True regardless.
@@ -1230,14 +1219,14 @@ class BuildManager(Manager):
             corruptors = self.bot.units(const.CORRUPTOR)
 
             # Train the unit
-            if self.can_afford(build_target) and corruptors:
+            if self.bot.can_afford(build_target) and corruptors:
                 # Prefer idle corruptors if they exist
                 idle_corruptors = corruptors.idle
                 if idle_corruptors.exists:
                     corruptors = idle_corruptors
 
                 corruptor = corruptors.closest_to(self.bot.start_location)
-                self.bot.actions.append(corruptor.train(build_target))
+                self.bot.do(corruptor.train(build_target))
                 return True
 
         elif build_target is const.OVERSEER:
@@ -1245,23 +1234,23 @@ class BuildManager(Manager):
             overlords = self.bot.units(const.OVERLORD)
 
             # Train the unit
-            if self.can_afford(build_target) and overlords.exists:
+            if self.bot.can_afford(build_target) and overlords.exists:
                 overlord = overlords.closest_to(self.bot.start_location)
-                self.bot.actions.append(overlord.train(build_target))
+                self.bot.do(overlord.train(build_target))
                 return True
 
         # Upgrades below
         elif isinstance(build_target, const.UpgradeId):
             upgrade_structure_type = const2.ZERG_UPGRADES_TO_STRUCTURE[build_target]
             upgrade_structures = self.bot.units(upgrade_structure_type).ready
-            if self.can_afford(build_target) and upgrade_structures:
+            if self.bot.can_afford(build_target) and upgrade_structures:
 
                 # Require idle upgrade structures
                 if upgrade_structures.idle.exists:
                     upgrade_structures = upgrade_structures.idle
 
                 upgrade_ability = self.bot._game_data.upgrades[build_target.value].research_ability.id
-                self.bot.actions.append(upgrade_structures.first(upgrade_ability))
+                self.bot.do(upgrade_structures.first(upgrade_ability))
 
                 # Send out message about upgrade started
                 self.publish(Messages.UPGRADE_STARTED, build_target)
