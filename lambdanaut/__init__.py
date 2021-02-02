@@ -1,4 +1,4 @@
-VERSION = '3.3.4'
+VERSION = '4.0.0'
 DEBUG = False
 
 # Creates debug units and uses debug map if True
