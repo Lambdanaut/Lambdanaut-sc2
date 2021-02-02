@@ -7,6 +7,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+venv/
 env/
 build/
 develop-eggs/
@@ -60,10 +61,12 @@ target/
 
 .pytest_cache/
 
+.idea/*
 .idea/
 
 # PROJECT SPECIFIC FILES
 lib/sc2-old
 lib/sc2old
 data/log.txt
+replays/
 
